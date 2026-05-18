@@ -1,71 +1,88 @@
 <?php session_start(); ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Edit Book</title>
-    <link rel="stylesheet" href="../assets/admin.css">
-</head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<title>Edit Book</title>
+
+<!-- FONT -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- IMPORTANT CSS -->
+<link rel="stylesheet" href="../assets/student.css">
+
+</head>
 <body>
 
-<div class="container">
+<!-- SIDEBAR -->
+<?php include "sidebar.php"; ?>
 
-    <?php include "sidebar.php"; ?>
+<!-- MAIN WRAPPER -->
+<div class="main-wrapper">
 
-    <main class="main-content">
+<!-- TOPBAR -->
+<header class="topbar">
+  <span class="topbar-title">Edit Book</span>
+</header>
 
-        <div class="header">
-            <h1>Edit Book</h1>
-        </div>
+<!-- PAGE -->
+<main class="page-content">
 
-        <div class="panel form-panel">
+<div class="page-header">
+  <h1>Edit Book</h1>
+  <div class="gold-rule"><span></span><i>✦</i><span></span></div>
+</div>
 
-            <div class="panel-header">
-                <h2>Edit Book</h2>
-            </div>
+<div class="card">
+<div class="card-body">
 
-            <form method="POST">
+<form method="POST">
 
-                <div class="form-group">
-                    <label>Book ID</label>
-                    <input type="text" name="book_id">
-                </div>
+  <div class="field">
+    <label>Title</label>
+    <div class="input-wrap">
+      <input type="text" name="title">
+    </div>
+  </div>
 
-                <div class="form-group">
-                    <label>Title</label>
-                    <input type="text" name="title">
-                </div>
+  <div class="field">
+    <label>Author</label>
+    <div class="input-wrap">
+      <input type="text" name="author">
+    </div>
+  </div>
 
-                <div class="form-group">
-                    <label>Author</label>
-                    <input type="text" name="author">
-                </div>
+  <div class="field">
+    <label>Category</label>
+    <div class="input-wrap">
+      <input type="text" name="category">
+    </div>
+  </div>
 
-                <div class="form-group">
-                    <label>Category</label>
-                    <input type="text" name="category">
-                </div>
+  <div class="field">
+    <label>ISBN</label>
+    <div class="input-wrap">
+      <input type="text" name="isbn">
+    </div>
+  </div>
 
-                <div class="form-group">
-                    <label>ISBN</label>
-                    <input type="text" name="isbn">
-                </div>
+  <div class="field">
+    <label>Quantity</label>
+    <div class="input-wrap">
+      <input type="number" name="quantity">
+    </div>
+  </div>
 
-                <div class="form-group">
-                    <label>Quantity</label>
-                    <input type="number" name="quantity">
-                </div>
+  <button class="btn-primary">Update Book</button>
 
-                <button type="submit">Update Book</button>
+</form>
 
-            </form>
+</div>
+</div>
 
-        </div>
-
-    </main>
-
+</main>
 </div>
 
 </body>
