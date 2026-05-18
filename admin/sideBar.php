@@ -50,7 +50,6 @@
 
     </div>
 
-    <!-- BOTTOM -->
     <div class="sidebar-bottom">
 
         <div class="profile-card">
@@ -69,7 +68,7 @@
         </div>
 
         <a href="logout.php" class="logout">
-            ⎋ Log Out
+             Log Out
         </a>
 
     </div>

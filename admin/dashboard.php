@@ -44,7 +44,7 @@
 
                 <tbody>
                     <tr>
-                        <td>Sample Book</td>
+                        <td>She's Dating the Gangster</td>
                         <td>Christine</td>
                         <td>May 9</td>
                         <td>Borrowed</td>
