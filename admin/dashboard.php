@@ -115,7 +115,7 @@ session_start();
         <!-- main -->
         <main class="main-content">
 
-            <!-- dashboard -->
+            <!-- admin dashboard -->
             <header>
                 <h1>Dashboard</h1>
 
