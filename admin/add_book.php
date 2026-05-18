@@ -1,102 +1,67 @@
-<?php
-session_start();
-?>
+<?php session_start(); ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add Book</title>
+    <link rel="stylesheet" href="../assets/admin.css">
 </head>
+
 <body>
 
-    <div class="container">
+<div class="container">
 
-        <!-- sidebar -->
-        <aside class="sidebar">
+    <?php include "sidebar.php"; ?>
 
-            <h2>CvSU Library System</h2>
+    <main class="main-content">
 
-            <ul>
-                <li><a href="dashboard.php">Dashboard</a></li>
+        <div class="header">
+            <h1>Add Book</h1>
+        </div>
 
-                <li><a href="add_book.php">Add Book</a></li>
+        <div class="panel form-panel">
 
-                <li><a href="edit_book.php">Edit Book</a></li>
+            <div class="panel-header">
+                <h2>Add New Book</h2>
+            </div>
 
-                <li><a href="delete_book.php">Delete Book</a></li>
+            <form method="POST">
 
-                <li><a href="view_books.php">View Books</a></li>
-
-                <li><a href="borrowed_books.php">Borrowed Books</a></li>
-
-                <li><a href="issue_book.php">Issue Book</a></li>
-
-                <li><a href="return_book.php">Return Book</a></li>
-
-                <li><a href="view_students.php">View Students</a></li>
-
-                <li><a href="manage_students.php">Manage Students</a></li>
-
-                <li><a href="view_fines.php">View Fines</a></li>
-            </ul>
-
-        </aside>
-
-        <!-- main -->
-        <main class="main-content">
-
-            <h1>Add New Book</h1>
-
-            <hr>
-
-            <form action="" method="POST">
-
-                <div>
-                    <label>Book Title</label><br>
-                    <input type="text" name="book_title">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" name="title">
                 </div>
 
-                <br>
-
-                <div>
-                    <label>Author</label><br>
+                <div class="form-group">
+                    <label>Author</label>
                     <input type="text" name="author">
                 </div>
 
-                <br>
-
-                <div>
-                    <label>Category</label><br>
+                <div class="form-group">
+                    <label>Category</label>
                     <input type="text" name="category">
                 </div>
 
-                <br>
-
-                <div>
-                    <label>ISBN</label><br>
+                <div class="form-group">
+                    <label>ISBN</label>
                     <input type="text" name="isbn">
                 </div>
 
-                <br>
-
-                <div>
-                    <label>Quantity</label><br>
+                <div class="form-group">
+                    <label>Quantity</label>
                     <input type="number" name="quantity">
                 </div>
 
-                <br>
-
-                <button type="submit" name="add_book">
-                    Add Book
-                </button>
+                <button type="submit">Add Book</button>
 
             </form>
 
-        </main>
+        </div>
 
-    </div>
+    </main>
+
+</div>
 
 </body>
 </html>
