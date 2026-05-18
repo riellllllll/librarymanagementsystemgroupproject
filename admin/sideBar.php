@@ -3,13 +3,14 @@
     <div class="sidebar-top">
 
         <div class="logo">
-            <h2>CvSU Library Admin</h2>
+            <h2>CvSU</h2>
+            <span>LIBRARY ADMIN</span>
         </div>
 
         <div class="menu-section">
             <h4>DASHBOARD</h4>
             <ul>
-                <li><a href="dashboard.php">Dashboard</a></li>
+                <li><a href="dashboard.php" class="active">Dashboard</a></li>
             </ul>
         </div>
 
@@ -49,17 +50,27 @@
 
     </div>
 
+    <!-- BOTTOM -->
     <div class="sidebar-bottom">
 
-        <div class="profile">
-            <div class="avatar">AD</div>
-            <div>
-                <p><strong>Admin</strong></p>
-                <small>Library System</small>
+        <div class="profile-card">
+
+            <div class="profile">
+
+                <div class="avatar">AD</div>
+
+                <div class="profile-info">
+                    <p>Admin</p>
+                    <small>Library System</small>
+                </div>
+
             </div>
+
         </div>
 
-        <a href="logout.php" class="logout">Log Out</a>
+        <a href="logout.php" class="logout">
+            ⎋ Log Out
+        </a>
 
     </div>
 
