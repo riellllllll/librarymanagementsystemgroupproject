@@ -1,50 +1,57 @@
 <?php session_start(); ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Delete Book</title>
-    <link rel="stylesheet" href="../assets/admin.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Delete Book</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/student.css">
 </head>
 
 <body>
 
-<div class="container">
+<?php include "sideBar.php"; ?>
 
-    <?php include "sidebar.php"; ?>
+<div class="main-wrapper">
 
-    <main class="main-content">
+<header class="topbar">
+  <span class="topbar-title">Delete Book</span>
+</header>
 
-        <div class="header">
-            <h1>Delete Book</h1>
-        </div>
+<main class="page-content">
 
-        <div class="panel">
+<div class="page-header">
+  <h1>Delete Book</h1>
+  <div class="gold-rule"><span></span><i>✦</i><span></span></div>
+</div>
 
-            <div class="panel-header">
-                <h2>Delete Confirmation</h2>
-            </div>
+<div class="card">
+<div class="card-body">
 
-            <form method="POST">
+<div class="card-title">Delete Confirmation</div>
 
-                <div class="form-group">
-                    <label>Book ID</label>
-                    <input type="text" name="book_id">
-                </div>
+<form method="POST">
 
-                <button type="submit">Delete</button>
+<div class="field">
+  <label>Book ID</label>
+  <div class="input-wrap">
+    <input type="text" name="book_id" required>
+  </div>
+</div>
 
-                <a href="view_books.php">
-                    <button type="button">Cancel</button>
-                </a>
+<div style="display:flex; gap:10px;">
+  <button class="btn-danger">Delete</button>
+  <a href="view_books.php" class="btn-outline">Cancel</a>
+</div>
 
-            </form>
+</form>
 
-        </div>
+</div>
+</div>
 
-    </main>
-
+</main>
 </div>
 
 </body>
