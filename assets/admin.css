@@ -223,7 +223,6 @@ body {
     border-top: 4px solid #c89b3c;
 }
 
-/* panel */
 .panel {
     background: #fff;
     padding: 20px;
@@ -269,7 +268,7 @@ th {
     color: #c62828;
 }
 
-/* quick actions */
+/* quick actions(dashboard) */
 .actions {
     display: flex;
     gap: 10px;
@@ -283,7 +282,6 @@ th {
     cursor: pointer;
 }
 
-/* form */
 .form-panel {
     max-width: 600px;
 }
