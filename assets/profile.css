@@ -1,0 +1,309 @@
+/* ============================================================
+   profile.css — CvSU Library
+   Page-specific styles for My Profile
+   Extends student.css
+   ============================================================ */
+
+/* ── Profile Hero ── */
+.profile-hero {
+  background: var(--card-bg);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(15,22,35,0.07), 0 0 0 1px rgba(201,151,58,0.08);
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.profile-hero::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gold-dk), var(--gold-lt), var(--gold-dk));
+}
+
+/* Banner area */
+.profile-banner {
+  height: 90px;
+  background: linear-gradient(135deg, var(--ink) 0%, #1a2a4a 50%, #1d2e3e 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-banner::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(201,151,58,0.04) 20px, rgba(201,151,58,0.04) 21px),
+    repeating-linear-gradient(-45deg, transparent, transparent 20px, rgba(201,151,58,0.04) 20px, rgba(201,151,58,0.04) 21px);
+}
+
+.profile-hero-body {
+  padding: 0 28px 24px;
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+}
+
+/* Big Avatar */
+.profile-avatar-xl {
+  width: 88px; height: 88px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold-dk), var(--gold-lt));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Inter', sans-serif;
+  font-size: 2.2rem;
+  color: #fff;
+  font-weight: 800;
+  margin-top: -44px;
+  border: 4px solid var(--card-bg);
+  box-shadow: 0 8px 24px rgba(201,151,58,0.35);
+  flex-shrink: 0;
+  position: relative;
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+
+.profile-avatar-xl:hover { box-shadow: 0 10px 30px rgba(201,151,58,0.5); }
+
+.avatar-edit-overlay {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background: rgba(15,22,35,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+  font-size: 1.2rem;
+}
+
+.profile-avatar-xl:hover .avatar-edit-overlay { opacity: 1; }
+
+.profile-hero-info {
+  flex: 1;
+  padding-top: 8px;
+}
+
+.profile-hero-info h2 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 3px;
+}
+
+.profile-hero-info .ph-id {
+  font-size: 0.75rem;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+
+.profile-hero-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.profile-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: var(--input-bg);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.profile-chip.chip-gold {
+  background: #fdf8ee;
+  color: var(--gold-dk);
+  border-color: rgba(201,151,58,0.25);
+}
+
+.profile-chip.chip-sage {
+  background: #eef5f1;
+  color: var(--sage);
+  border-color: rgba(46,125,94,0.2);
+}
+
+.profile-hero-actions {
+  padding-top: 8px;
+}
+
+/* ── Profile Stats Strip ── */
+.profile-stats {
+  display: flex;
+  gap: 20px;
+  padding: 16px 24px;
+  background: var(--input-bg);
+  border-top: 1px solid var(--border);
+}
+
+.ps-item { display: flex; flex-direction: column; gap: 2px; }
+
+.ps-item .psi-val {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.ps-item .psi-lbl {
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ps-divider { width: 1px; background: var(--border); margin: 4px 0; }
+
+/* ── Edit toggle ── */
+.edit-toggle-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.edit-toggle-header h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.btn-edit-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border: 1.5px solid var(--gold);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--gold-dk);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.04em;
+}
+
+.btn-edit-toggle:hover { background: #fdf8ee; }
+
+.btn-edit-toggle.editing {
+  background: var(--gold);
+  color: #fff;
+  border-color: var(--gold);
+}
+
+/* ── Read-only info display ── */
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+.info-cell {
+  padding: 13px 0;
+  border-bottom: 1px solid rgba(221,227,239,0.7);
+}
+
+.info-cell:nth-child(odd) { padding-right: 20px; }
+.info-cell:nth-child(even) { padding-left: 20px; border-left: 1px solid var(--border); }
+
+.info-cell:nth-last-child(-n+2) { border-bottom: none; }
+
+.info-cell .ic-label {
+  font-size: 0.63rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #aab4cc;
+  margin-bottom: 4px;
+}
+
+.info-cell .ic-val {
+  font-size: 0.9rem;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+/* Edit form (shown when editing) */
+.edit-form { display: none; }
+.edit-form.active { display: block; }
+.view-mode { display: block; }
+.view-mode.hidden { display: none; }
+
+/* ── Password Section ── */
+.password-strength {
+  margin-top: 6px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.password-strength-bar {
+  height: 100%;
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.3s, background 0.3s;
+}
+
+.strength-weak   { background: var(--rust); width: 33%; }
+.strength-medium { background: var(--gold);  width: 66%; }
+.strength-strong { background: var(--sage);  width: 100%; }
+
+.password-strength-label {
+  font-size: 0.7rem;
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+/* ── 2-col layout on desktop ── */
+.profile-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 20px;
+  align-items: start;
+}
+
+/* ── Account danger zone ── */
+.danger-zone {
+  border: 1px solid rgba(192,57,43,0.2);
+  border-radius: 12px;
+  padding: 18px 20px;
+  background: rgba(192,57,43,0.03);
+}
+
+.danger-zone h4 {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--rust);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.danger-zone p {
+  font-size: 0.76rem;
+  color: var(--muted);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .profile-layout { grid-template-columns: 1fr; }
+  .info-grid { grid-template-columns: 1fr; }
+  .info-cell:nth-child(even) { border-left: none; padding-left: 0; }
+  .info-cell:nth-last-child(-n+2) { border-bottom: 1px solid rgba(221,227,239,0.7); }
+  .info-cell:last-child { border-bottom: none; }
+  .profile-stats { gap: 14px; flex-wrap: wrap; }
+}
+
+@media (max-width: 580px) {
+  .profile-hero-body { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .profile-hero-actions { align-self: flex-end; }
+}

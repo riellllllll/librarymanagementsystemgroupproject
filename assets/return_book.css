@@ -1,0 +1,271 @@
+/* ============================================================
+   return_book.css — CvSU Library
+   Page-specific styles for Return a Book
+   Extends student.css
+   ============================================================ */
+
+/* ── Selectable Book Row ── */
+.return-list { display: flex; flex-direction: column; gap: 10px; }
+
+.return-book-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  background: var(--card-bg);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: border-color 0.22s, box-shadow 0.22s, background 0.22s, transform 0.2s;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  box-shadow: 0 2px 8px rgba(15,22,35,0.05);
+}
+
+.return-book-item::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: transparent;
+  border-radius: 4px 0 0 4px;
+  transition: background 0.2s;
+}
+
+.return-book-item:hover {
+  border-color: rgba(201,151,58,0.4);
+  box-shadow: 0 6px 20px rgba(15,22,35,0.09), 0 0 0 1px rgba(201,151,58,0.12);
+  transform: translateY(-1px);
+}
+
+.return-book-item.selected {
+  border-color: var(--gold);
+  background: #fdf8ee;
+  box-shadow: 0 6px 24px rgba(201,151,58,0.18);
+}
+
+.return-book-item.selected::before { background: var(--gold); }
+
+.return-book-item.overdue {
+  border-color: rgba(192,57,43,0.35);
+}
+
+.return-book-item.overdue:hover {
+  border-color: rgba(192,57,43,0.6);
+}
+
+.return-book-item.overdue.selected {
+  border-color: var(--rust);
+  background: #fdf0ee;
+}
+
+.return-book-item.overdue.selected::before { background: var(--rust); }
+
+/* Radio indicator */
+.return-radio {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s;
+  background: var(--input-bg);
+}
+
+.return-book-item.selected .return-radio {
+  border-color: var(--gold);
+  background: var(--gold);
+}
+
+.return-book-item.selected .return-radio::after {
+  content: '';
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.return-book-item.overdue.selected .return-radio {
+  border-color: var(--rust);
+  background: var(--rust);
+}
+
+/* Book spine miniature */
+.return-spine {
+  width: 48px; height: 64px;
+  border-radius: 5px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  box-shadow: 2px 2px 10px rgba(15,22,35,0.18);
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(160deg, var(--ink), #1e2d45);
+}
+
+.return-spine::after {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: var(--gold);
+  opacity: 0.65;
+}
+
+.return-book-item.overdue .return-spine::after { background: var(--rust); }
+
+.return-info { flex: 1; min-width: 0; }
+
+.return-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 3px;
+}
+
+.return-author {
+  font-size: 0.74rem;
+  color: var(--muted);
+  margin-bottom: 7px;
+}
+
+.return-meta {
+  display: flex;
+  gap: 14px;
+  font-size: 0.72rem;
+  color: #aab4cc;
+  flex-wrap: wrap;
+}
+
+.return-meta strong { color: var(--ink); font-weight: 500; }
+
+.return-right { text-align: right; flex-shrink: 0; }
+
+/* Overdue warning chip */
+.overdue-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: #fdf0ee;
+  color: var(--rust);
+  border: 1px solid rgba(192,57,43,0.25);
+  margin-bottom: 4px;
+}
+
+/* ── Confirm Panel ── */
+.confirm-panel {
+  background: var(--card-bg);
+  border-radius: var(--radius-card);
+  border: 2px solid rgba(201,151,58,0.2);
+  overflow: hidden;
+  display: none;
+  animation: panel-in 0.35s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+.confirm-panel.visible { display: block; }
+
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.confirm-panel-header {
+  background: linear-gradient(135deg, rgba(201,151,58,0.08), rgba(201,151,58,0.03));
+  border-bottom: 1px solid rgba(201,151,58,0.15);
+  padding: 18px 24px;
+}
+
+.confirm-panel-header h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 2px;
+}
+
+.confirm-panel-header p {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.confirm-body { padding: 20px 24px; }
+
+.confirm-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px dashed rgba(221,227,239,0.7);
+  font-size: 0.83rem;
+}
+
+.confirm-row:last-of-type { border-bottom: none; }
+
+.confirm-row .cr-label { color: var(--muted); }
+.confirm-row .cr-val   { color: var(--ink); font-weight: 500; }
+.confirm-row .cr-val.bad { color: var(--rust); font-weight: 600; }
+.confirm-row .cr-val.good { color: var(--sage); font-weight: 600; }
+
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  background: var(--input-bg);
+}
+
+/* ── Receipt Modal ── */
+.receipt-lines { margin: 16px 0; }
+
+.receipt-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  padding: 7px 0;
+  border-bottom: 1px dashed var(--border);
+  color: var(--ink);
+}
+
+.receipt-line:last-child { border-bottom: none; }
+.receipt-line .rl-label { color: var(--muted); }
+
+.receipt-total {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 12px 0 0;
+  color: var(--ink);
+  border-top: 2px solid var(--gold);
+  margin-top: 10px;
+}
+
+.receipt-total span:last-child { color: var(--rust); }
+.receipt-total.no-fine span:last-child { color: var(--sage); }
+
+/* ── No borrowed state ── */
+.no-borrow-hint {
+  text-align: center;
+  padding: 48px 24px;
+}
+
+.no-borrow-hint .nb-icon { font-size: 3.5rem; margin-bottom: 14px; opacity: 0.3; }
+.no-borrow-hint h3 { font-size: 1rem; color: var(--muted); margin-bottom: 6px; }
+.no-borrow-hint p { font-size: 0.8rem; color: #aab4cc; }
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .return-spine { display: none; }
+  .return-right { display: none; }
+  .confirm-actions { flex-direction: column; }
+}

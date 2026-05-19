@@ -1,0 +1,373 @@
+/* ============================================================
+   style.css — CvSU Library Student Panel Custom Styles
+   Companion to student.css
+   ============================================================ */
+
+/* ── Search Bar (search_books.php) ── */
+.search-bar {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  background: var(--card-bg);
+  padding: 20px;
+  border-radius: var(--radius-card);
+  box-shadow: 0 4px 24px rgba(15,22,35,0.07), 0 0 0 1px rgba(201,151,58,0.08);
+}
+
+.search-bar .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 0;
+}
+
+.search-bar .form-group.search-query {
+  flex: 2;
+  min-width: 220px;
+}
+
+.search-bar .form-group.search-category {
+  min-width: 170px;
+}
+
+.search-bar .form-group.search-availability {
+  min-width: 150px;
+}
+
+.search-bar .search-input-wrap {
+  position: relative;
+}
+
+.search-bar .search-input-wrap svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 15px;
+  height: 15px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.search-bar .search-input-wrap input {
+  padding-left: 38px;
+}
+
+/* ── Form Elements ── */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.form-label {
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.form-control {
+  background: var(--input-bg);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+}
+
+.form-control:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(201,151,58,0.12);
+  background: #fff;
+}
+
+textarea.form-control {
+  resize: vertical;
+  min-height: 90px;
+}
+
+/* ── Form Row (2 columns) ── */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.form-row .form-group {
+  margin-bottom: 0;
+}
+
+/* ── Request Borrow Card ── */
+.request-card {
+  max-width: 600px;
+  background: var(--card-bg);
+  border-radius: var(--radius-card);
+  box-shadow: 0 4px 24px rgba(15,22,35,0.07), 0 0 0 1px rgba(201,151,58,0.08);
+  overflow: hidden;
+  position: relative;
+}
+
+.request-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gold-dk), var(--gold-lt), var(--gold-dk));
+}
+
+.request-card .card-body {
+  padding: 24px;
+}
+
+/* ── Book Preview ── */
+.book-preview {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+  background: linear-gradient(135deg, #fdf8ee, #f5e6c0);
+  border-radius: 12px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(201,151,58,0.2);
+}
+
+.book-cover-mini {
+  width: 60px;
+  height: 60px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--gold-dk), var(--gold-lt));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  flex-shrink: 0;
+}
+
+.book-details h4 {
+  font-size: 1rem;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.book-details p {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+/* ── Category Pills (view_books.php) ── */
+.category-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.category-pill {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-decoration: none;
+  border: 1.5px solid var(--border);
+  color: var(--muted);
+  background: var(--card-bg);
+  transition: all 0.2s;
+}
+
+.category-pill:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.category-pill.active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(201,151,58,0.3);
+}
+
+/* ── Books Grid (view_books.php) ── */
+.books-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.book-card {
+  background: var(--card-bg);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(15,22,35,0.08), 0 0 0 1px rgba(201,151,58,0.08);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.book-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(15,22,35,0.12), 0 0 0 1px rgba(201,151,58,0.15);
+}
+
+.book-cover {
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.book-cover.color-a { background: linear-gradient(135deg, #1a2a4a, #0f1623); }
+.book-cover.color-b { background: linear-gradient(135deg, #2d4a3e, #1a3028); }
+.book-cover.color-c { background: linear-gradient(135deg, #4a3a2a, #2a1f15); }
+.book-cover.color-d { background: linear-gradient(135deg, #3a2a4a, #1f152a); }
+.book-cover.color-e { background: linear-gradient(135deg, #4a2a2a, #2a1515); }
+
+.book-cover-icon {
+  font-size: 3rem;
+  opacity: 0.3;
+}
+
+.book-cover-accent {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--gold-dk), var(--gold-lt));
+}
+
+.book-info {
+  padding: 14px;
+}
+
+.book-category {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold-dk);
+  margin-bottom: 4px;
+}
+
+.book-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 3px;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.book-author {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.book-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ── Search Results ── */
+.highlight {
+  background: #fef3c7;
+  color: var(--gold-dk);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+.result-count {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+.result-count strong {
+  color: var(--gold);
+}
+
+/* ── Badges ── */
+.badge-success {
+  background: #eef5f1;
+  color: var(--sage);
+  border: 1px solid rgba(46,125,94,0.2);
+}
+
+.badge-danger {
+  background: #fdf0ee;
+  color: var(--rust);
+  border: 1px solid rgba(192,57,43,0.2);
+}
+
+.badge-info {
+  background: #eef5f1;
+  color: var(--sage);
+  border: 1px solid rgba(46,125,94,0.2);
+}
+
+.badge-sage {
+  background: #eef5f1;
+  color: var(--sage);
+  border: 1px solid rgba(46,125,94,0.2);
+}
+
+.badge-rust {
+  background: #fdf0ee;
+  color: var(--rust);
+  border: 1px solid rgba(192,57,43,0.2);
+}
+
+.badge-muted {
+  background: var(--input-bg);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+/* ── Button Sizes ── */
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+}
+
+/* ── Utilities ── */
+.text-muted {
+  color: var(--muted);
+}
+
+.mt-16 {
+  margin-top: 16px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .search-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-bar .form-group {
+    width: 100% !important;
+    min-width: auto !important;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .books-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+}
