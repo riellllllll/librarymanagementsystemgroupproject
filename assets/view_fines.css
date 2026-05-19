@@ -1,0 +1,225 @@
+/* ============================================================
+   view_fines.css — CvSU Library
+   Page-specific styles for My Fines
+   Extends student.css
+   ============================================================ */
+
+/* ── Fine Hero ── */
+.fine-hero {
+  background: var(--card-bg);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(15,22,35,0.07), 0 0 0 1px rgba(201,151,58,0.08);
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.fine-hero::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #c0392b, #e05a4a, #c0392b);
+}
+
+.fine-hero.cleared::before {
+  background: linear-gradient(90deg, var(--sage), #4aab82, var(--sage));
+}
+
+.fine-hero-inner {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+
+.fine-hero-main {
+  flex: 1;
+  padding: 28px 30px;
+}
+
+.fine-hero-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.fine-hero-amount {
+  font-size: 3rem;
+  font-weight: 800;
+  color: var(--rust);
+  line-height: 1;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.fine-hero-amount.cleared { color: var(--sage); }
+
+.fine-hero-desc {
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.fine-hero-side {
+  width: 180px;
+  background: linear-gradient(135deg, rgba(192,57,43,0.05), rgba(192,57,43,0.02));
+  border-left: 1px solid rgba(192,57,43,0.12);
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+}
+
+.fine-hero.cleared .fine-hero-side {
+  background: linear-gradient(135deg, rgba(46,125,94,0.05), rgba(46,125,94,0.02));
+  border-left-color: rgba(46,125,94,0.12);
+}
+
+.fine-mini-stat { display: flex; flex-direction: column; gap: 2px; }
+
+.fine-mini-stat .ms-val {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.fine-mini-stat .ms-lbl {
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ── Fine Table Row accent ── */
+.fine-row-unpaid td:first-child {
+  border-left: 3px solid var(--rust);
+}
+
+.fine-row-paid td:first-child {
+  border-left: 3px solid var(--sage);
+}
+
+/* ── Fine Amount Cell ── */
+.fine-cell-amount {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.fine-cell-amount.unpaid { color: var(--rust); }
+.fine-cell-amount.paid   { color: var(--sage); }
+
+/* ── Payment Modal specific ── */
+.pay-amount-display {
+  background: linear-gradient(135deg, rgba(192,57,43,0.07), rgba(192,57,43,0.03));
+  border: 1px solid rgba(192,57,43,0.18);
+  border-radius: 12px;
+  padding: 16px 20px;
+  text-align: center;
+  margin: 16px 0 22px;
+}
+
+.pay-amount-display .pa-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.pay-amount-display .pa-val {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--rust);
+  font-family: 'Inter', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* Payment method tiles */
+.pay-methods {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.pay-method-tile {
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s;
+  font-size: 0.82rem;
+  color: var(--ink);
+  font-family: 'Inter', sans-serif;
+  background: var(--input-bg);
+  user-select: none;
+}
+
+.pay-method-tile:hover { border-color: var(--gold); background: #fdf8ee; }
+
+.pay-method-tile.selected {
+  border-color: var(--gold);
+  background: #fdf8ee;
+  color: var(--gold-dk);
+  font-weight: 500;
+}
+
+.pay-method-tile .pm-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+/* ── All Clear Banner ── */
+.all-clear-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(135deg, rgba(46,125,94,0.1), rgba(46,125,94,0.04));
+  border: 1px solid rgba(46,125,94,0.2);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+.all-clear-banner .acb-icon { font-size: 2rem; flex-shrink: 0; }
+
+.all-clear-banner .acb-text h4 {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--sage);
+  margin-bottom: 2px;
+}
+
+.all-clear-banner .acb-text p {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* ── Urgency pulse on unpaid fine row ── */
+@keyframes row-pulse {
+  0%, 100% { background: transparent; }
+  50%       { background: rgba(192,57,43,0.04); }
+}
+
+.fine-row-unpaid:hover { background: rgba(192,57,43,0.04) !important; }
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .fine-hero-inner { flex-direction: column; }
+  .fine-hero-side {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid rgba(192,57,43,0.12);
+    flex-direction: row;
+    justify-content: space-around;
+  }
+  .fine-hero-amount { font-size: 2rem; }
+  .pay-methods { grid-template-columns: 1fr; }
+}
