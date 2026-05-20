@@ -58,7 +58,7 @@ function hl(string $text, string $q): string {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/student.css">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../assets/style.css">
 </head>
 <body>
 
@@ -89,6 +89,7 @@ function hl(string $text, string $q): string {
       </svg>
       Dashboard
     </a>
+    <div class="nav-section-label">Books</div>
     <a href="view_books.php" class="nav-link ">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
@@ -207,7 +208,14 @@ function hl(string $text, string $q): string {
 
     <!-- Search Form -->
     <form method="GET" action="search_books.php">
-      <div class="search-bar">
+      <div class="search-card">
+        <div class="search-card-header">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <span>Search Filters</span>
+        </div>
+        <div class="search-bar">
         <div class="form-group search-query">
           <label class="form-label">Search Query</label>
           <div class="search-input-wrap">
@@ -244,6 +252,7 @@ function hl(string $text, string $q): string {
         <?php if ($searched): ?>
         <a href="search_books.php" class="btn btn-outline" style="height:40px;">Clear</a>
         <?php endif; ?>
+      </div>
       </div>
     </form>
 

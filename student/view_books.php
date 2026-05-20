@@ -44,7 +44,7 @@ $books = array_slice($filtered, $offset, $per_page);
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/student.css">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../assets/style.css">
 </head>
 <body>
 
@@ -75,6 +75,7 @@ $books = array_slice($filtered, $offset, $per_page);
       </svg>
       Dashboard
     </a>
+    <div class="nav-section-label">Books</div>
     <a href="view_books.php" class="nav-link active">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
