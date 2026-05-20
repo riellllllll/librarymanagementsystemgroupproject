@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/student.css">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../assets/style.css">
 </head>
 <body>
 
@@ -72,6 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </svg>
       Dashboard
     </a>
+    <div class="nav-section-label">Books</div>
     <a href="view_books.php" class="nav-link ">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
@@ -188,6 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="gold-rule"><span></span><i>✦</i><span></span></div>
     </div>
 
+    <div class="form-container">
     <?php if ($submitted): ?>
     <div class="alert alert-sage" style="margin-bottom: 20px;">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -252,6 +254,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </div>
         </form>
       </div>
+    </div>
     </div>
   </main>
 

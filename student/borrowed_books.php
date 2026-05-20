@@ -56,6 +56,7 @@ function status_badge(string $status): string {
       </svg>
       Dashboard
     </a>
+    <div class="nav-section-label">Books</div>
     <a href="view_books.php" class="nav-link ">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
@@ -172,6 +173,7 @@ function status_badge(string $status): string {
       <div class="gold-rule"><span></span><i>✦</i><span></span></div>
     </div>
 
+    <div class="form-container-wide">
     <?php if (empty($borrowed)): ?>
     <div class="card">
       <div class="empty-state">
@@ -211,7 +213,7 @@ function status_badge(string $status): string {
       </div>
     </div>
     <?php endif; ?>
-
+    </div>
   </main>
 
 </div>
