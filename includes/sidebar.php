@@ -11,11 +11,11 @@
  */
 
 // ── Derive values from session ──────────────────────────────────────────────
-$_s_name     = htmlspecialchars($_SESSION['student_name']  ?? 'Student');
+$_s_name     = htmlspecialchars($_SESSION['student_name']  ?? 'Juan Dela Cruz');
 $_s_borrows  = (int)($_SESSION['active_borrows']           ?? 0);
 
 // Build initials from first + last word of name
-$_s_parts    = explode(' ', trim($_SESSION['student_name'] ?? 'S'));
+$_s_parts    = explode(' ', trim($_SESSION['student_name'] ?? 'Juan Dela Cruz'));
 $_s_initials = strtoupper(substr($_s_parts[0], 0, 1));
 if (count($_s_parts) > 1) {
     $_s_initials .= strtoupper(substr(end($_s_parts), 0, 1));

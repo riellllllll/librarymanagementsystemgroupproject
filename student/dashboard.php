@@ -7,8 +7,8 @@ session_start();
 // Guard: redirect to login if not authenticated
 
 // ── Session values ────────────────────────────────────────────
-$student_name   = htmlspecialchars($_SESSION['student_name']   ?? 'Student');
-$first_name     = htmlspecialchars(explode(' ', trim($_SESSION['student_name'] ?? 'Student'))[0]);
+$student_name   = htmlspecialchars($_SESSION['student_name']   ?? 'Juan Dela Cruz');
+$first_name     = htmlspecialchars(explode(' ', trim($_SESSION['student_name'] ?? 'Juan Dela Cruz'))[0]);
 $active_borrows = (int)($_SESSION['active_borrows']  ?? 0);
 $has_fines      = (bool)($_SESSION['has_fines']       ?? false);
 
