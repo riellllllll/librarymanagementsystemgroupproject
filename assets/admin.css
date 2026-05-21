@@ -303,3 +303,38 @@ form button {
     background: #c89b3c;
     border: none;
 }
+
+.admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.table-action {
+  color: var(--gold-dk);
+  font-weight: 600;
+  text-decoration: none;
+  margin-right: 10px;
+}
+
+.table-action:hover {
+  color: var(--gold);
+}
+
+.table-action.danger {
+  color: var(--rust);
+}
+
+@media (max-width: 768px) {
+  .topbar-search {
+    width: 150px;
+  }
+}
+
+.btn-primary,
+.btn-danger,
+button {
+  pointer-events: auto;
+  cursor: pointer;
+}
