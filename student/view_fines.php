@@ -130,12 +130,6 @@
     </button>
     <span class="topbar-title">My Fines</span>
     <div class="topbar-spacer"></div>
-    <div class="topbar-search">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      </svg>
-      <input type="text" placeholder="Search books…">
-    </div>
     <a href="view_fines.php" class="topbar-icon-btn" title="Fines &amp; Notifications">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
@@ -291,6 +285,68 @@
 </div>
 
 
+<!-- ── Payment Confirmation Panel ── -->
+<div id="payConfirmPanel" style="display:none;position:fixed;inset:0;z-index:1100;background:rgba(15,22,35,0.55);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--card-bg,#fff);border-radius:18px;max-width:480px;width:100%;box-shadow:0 24px 64px rgba(15,22,35,0.22);overflow:hidden;animation:modalIn 0.28s cubic-bezier(.22,1,.36,1);">
+    <!-- Green top bar -->
+    <div style="height:4px;background:linear-gradient(90deg,var(--sage,#2e7d5e),#4aab82,var(--sage,#2e7d5e));"></div>
+    <div style="padding:28px 28px 24px;">
+      <!-- Icon + heading -->
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="width:56px;height:56px;background:rgba(46,125,94,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:1.6rem;">✅</div>
+        <div style="font-size:1.15rem;font-weight:700;color:var(--ink,#0f1623);margin-bottom:4px;">Payment Submitted</div>
+        <div style="font-size:0.82rem;color:var(--muted,#6b7a99);" id="pcpDesc">Your fine payment has been recorded.</div>
+      </div>
+
+      <!-- Details card -->
+      <div style="background:var(--input-bg,#f4f6fb);border:1px solid var(--border,#dde3ef);border-radius:12px;padding:16px 18px;margin-bottom:18px;">
+        <div style="font-size:0.62rem;letter-spacing:0.16em;text-transform:uppercase;color:#aab4cc;margin-bottom:12px;">Payment Details</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:0.8rem;color:var(--muted,#6b7a99);">Book</span>
+            <span style="font-size:0.85rem;font-weight:600;color:var(--ink,#0f1623);" id="pcpBook">To Kill a Mockingbird</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:0.8rem;color:var(--muted,#6b7a99);">Amount Paid</span>
+            <span style="font-size:1.05rem;font-weight:800;color:var(--sage,#2e7d5e);" id="pcpAmount">₱20</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:0.8rem;color:var(--muted,#6b7a99);">Payment Method</span>
+            <span style="font-size:0.85rem;font-weight:600;color:var(--ink,#0f1623);" id="pcpMethod">GCash</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:0.8rem;color:var(--muted,#6b7a99);">Reference No.</span>
+            <span style="font-size:0.85rem;font-weight:600;color:var(--ink,#0f1623);font-family:monospace;letter-spacing:0.06em;" id="pcpRef">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:0.8rem;color:var(--muted,#6b7a99);">Date & Time</span>
+            <span style="font-size:0.82rem;color:var(--ink,#0f1623);" id="pcpDate">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:0.8rem;color:var(--muted,#6b7a99);">Status</span>
+            <span class="badge badge-sage" id="pcpStatus">Pending Confirmation</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notice -->
+      <div id="pcpNotice" style="font-size:0.76rem;color:var(--muted,#6b7a99);background:rgba(201,151,58,0.07);border:1px solid rgba(201,151,58,0.2);border-radius:8px;padding:10px 13px;margin-bottom:18px;line-height:1.5;"></div>
+
+      <!-- Buttons -->
+      <div style="display:flex;gap:10px;">
+        <button class="btn-outline" style="flex:1;" onclick="closePayConfirm()">Close</button>
+        <button class="btn-primary" style="flex:1;" onclick="window.print()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+            <rect x="6" y="14" width="12" height="8"/>
+          </svg>
+          Print Receipt
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ── Pay Fine Modal ── -->
 <div class="modal-backdrop" id="payModal">
   <div class="modal">
@@ -313,8 +369,8 @@
         <label>Payment Method</label>
         <div class="pay-methods">
           <div class="pay-method-tile selected" data-method="counter">
-            <span class="pm-icon">🏛️</span>
-            <span>Library Counter</span>
+            <span class="pm-icon">💵</span>
+            <span>Cash</span>
           </div>
           <div class="pay-method-tile" data-method="gcash">
             <span class="pm-icon">📱</span>
@@ -324,9 +380,9 @@
             <span class="pm-icon">💳</span>
             <span>Maya</span>
           </div>
-          <div class="pay-method-tile" data-method="cash">
-            <span class="pm-icon">💵</span>
-            <span>Cash (Staff)</span>
+          <div class="pay-method-tile" data-method="bank">
+            <span class="pm-icon">🏦</span>
+            <span>Bank Transfer</span>
           </div>
         </div>
       </div>
@@ -402,14 +458,64 @@
 
   /* ── Proceed to Pay ── */
   document.getElementById('payNowBtn').addEventListener('click', () => {
-    const method = document.querySelector('.pay-method-tile.selected')?.dataset.method;
+    const method     = document.querySelector('.pay-method-tile.selected')?.dataset.method;
+    const amount     = document.getElementById('payModalAmount').textContent;
+    const isAll      = payTarget === 'all';
+    const book       = isAll ? 'All Outstanding Fines' : 'To Kill a Mockingbird';
+
+    // Close modal
     document.getElementById('payModal').classList.remove('open');
 
-    if (method === 'counter' || method === 'cash') {
-      showToast('Please proceed to the library counter to pay your fine.', '');
-    } else {
-      showToast('Reference #LIB-2026-0042 generated. Show this to a librarian.', 'success');
-    }
+    // Build reference number for digital methods
+    const ref = method === 'counter'
+      ? 'Pay at counter'
+      : 'LIB-2026-' + Math.floor(10000 + Math.random() * 90000);
+
+    const methodLabels = {
+      counter : '💵 Cash',
+      gcash   : '📱 GCash',
+      maya    : '💳 Maya',
+      bank    : '🏦 Bank Transfer',
+    };
+
+    const notices = {
+      counter : 'Please proceed to the library counter during office hours (Mon–Fri, 8:00 AM – 5:00 PM) to pay in cash. Bring your library card.',
+      gcash   : 'Present your reference number to a librarian for confirmation. Your status will update within 1 business day.',
+      maya    : 'Present your reference number to a librarian for confirmation. Your status will update within 1 business day.',
+      bank    : 'Transfer to: BDO – CvSU Library Account No. 0012-3456-7890. Use your Student ID as reference. Show proof of transfer to a librarian.',
+    };
+
+    const statuses = {
+      counter : 'Pending Payment',
+      gcash   : 'Pending Confirmation',
+      maya    : 'Pending Confirmation',
+      bank    : 'Pending Verification',
+    };
+
+    // Populate panel
+    document.getElementById('pcpBook').textContent   = book;
+    document.getElementById('pcpAmount').textContent = amount;
+    document.getElementById('pcpMethod').textContent = methodLabels[method] || method;
+    document.getElementById('pcpRef').textContent    = ref;
+    document.getElementById('pcpDate').textContent   = new Date().toLocaleString('en-PH', { dateStyle:'medium', timeStyle:'short' });
+    document.getElementById('pcpStatus').textContent = statuses[method] || 'Pending';
+    document.getElementById('pcpNotice').textContent = notices[method] || '';
+    document.getElementById('pcpDesc').textContent   = isAll
+      ? 'All outstanding fines have been submitted for processing.'
+      : `Fine for "${book}" has been submitted for processing.`;
+
+    // Show panel
+    const panel = document.getElementById('payConfirmPanel');
+    panel.style.display = 'flex';
+  });
+
+  function closePayConfirm() {
+    document.getElementById('payConfirmPanel').style.display = 'none';
+  }
+
+  // Close on backdrop click
+  document.getElementById('payConfirmPanel').addEventListener('click', function(e) {
+    if (e.target === this) closePayConfirm();
   });
 
   /* ── Toast ── */
