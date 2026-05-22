@@ -1,3 +1,61 @@
+<?php
+// ============================================================
+// borrow_history.php — CvSU Library Borrow History
+// ============================================================
+session_start();
+
+
+$has_fines = (bool)($_SESSION['has_fines'] ?? false);
+
+// ── TODO: Replace with real DB query ─────────────────────────
+// require_once '../includes/db_connect.php';
+// $stmt = $pdo->prepare("
+//   SELECT b.id, b.borrow_date, b.due_date, b.return_date, b.status,
+//          bk.title, bk.author,
+//          f.amount   AS fine_amount,
+//          f.status   AS fine_status
+//   FROM borrows b
+//   JOIN books bk ON b.book_id = bk.id
+//   LEFT JOIN fines f ON f.borrow_id = b.id
+//   WHERE b.student_id = ?
+//   ORDER BY b.borrow_date DESC
+// ");
+// $stmt->execute([$_SESSION['student_id']]);
+// $history = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Placeholder data (remove when DB connected):
+$history = [
+    ['id'=>1,'title'=>'The Great Gatsby',      'author'=>'F. Scott Fitzgerald','borrow_date'=>'2026-05-01','due_date'=>'2026-05-25','return_date'=>null,        'status'=>'active',  'fine_amount'=>null, 'fine_status'=>null],
+    ['id'=>2,'title'=>'To Kill a Mockingbird', 'author'=>'Harper Lee',         'borrow_date'=>'2026-05-04','due_date'=>'2026-05-18','return_date'=>null,        'status'=>'overdue', 'fine_amount'=>null, 'fine_status'=>null],
+    ['id'=>3,'title'=>'1984',                  'author'=>'George Orwell',      'borrow_date'=>'2026-04-20','due_date'=>'2026-05-04','return_date'=>'2026-05-02','status'=>'returned','fine_amount'=>null, 'fine_status'=>null],
+    ['id'=>4,'title'=>'Brave New World',       'author'=>'Aldous Huxley',      'borrow_date'=>'2026-04-01','due_date'=>'2026-04-15','return_date'=>'2026-04-22','status'=>'overdue', 'fine_amount'=>20,   'fine_status'=>'unpaid'],
+    ['id'=>5,'title'=>'The Alchemist',         'author'=>'Paulo Coelho',       'borrow_date'=>'2026-03-14','due_date'=>'2026-03-28','return_date'=>'2026-03-28','status'=>'returned','fine_amount'=>null, 'fine_status'=>null],
+    ['id'=>6,'title'=>'Of Mice and Men',       'author'=>'John Steinbeck',     'borrow_date'=>'2026-03-02','due_date'=>'2026-03-16','return_date'=>'2026-03-16','status'=>'returned','fine_amount'=>null, 'fine_status'=>null],
+    ['id'=>7,'title'=>'Animal Farm',           'author'=>'George Orwell',      'borrow_date'=>'2026-02-10','due_date'=>'2026-02-24','return_date'=>'2026-02-24','status'=>'returned','fine_amount'=>10,   'fine_status'=>'paid'],
+];
+
+// ── Compute summary stats via PHP ─────────────────────────────
+$total_count    = count($history);
+$returned_count = count(array_filter($history, fn($e) => $e['status'] === 'returned'));
+$active_count   = count(array_filter($history, fn($e) => $e['status'] === 'active'));
+$overdue_count  = count(array_filter($history, fn($e) => $e['status'] === 'overdue'));
+$fined_count    = count(array_filter($history, fn($e) => !empty($e['fine_amount'])));
+
+// ── Group entries by month (from borrow_date) ─────────────────
+$grouped = [];
+foreach ($history as $entry) {
+    // Group by the month of the borrow date
+    $month_key = date('F Y', strtotime($entry['borrow_date']));
+    $grouped[$month_key][] = $entry;
+}
+
+// ── Helper: days late for a returned overdue entry ────────────
+function days_late(string $due, ?string $returned): int {
+    if (!$returned) return 0;
+    $diff = (new DateTime($returned))->diff(new DateTime($due));
+    return $diff->invert ? $diff->days : 0;  // invert=1 means returned > due
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -120,6 +178,9 @@
 <!-- ============================================================
      MAIN WRAPPER
      ============================================================ -->
+
+<?php require_once '../includes/sidebar.php'; ?>
+
 <div class="main-wrapper">
 
   <header class="topbar">
@@ -130,18 +191,12 @@
     </button>
     <span class="topbar-title">Borrow History</span>
     <div class="topbar-spacer"></div>
-    <div class="topbar-search">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      </svg>
-      <input type="text" id="historySearch" placeholder="Search title or author…">
-    </div>
     <a href="view_fines.php" class="topbar-icon-btn" title="Fines &amp; Notifications">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
         <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
       </svg>
-      <span class="topbar-notif-dot"></span>
+      <?php if ($has_fines): ?><span class="topbar-notif-dot"></span><?php endif; ?>
     </a>
     <a href="profile.php" class="topbar-icon-btn" title="My Profile">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -153,244 +208,126 @@
 
   <main class="page-content">
 
-    <!-- Page Header -->
     <div class="page-header">
       <h1>Borrow <em style="font-style:italic;color:var(--gold)">History</em></h1>
       <div class="gold-rule"><span></span><i>✦</i><span></span></div>
       <p>A complete record of all your borrowing activity.</p>
     </div>
 
-    <!-- Summary Strip -->
+    <!-- Summary Strip — values computed by PHP above -->
     <div class="summary-strip">
       <div class="summary-item">
-        <span class="s-val">7</span>
+        <span class="s-val"><?= $total_count ?></span>
         <span class="s-lbl">Total Borrowed</span>
       </div>
       <div class="summary-item">
-        <span class="s-val">5</span>
+        <span class="s-val"><?= $returned_count ?></span>
         <span class="s-lbl">Returned</span>
       </div>
       <div class="summary-item">
-        <span class="s-val">2</span>
+        <span class="s-val"><?= $active_count ?></span>
         <span class="s-lbl">Active</span>
       </div>
       <div class="summary-item">
-        <span class="s-val" style="color:var(--rust)">1</span>
+        <span class="s-val" <?= $fined_count > 0 ? 'style="color:var(--rust)"' : '' ?>><?= $fined_count ?></span>
         <span class="s-lbl">With Fines</span>
       </div>
     </div>
 
-    <!-- Filter Bar -->
+    <!-- Filter Bar — counts are PHP-rendered, tab switching stays JS -->
     <div class="filter-bar">
       <button class="filter-tab active" data-filter="all">
-        All <span class="tab-count">7</span>
+        All <span class="tab-count"><?= $total_count ?></span>
       </button>
       <button class="filter-tab" data-filter="active">
-        Active <span class="tab-count">2</span>
+        Active <span class="tab-count"><?= $active_count ?></span>
       </button>
       <button class="filter-tab" data-filter="returned">
-        Returned <span class="tab-count">5</span>
+        Returned <span class="tab-count"><?= $returned_count ?></span>
       </button>
       <button class="filter-tab" data-filter="overdue">
-        Overdue / Fined <span class="tab-count">1</span>
+        Overdue / Fined <span class="tab-count"><?= $overdue_count ?></span>
       </button>
       <div class="filter-spacer"></div>
-      <div class="filter-select-wrap">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-          <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-        </svg>
-        <select id="yearFilter">
-          <option value="">All Years</option>
-          <option value="2026" selected>2026</option>
-          <option value="2025">2025</option>
-        </select>
-      </div>
     </div>
 
-    <!-- History Timeline -->
-    <div class="history-timeline" id="historyList">
 
-      <!-- ── May 2026 ── -->
-      <div class="history-group" data-month="May 2026">
-        <div class="history-group-label">May 2026</div>
+    <!-- Timeline — built via PHP loop, filtered client-side by JS -->
+    <div class="history-timeline" id="historyTimeline">
 
-        <!-- Active borrow -->
-        <div class="history-entry" data-status="active" data-title="The Great Gatsby" data-author="F. Scott Fitzgerald">
-          <div class="entry-dot dot-active"><span></span></div>
-          <div class="entry-card">
-            <div class="entry-book-spine">📖</div>
-            <div class="entry-main">
-              <div class="entry-title">The Great Gatsby</div>
-              <div class="entry-author">F. Scott Fitzgerald</div>
-              <div class="entry-dates">
-                <span>Borrowed: <strong>May 10, 2026</strong></span>
-                <span>Due: <strong>May 25, 2026</strong></span>
+      <?php if (empty($history)): ?>
+        <div class="empty-state">
+          <div class="empty-icon">📭</div>
+          <h3>No borrow records yet</h3>
+          <p>Your borrowing history will appear here once you check out a book.</p>
+        </div>
+      <?php else: ?>
+
+        <?php foreach ($grouped as $month => $entries): ?>
+          <div class="history-group" data-month="<?= htmlspecialchars($month) ?>">
+            <div class="history-group-label"><?= htmlspecialchars($month) ?></div>
+
+            <?php foreach ($entries as $e): ?>
+              <?php
+                $status   = $e['status'];
+                $late     = days_late($e['due_date'], $e['return_date']);
+                $dot_cls  = match($status) {
+                    'returned' => 'dot-returned',
+                    'overdue'  => 'dot-overdue',
+                    default    => 'dot-active',
+                };
+                // Badge markup
+                $badge = match($status) {
+                    'returned' => '<span class="badge badge-sage">Returned</span>',
+                    'overdue'  => '<span class="badge badge-rust">Overdue</span>',
+                    default    => '<span class="badge badge-gold">Active</span>',
+                };
+                $book_emoji = ['📗','📘','📙','📕'][array_rand(['📗','📘','📙','📕'])];
+              ?>
+              <div class="history-entry"
+                   data-status="<?= htmlspecialchars($status) ?>"
+                   data-title="<?= htmlspecialchars($e['title']) ?>"
+                   data-author="<?= htmlspecialchars($e['author']) ?>">
+                <div class="entry-dot <?= $dot_cls ?>"><span></span></div>
+                <div class="entry-card">
+                  <div class="entry-book-spine"><?= $book_emoji ?></div>
+                  <div class="entry-main">
+                    <div class="entry-title"><?= htmlspecialchars($e['title']) ?></div>
+                    <div class="entry-author"><?= htmlspecialchars($e['author']) ?></div>
+                    <div class="entry-dates">
+                      <span>Borrowed: <strong><?= date('M j, Y', strtotime($e['borrow_date'])) ?></strong></span>
+                      <?php if ($e['return_date']): ?>
+                        <span>Returned: <strong><?= date('M j, Y', strtotime($e['return_date'])) ?></strong></span>
+                      <?php else: ?>
+                        <span>Due: <strong><?= date('M j, Y', strtotime($e['due_date'])) ?></strong></span>
+                      <?php endif; ?>
+                      <?php if ($late > 0): ?>
+                        <span style="color:var(--rust)"><?= $late ?> day<?= $late !== 1 ? 's' : '' ?> late</span>
+                      <?php endif; ?>
+                    </div>
+                    <?php if (!empty($e['fine_amount'])): ?>
+                      <div class="fine-chip <?= $e['fine_status'] === 'paid' ? 'paid' : '' ?>">
+                        ₱<?= number_format($e['fine_amount']) ?> fine — <?= $e['fine_status'] === 'paid' ? 'paid' : 'unpaid' ?>
+                      </div>
+                    <?php endif; ?>
+                  </div>
+                  <div class="entry-meta"><?= $badge ?></div>
+                </div>
               </div>
-            </div>
-            <div class="entry-meta">
-              <span class="badge badge-gold">Active</span>
-            </div>
+            <?php endforeach; ?>
           </div>
+        <?php endforeach; ?>
+
+        <!-- Empty state shown by JS when filters produce no results -->
+        <div class="empty-state" id="emptyState" style="display:none;">
+          <div class="empty-icon">📭</div>
+          <h3>No records found</h3>
+          <p>Try adjusting your filters or search query.</p>
         </div>
 
-        <!-- Active borrow – due today -->
-        <div class="history-entry" data-status="active" data-title="To Kill a Mockingbird" data-author="Harper Lee">
-          <div class="entry-dot dot-active"><span></span></div>
-          <div class="entry-card">
-            <div class="entry-book-spine">📚</div>
-            <div class="entry-main">
-              <div class="entry-title">To Kill a Mockingbird</div>
-              <div class="entry-author">Harper Lee</div>
-              <div class="entry-dates">
-                <span>Borrowed: <strong>May 3, 2026</strong></span>
-                <span>Due: <strong style="color:var(--rust)">May 18, 2026</strong></span>
-              </div>
-            </div>
-            <div class="entry-meta">
-              <span class="badge badge-rust">Due Today</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- ── April 2026 ── -->
-      <div class="history-group" data-month="April 2026">
-        <div class="history-group-label">April 2026</div>
-
-        <div class="history-entry" data-status="returned" data-title="1984" data-author="George Orwell">
-          <div class="entry-dot dot-returned"><span></span></div>
-          <div class="entry-card">
-            <div class="entry-book-spine">📗</div>
-            <div class="entry-main">
-              <div class="entry-title">1984</div>
-              <div class="entry-author">George Orwell</div>
-              <div class="entry-dates">
-                <span>Borrowed: <strong>Apr 5, 2026</strong></span>
-                <span>Returned: <strong>Apr 19, 2026</strong></span>
-              </div>
-            </div>
-            <div class="entry-meta">
-              <span class="badge badge-sage">Returned</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="history-entry" data-status="overdue" data-title="Brave New World" data-author="Aldous Huxley">
-          <div class="entry-dot dot-overdue"><span></span></div>
-          <div class="entry-card">
-            <div class="entry-book-spine">📕</div>
-            <div class="entry-main">
-              <div class="entry-title">Brave New World</div>
-              <div class="entry-author">Aldous Huxley</div>
-              <div class="entry-dates">
-                <span>Borrowed: <strong>Apr 1, 2026</strong></span>
-                <span>Returned: <strong>Apr 22, 2026</strong></span>
-                <span style="color:var(--rust)">4 days late</span>
-              </div>
-              <div class="fine-chip">₱20 fine — unpaid</div>
-            </div>
-            <div class="entry-meta">
-              <span class="badge badge-rust">Overdue</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- ── March 2026 ── -->
-      <div class="history-group" data-month="March 2026">
-        <div class="history-group-label">March 2026</div>
-
-        <div class="history-entry" data-status="returned" data-title="The Alchemist" data-author="Paulo Coelho">
-          <div class="entry-dot dot-returned"><span></span></div>
-          <div class="entry-card">
-            <div class="entry-book-spine">📘</div>
-            <div class="entry-main">
-              <div class="entry-title">The Alchemist</div>
-              <div class="entry-author">Paulo Coelho</div>
-              <div class="entry-dates">
-                <span>Borrowed: <strong>Mar 14, 2026</strong></span>
-                <span>Returned: <strong>Mar 28, 2026</strong></span>
-              </div>
-            </div>
-            <div class="entry-meta">
-              <span class="badge badge-sage">Returned</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="history-entry" data-status="returned" data-title="Of Mice and Men" data-author="John Steinbeck">
-          <div class="entry-dot dot-returned"><span></span></div>
-          <div class="entry-card">
-            <div class="entry-book-spine">📙</div>
-            <div class="entry-main">
-              <div class="entry-title">Of Mice and Men</div>
-              <div class="entry-author">John Steinbeck</div>
-              <div class="entry-dates">
-                <span>Borrowed: <strong>Mar 2, 2026</strong></span>
-                <span>Returned: <strong>Mar 16, 2026</strong></span>
-              </div>
-            </div>
-            <div class="entry-meta">
-              <span class="badge badge-sage">Returned</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- ── February 2026 ── -->
-      <div class="history-group" data-month="February 2026">
-        <div class="history-group-label">February 2026</div>
-
-        <div class="history-entry" data-status="returned" data-title="Animal Farm" data-author="George Orwell">
-          <div class="entry-dot dot-returned"><span></span></div>
-          <div class="entry-card">
-            <div class="entry-book-spine">📗</div>
-            <div class="entry-main">
-              <div class="entry-title">Animal Farm</div>
-              <div class="entry-author">George Orwell</div>
-              <div class="entry-dates">
-                <span>Borrowed: <strong>Feb 10, 2026</strong></span>
-                <span>Returned: <strong>Feb 24, 2026</strong></span>
-              </div>
-              <div class="fine-chip paid">₱10 fine — paid</div>
-            </div>
-            <div class="entry-meta">
-              <span class="badge badge-sage">Returned</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Empty state (hidden by default) -->
-      <div class="empty-state" id="emptyState" style="display:none;">
-        <div class="empty-icon">📭</div>
-        <h3>No records found</h3>
-        <p>Try adjusting your filters or search query.</p>
-      </div>
-
+      <?php endif; ?>
     </div>
     <!-- end timeline -->
-
-    <!-- Pagination -->
-    <div class="pagination">
-      <button class="page-btn" disabled>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="15 18 9 12 15 6"/>
-        </svg>
-      </button>
-      <button class="page-btn active">1</button>
-      <button class="page-btn">2</button>
-      <button class="page-btn">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="9 18 15 12 9 6"/>
-        </svg>
-      </button>
-    </div>
 
   </main>
 </div>
@@ -398,7 +335,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  /* ── Mobile ── */
+  /* ── Mobile sidebar toggle ── */
   function checkMobile() {
     const t = document.getElementById('menuToggle');
     t.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
@@ -410,7 +347,7 @@
     document.getElementById('sidebar').classList.toggle('open')
   );
 
-  /* ── Filter Tabs ── */
+  /* ── Filter Tabs ── (must stay JS — instant client-side filtering) */
   const tabs = document.querySelectorAll('.filter-tab');
   tabs.forEach(tab => {
     tab.addEventListener('click', function() {
@@ -420,29 +357,21 @@
     });
   });
 
-  /* ── Search ── */
-  document.getElementById('historySearch').addEventListener('input', applyFilters);
-
   function applyFilters() {
     const activeFilter = document.querySelector('.filter-tab.active')?.dataset.filter || 'all';
-    const query = document.getElementById('historySearch').value.toLowerCase();
     const entries = document.querySelectorAll('.history-entry');
     let visibleCount = 0;
 
     entries.forEach(entry => {
       const status = entry.dataset.status;
-      const title  = entry.dataset.title?.toLowerCase() || '';
-      const author = entry.dataset.author?.toLowerCase() || '';
       const matchFilter = activeFilter === 'all' || status === activeFilter;
-      const matchSearch = !query || title.includes(query) || author.includes(query);
-      const show = matchFilter && matchSearch;
+      const show = matchFilter;
       entry.style.display = show ? 'flex' : 'none';
       if (show) visibleCount++;
     });
 
-    /* Hide empty group headings */
+    // Hide month groups that have no visible entries
     document.querySelectorAll('.history-group').forEach(group => {
-      const visible = group.querySelectorAll('.history-entry[style=""],.history-entry:not([style])');
       const hasVisible = [...group.querySelectorAll('.history-entry')].some(e => e.style.display !== 'none');
       group.style.display = hasVisible ? '' : 'none';
     });
@@ -450,7 +379,7 @@
     document.getElementById('emptyState').style.display = visibleCount === 0 ? 'block' : 'none';
   }
 
-  /* ── Toast ── */
+  /* ── Toast helper ── */
   function showToast(msg, type = '') {
     const t = document.getElementById('toast');
     t.textContent = msg;
