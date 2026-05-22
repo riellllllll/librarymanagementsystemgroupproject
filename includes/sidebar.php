@@ -121,13 +121,88 @@ function _nav_active(string $href, string $current): string {
         <div class="user-role">Student</div>
       </div>
     </div>
-    <a href="../includes/logout.php" class="btn-logout">
+    <button type="button" class="btn-logout" onclick="openLogoutModal()">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
         <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
       </svg>
       Log Out
-    </a>
+    </button>
   </div>
 
 </aside>
+
+<!-- ══════════════════════════════════════════════════════════
+     LOGOUT CONFIRMATION MODAL
+     Uses .modal-backdrop / .modal / .btn-danger / .btn-outline
+     already defined in student.css — no extra CSS needed.
+     ══════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="logoutModal" role="dialog" aria-modal="true" aria-labelledby="logoutModalTitle">
+  <div class="modal" style="max-width:400px;">
+
+    <!-- Gold top bar (from student.css .modal-top) -->
+    <div class="modal-top" style="background:linear-gradient(90deg,#8b3a2a,#c06040,#8b3a2a);"></div>
+
+    <!-- Close × -->
+    <button class="modal-close" onclick="closeLogoutModal()" aria-label="Cancel">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+
+    <div class="modal-body" style="text-align:center;">
+
+      <!-- Icon -->
+      <div style="width:60px;height:60px;border-radius:50%;background:rgba(192,57,43,0.1);border:1px solid rgba(192,57,43,0.2);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c0392b" stroke-width="1.8">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+      </div>
+
+      <div id="logoutModalTitle" class="modal-title" style="font-size:1.15rem;">
+        Log Out?
+      </div>
+      <p class="modal-desc" style="margin-bottom:24px;">
+        Are you sure you want to log out of the CvSU Library System?
+        Any unsaved changes will be lost.
+      </p>
+
+      <!-- Action buttons -->
+      <div style="display:flex;gap:10px;">
+        <button type="button" class="btn-outline" style="flex:1;" onclick="closeLogoutModal()">
+          Stay
+        </button>
+        <a href="../includes/logout.php"
+           class="btn-danger"
+           style="flex:1;padding:10px 20px;border-radius:10px;font-size:0.85rem;justify-content:center;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          Yes, Log Out
+        </a>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── Logout modal helpers ──
+   Scoped with var so they don't collide if this include is loaded multiple times. */
+function openLogoutModal() {
+  document.getElementById('logoutModal').classList.add('open');
+}
+function closeLogoutModal() {
+  document.getElementById('logoutModal').classList.remove('open');
+}
+/* Close on backdrop click */
+document.getElementById('logoutModal').addEventListener('click', function(e) {
+  if (e.target === this) closeLogoutModal();
+});
+/* Close on Escape key */
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeLogoutModal();
+});
+</script>

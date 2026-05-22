@@ -1,3 +1,95 @@
+<?php
+// ============================================================
+// login.php — CvSU Library Login & Registration
+// ============================================================
+session_start();
+
+// ── Guard: redirect if already logged in ─────────────────────
+// TODO: uncomment once DB + OOP classes are connected
+// if (isset($_SESSION['user_id'])) {
+//     $redirect = ($_SESSION['role'] === 'admin')
+//         ? 'admin/dashboard.php'
+//         : 'student/dashboard.php';
+//     header('Location: ' . $redirect);
+//     exit;
+// }
+
+// ── TODO: Require OOP classes (create these files first) ─────
+// require_once 'includes/Database.php';   // class Database
+// require_once 'includes/User.php';       // class User
+
+// ── Handle Student Login ──────────────────────────────────────
+// TODO: uncomment when DB is ready
+// if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['login_type'] ?? '') === 'student') {
+//     $db     = new Database();
+//     $user   = new User($db->getConnection());
+//     $result = $user->loginStudent(
+//         trim($_POST['student_number']),
+//         $_POST['password']
+//     );
+//     if ($result) {
+//         $_SESSION['user_id']        = $result['id'];
+//         $_SESSION['student_name']   = $result['full_name'];
+//         $_SESSION['student_id']     = $result['student_number'];
+//         $_SESSION['role']           = 'student';
+//         $_SESSION['active_borrows'] = (int)$result['active_borrows'];
+//         $_SESSION['has_fines']      = (bool)$result['has_fines'];
+//         header('Location: student/dashboard.php');
+//         exit;
+//     }
+//     $login_error = 'Invalid student number or password.';
+// }
+
+// ── Handle Admin Login ────────────────────────────────────────
+// TODO: uncomment when DB is ready
+// if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['login_type'] ?? '') === 'admin') {
+//     $db     = new Database();
+//     $user   = new User($db->getConnection());
+//     $result = $user->loginAdmin(
+//         trim($_POST['username']),
+//         $_POST['password']
+//     );
+//     if ($result) {
+//         $_SESSION['user_id']  = $result['id'];
+//         $_SESSION['username'] = $result['username'];
+//         $_SESSION['role']     = 'admin';
+//         header('Location: admin/dashboard.php');
+//         exit;
+//     }
+//     $admin_error = 'Invalid username or password.';
+// }
+
+// ── Handle Registration ───────────────────────────────────────
+// TODO: uncomment when DB is ready
+// if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['login_type'] ?? '') === 'register') {
+//     $db   = new Database();
+//     $user = new User($db->getConnection());
+//     $data = [
+//         'first_name'     => trim($_POST['first_name']),
+//         'last_name'      => trim($_POST['last_name']),
+//         'middle_name'    => trim($_POST['middle_name'] ?? ''),
+//         'dob'            => $_POST['dob'],
+//         'gender'         => $_POST['gender'],
+//         'student_number' => trim($_POST['student_number']),
+//         'course'         => $_POST['course'],
+//         'year_level'     => $_POST['year_level'],
+//         'email'          => strtolower(trim($_POST['email'])),
+//         'phone'          => trim($_POST['phone'] ?? ''),
+//         'password'       => password_hash($_POST['password'], PASSWORD_DEFAULT),
+//     ];
+//     if ($user->register($data)) {
+//         $reg_success = true;
+//     } else {
+//         $reg_error = 'Registration failed. Student number or email may already be in use.';
+//     }
+// }
+
+// Safe defaults so PHP doesn't throw undefined-variable notices
+$login_error = $login_error ?? null;
+$admin_error = $admin_error ?? null;
+$reg_success = $reg_success ?? false;
+$reg_error   = $reg_error   ?? null;
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -299,6 +391,20 @@
   }
   .field.has-error .field-err { display: block; }
   .field.has-error input { border-color: var(--rust); }
+
+  /* ── PHP error banner ── */
+  .php-error {
+    background: #fdf0ed;
+    border: 1px solid #e8a898;
+    border-radius: 10px;
+    padding: 11px 14px;
+    margin-bottom: 20px;
+    font-size: 0.82rem;
+    color: var(--rust);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
 
   /* ── Password strength ── */
   .strength-wrap { margin-top: 8px; }
@@ -635,19 +741,38 @@
   <!-- Card -->
   <div class="card" id="mainCard">
 
-    <!-- ── STUDENT LOGIN ── -->
+    <!-- ══════════════════════════════════════════════════════
+         STUDENT LOGIN PANEL
+         ══════════════════════════════════════════════════════ -->
     <div class="panel active" id="panel-student">
       <h2 class="panel-title">Welcome back,<br><em style="font-style:italic;color:var(--gold)">Student</em></h2>
       <p class="panel-sub">Sign in with your student credentials to access the library portal.</p>
 
-      <form id="studentForm" novalidate>
+      <?php if ($login_error): ?>
+        <div class="php-error">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <?= htmlspecialchars($login_error) ?>
+        </div>
+      <?php endif; ?>
+
+      <!-- method="POST" + action + hidden login_type added -->
+      <!-- name attributes added to all inputs for PHP $_POST -->
+      <!-- JS e.preventDefault() kept for now; remove it when DB is ready -->
+      <form id="studentForm" method="POST" action="login.php" novalidate>
+        <input type="hidden" name="login_type" value="student">
+
         <div class="field" id="f-sno">
           <label>Student Number <span>*</span></label>
           <div class="input-wrap">
             <span class="ico">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             </span>
-            <input type="text" id="sno" placeholder="e.g. 202410498" autocomplete="username" inputmode="numeric" maxlength="12" oninput="this.value=this.value.replace(/\D/g,'')" />
+            <input type="text" id="sno" name="student_number"
+              placeholder="e.g. 202410498"
+              autocomplete="username"
+              inputmode="numeric"
+              maxlength="12"
+              oninput="this.value=this.value.replace(/\D/g,'')" />
           </div>
           <div class="field-err">Please enter your student number.</div>
         </div>
@@ -658,7 +783,9 @@
             <span class="ico">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             </span>
-            <input type="password" id="spw" placeholder="Enter your password" autocomplete="current-password" />
+            <input type="password" id="spw" name="password"
+              placeholder="Enter your password"
+              autocomplete="current-password" />
             <button type="button" class="pw-toggle" onclick="togglePw('spw',this)" aria-label="Show password">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             </button>
@@ -668,7 +795,7 @@
 
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
           <label style="display:flex;align-items:center;gap:7px;font-size:0.8rem;color:#7a6e5e;cursor:pointer;">
-            <input type="checkbox" style="accent-color:var(--gold);width:14px;height:14px;"> Remember me
+            <input type="checkbox" name="remember" value="1" style="accent-color:var(--gold);width:14px;height:14px;"> Remember me
           </label>
           <a href="#" style="font-size:0.8rem;color:var(--gold);text-decoration:none;" onclick="openForgotModal();return false;">Forgot password?</a>
         </div>
@@ -681,7 +808,9 @@
       </div>
     </div>
 
-    <!-- ── ADMIN LOGIN ── -->
+    <!-- ══════════════════════════════════════════════════════
+         ADMIN LOGIN PANEL
+         ══════════════════════════════════════════════════════ -->
     <div class="panel" id="panel-admin">
       <h2 class="panel-title">Admin <em style="font-style:italic;color:var(--rust)">Portal</em></h2>
       <p class="panel-sub">Restricted access. Authorized library staff only.</p>
@@ -691,14 +820,26 @@
         <span style="font-size:0.78rem;color:#8a6a30;line-height:1.4;">This portal is for authorized library administrators and staff only.</span>
       </div>
 
-      <form id="adminForm" novalidate>
+      <?php if ($admin_error): ?>
+        <div class="php-error">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <?= htmlspecialchars($admin_error) ?>
+        </div>
+      <?php endif; ?>
+
+      <!-- method="POST" + action + hidden login_type added -->
+      <form id="adminForm" method="POST" action="login.php" novalidate>
+        <input type="hidden" name="login_type" value="admin">
+
         <div class="field" id="f-aun">
           <label>Username <span>*</span></label>
           <div class="input-wrap">
             <span class="ico">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </span>
-            <input type="text" id="aun" placeholder="Admin username" autocomplete="username" />
+            <input type="text" id="aun" name="username"
+              placeholder="Admin username"
+              autocomplete="username" />
           </div>
           <div class="field-err">Please enter your username.</div>
         </div>
@@ -709,7 +850,9 @@
             <span class="ico">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             </span>
-            <input type="password" id="apw" placeholder="Enter your password" autocomplete="current-password" />
+            <input type="password" id="apw" name="password"
+              placeholder="Enter your password"
+              autocomplete="current-password" />
             <button type="button" class="pw-toggle" onclick="togglePw('apw',this)" aria-label="Show password">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             </button>
@@ -721,10 +864,12 @@
       </form>
     </div>
 
-    <!-- ── REGISTER ── -->
+    <!-- ══════════════════════════════════════════════════════
+         REGISTER PANEL
+         ══════════════════════════════════════════════════════ -->
     <div class="panel" id="panel-register">
-      <!-- Success state -->
-      <div class="success-overlay" id="regSuccess">
+      <!-- Success state — shown by JS (or by PHP when $reg_success is true) -->
+      <div class="success-overlay<?= $reg_success ? ' show' : '' ?>" id="regSuccess">
         <div class="check-circle">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
@@ -733,12 +878,22 @@
         <button class="btn-submit" onclick="switchTab('student')" style="max-width:200px;">Go to Sign In</button>
       </div>
 
-      <!-- Form state -->
-      <div id="regForm">
+      <!-- Form state — hide if registration was successful -->
+      <div id="regForm"<?= $reg_success ? ' style="display:none;"' : '' ?>>
         <h2 class="panel-title">Create <em style="font-style:italic;color:var(--gold)">Account</em></h2>
         <p class="panel-sub">Register as a student to borrow books, track due dates, and more.</p>
 
-        <form id="registerForm" novalidate>
+        <?php if ($reg_error): ?>
+          <div class="php-error">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <?= htmlspecialchars($reg_error) ?>
+          </div>
+        <?php endif; ?>
+
+        <!-- method="POST" + action + hidden login_type added -->
+        <!-- All inputs now have name attributes for PHP $_POST -->
+        <form id="registerForm" method="POST" action="login.php" novalidate>
+          <input type="hidden" name="login_type" value="register">
 
           <div class="section-head">Personal Information</div>
 
@@ -747,7 +902,7 @@
               <label>First Name <span>*</span></label>
               <div class="input-wrap">
                 <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-                <input type="text" id="rfn" placeholder="Juan" />
+                <input type="text" id="rfn" name="first_name" placeholder="Juan" />
               </div>
               <div class="field-err">Required.</div>
             </div>
@@ -755,7 +910,7 @@
               <label>Last Name <span>*</span></label>
               <div class="input-wrap">
                 <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-                <input type="text" id="rln" placeholder="Dela Cruz" />
+                <input type="text" id="rln" name="last_name" placeholder="Dela Cruz" />
               </div>
               <div class="field-err">Required.</div>
             </div>
@@ -765,7 +920,7 @@
             <label>Middle Name</label>
             <div class="input-wrap">
               <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-              <input type="text" id="rmn" placeholder="Santos (optional)" />
+              <input type="text" id="rmn" name="middle_name" placeholder="Santos (optional)" />
             </div>
           </div>
 
@@ -774,7 +929,7 @@
               <label>Date of Birth <span>*</span></label>
               <div class="input-wrap">
                 <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
-                <input type="date" id="rdob" style="padding-left:42px;" />
+                <input type="date" id="rdob" name="dob" style="padding-left:42px;" />
               </div>
               <div class="field-err">Required.</div>
             </div>
@@ -782,7 +937,7 @@
               <label>Gender <span>*</span></label>
               <div class="input-wrap">
                 <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M17 16h-2v2M7 16h2v2"/></svg></span>
-                <select id="rgender">
+                <select id="rgender" name="gender">
                   <option value="">Select…</option>
                   <option>Male</option>
                   <option>Female</option>
@@ -800,7 +955,11 @@
             <label>Student Number <span>*</span></label>
             <div class="input-wrap">
               <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></span>
-              <input type="text" id="rsno" placeholder="e.g. 202410498" inputmode="numeric" maxlength="12" oninput="this.value=this.value.replace(/\D/g,'')" />
+              <input type="text" id="rsno" name="student_number"
+                placeholder="e.g. 202410498"
+                inputmode="numeric"
+                maxlength="12"
+                oninput="this.value=this.value.replace(/\D/g,'')" />
             </div>
             <div class="field-hint">Numbers only — no dashes</div>
             <div class="field-err">Please enter a valid student number.</div>
@@ -811,7 +970,7 @@
               <label>Course / Program <span>*</span></label>
               <div class="input-wrap">
                 <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></span>
-                <select id="rcourse">
+                <select id="rcourse" name="course">
                   <option value="">Select…</option>
                   <option>BS Computer Science</option>
                   <option>BS Information Technology</option>
@@ -831,7 +990,7 @@
               <label>Year Level <span>*</span></label>
               <div class="input-wrap">
                 <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></span>
-                <select id="ryear">
+                <select id="ryear" name="year_level">
                   <option value="">Select…</option>
                   <option>1st Year</option>
                   <option>2nd Year</option>
@@ -846,13 +1005,13 @@
             </div>
           </div>
 
-          <div class="section-head">Contact & Account</div>
+          <div class="section-head">Contact &amp; Account</div>
 
           <div class="field" id="f-remail">
             <label>Email Address <span>*</span></label>
             <div class="input-wrap">
               <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
-              <input type="email" id="remail" placeholder="juandelacruz@school.edu.ph" />
+              <input type="email" id="remail" name="email" placeholder="juandelacruz@school.edu.ph" />
             </div>
             <div class="field-err">Enter a valid email address.</div>
           </div>
@@ -861,7 +1020,7 @@
             <label>Contact Number</label>
             <div class="input-wrap">
               <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 9.5a19.79 19.79 0 0 1-3-8.59A2 2 0 0 1 3.62 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
-              <input type="tel" id="rphone" placeholder="09XX-XXX-XXXX" />
+              <input type="tel" id="rphone" name="phone" placeholder="09XX-XXX-XXXX" />
             </div>
           </div>
 
@@ -869,7 +1028,10 @@
             <label>Password <span>*</span></label>
             <div class="input-wrap">
               <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
-              <input type="password" id="rpw" placeholder="Create a strong password" autocomplete="new-password" oninput="checkStrength(this.value)" />
+              <input type="password" id="rpw" name="password"
+                placeholder="Create a strong password"
+                autocomplete="new-password"
+                oninput="checkStrength(this.value)" />
               <button type="button" class="pw-toggle" onclick="togglePw('rpw',this)">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
               </button>
@@ -890,7 +1052,9 @@
             <label>Confirm Password <span>*</span></label>
             <div class="input-wrap">
               <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
-              <input type="password" id="rcpw" placeholder="Re-enter password" autocomplete="new-password" />
+              <input type="password" id="rcpw" name="confirm_password"
+                placeholder="Re-enter password"
+                autocomplete="new-password" />
               <button type="button" class="pw-toggle" onclick="togglePw('rcpw',this)">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
               </button>
@@ -900,7 +1064,7 @@
 
           <div class="field">
             <div class="check-field">
-              <input type="checkbox" id="rterms" />
+              <input type="checkbox" id="rterms" name="terms" value="1" />
               <label for="rterms">I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a> of the Library Management System.</label>
             </div>
           </div>
@@ -1003,8 +1167,11 @@ function validate(fieldId, condition, errMsg){
 }
 
 // ── Student login ──
+// NOTE: e.preventDefault() keeps this frontend-only for now.
+// When your DB + OOP classes are ready, REMOVE the e.preventDefault()
+// line and the setTimeout block — the form will POST to PHP naturally.
 document.getElementById('studentForm').addEventListener('submit', function(e){
-  e.preventDefault();
+  e.preventDefault(); // ← REMOVE THIS when DB is ready
   const sno = document.getElementById('sno').value.trim();
   const spw = document.getElementById('spw').value;
   let ok = true;
@@ -1013,15 +1180,17 @@ document.getElementById('studentForm').addEventListener('submit', function(e){
   if(!ok) return;
   const btn = this.querySelector('.btn-submit');
   btn.classList.add('loading');
+  // ↓ REMOVE this setTimeout block when DB is ready
   setTimeout(()=>{
     btn.classList.remove('loading');
     showToast('Sign-in successful! Redirecting…','success');
+    // TODO: actual redirect will be handled by PHP header()
   }, 1600);
 });
 
 // ── Admin login ──
 document.getElementById('adminForm').addEventListener('submit', function(e){
-  e.preventDefault();
+  e.preventDefault(); // ← REMOVE THIS when DB is ready
   const aun = document.getElementById('aun').value.trim();
   const apw = document.getElementById('apw').value;
   let ok = true;
@@ -1030,6 +1199,7 @@ document.getElementById('adminForm').addEventListener('submit', function(e){
   if(!ok) return;
   const btn = this.querySelector('.btn-submit');
   btn.classList.add('loading');
+  // ↓ REMOVE this setTimeout block when DB is ready
   setTimeout(()=>{
     btn.classList.remove('loading');
     showToast('Admin access granted. Welcome!','success');
@@ -1052,7 +1222,6 @@ function switchLookup(mode){
   document.getElementById('lookup-sno-wrap').style.display   = mode==='sno'   ? 'block' : 'none';
   document.getElementById('lt-email').classList.toggle('active', mode==='email');
   document.getElementById('lt-sno').classList.toggle('active',   mode==='sno');
-  // clear errors
   ['f-fpemail','f-fpsno'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.classList.remove('has-error');
@@ -1086,13 +1255,13 @@ function submitForgot(){
     document.getElementById('fp-step2').classList.add('active');
   }, 1500);
 }
-// Close modal on backdrop click
 document.getElementById('forgotModal').addEventListener('click', function(e){
   if(e.target === this) closeForgotModal();
 });
 
+// ── Register ──
 document.getElementById('registerForm').addEventListener('submit', function(e){
-  e.preventDefault();
+  e.preventDefault(); // ← REMOVE THIS when DB is ready
   const get = id => document.getElementById(id).value.trim();
   let ok = true;
   ok = validate('rfn',  !!get('rfn'), 'First name is required.') && ok;
@@ -1114,6 +1283,7 @@ document.getElementById('registerForm').addEventListener('submit', function(e){
   if(!ok) return;
   const btn = this.querySelector('.btn-submit');
   btn.classList.add('loading');
+  // ↓ REMOVE this setTimeout block when DB is ready
   setTimeout(()=>{
     btn.classList.remove('loading');
     document.getElementById('regForm').style.display = 'none';
@@ -1121,6 +1291,7 @@ document.getElementById('registerForm').addEventListener('submit', function(e){
   }, 1800);
 });
 </script>
+
 <!-- ── Forgot Password Modal ── -->
 <div class="modal-backdrop" id="forgotModal">
   <div class="modal">
@@ -1129,20 +1300,16 @@ document.getElementById('registerForm').addEventListener('submit', function(e){
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
     <div class="modal-body">
-
-      <!-- Step 1: Enter identifier -->
       <div class="modal-step active" id="fp-step1">
         <div class="modal-icon">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c9973a" stroke-width="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1" fill="#c9973a" stroke="none"/></svg>
         </div>
         <h3 class="modal-title">Forgot Password?</h3>
         <p class="modal-desc">Enter your registered email address or student number and we'll send you a reset link.</p>
-
         <div class="lookup-toggle">
           <button class="lookup-btn active" id="lt-email" onclick="switchLookup('email')">Email Address</button>
           <button class="lookup-btn" id="lt-sno" onclick="switchLookup('sno')">Student Number</button>
         </div>
-
         <div id="lookup-email-wrap">
           <div class="field" id="f-fpemail">
             <label>Email Address <span>*</span></label>
@@ -1153,7 +1320,6 @@ document.getElementById('registerForm').addEventListener('submit', function(e){
             <div class="field-err">Enter a valid email address.</div>
           </div>
         </div>
-
         <div id="lookup-sno-wrap" style="display:none;">
           <div class="field" id="f-fpsno">
             <label>Student Number <span>*</span></label>
@@ -1164,15 +1330,11 @@ document.getElementById('registerForm').addEventListener('submit', function(e){
             <div class="field-err">Please enter your student number.</div>
           </div>
         </div>
-
         <button class="btn-submit" id="fpSendBtn" onclick="submitForgot()">Send Reset Link</button>
-
         <p style="text-align:center;font-size:0.78rem;color:#b0a898;margin-top:14px;">
           Remember your password? <a href="#" style="color:var(--gold);" onclick="closeForgotModal();return false;">Back to sign in</a>
         </p>
       </div>
-
-      <!-- Step 2: Sent confirmation -->
       <div class="modal-step" id="fp-step2">
         <div class="sent-circle">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -1188,7 +1350,6 @@ document.getElementById('registerForm').addEventListener('submit', function(e){
           Didn't receive it? <a href="#" style="color:var(--gold);" onclick="backToStep1();return false;">Try again</a>
         </p>
       </div>
-
     </div>
   </div>
 </div>
