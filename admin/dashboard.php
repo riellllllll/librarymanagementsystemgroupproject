@@ -62,7 +62,7 @@ $recent_borrowed = array_slice(array_reverse($recent_borrowed), 0, 5);
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="../assets/student.css">
-  <link rel="stylesheet" href="../assets/admin-extra.css">
+  <link rel="stylesheet" href="../assets/style.css">
 </head>
 
 <body>
@@ -76,15 +76,6 @@ $recent_borrowed = array_slice(array_reverse($recent_borrowed), 0, 5);
     <span class="topbar-title">Dashboard</span>
 
     <div class="topbar-spacer"></div>
-
-    <form class="topbar-search" method="GET" action="view_books.php">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"></circle>
-        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-      </svg>
-
-      <input type="text" name="q" placeholder="Search by book title, author...">
-    </form>
 
     <a href="student_req.php" class="topbar-icon-btn" title="Student Requests">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

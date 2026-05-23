@@ -152,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selected_book) {
 
   </main>
 
-</div>
+  </div>
 
 </body>
 </html>
