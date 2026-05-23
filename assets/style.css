@@ -559,3 +559,91 @@ textarea.form-control {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
 }
+
+/* ── Admin View Books Toolbar ── */
+.books-filter-section {
+  width: 100%;
+  margin-bottom: 34px;
+}
+
+.view-books-toolbar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 28px;
+  margin-bottom: 36px;
+}
+
+.view-books-count {
+  margin: 0;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.view-books-count strong {
+  color: #000000;
+  font-weight: 700;
+}
+
+.view-books-count span {
+  color: #111827;
+  font-weight: 500;
+}
+
+.view-books-add-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 11px 22px;
+  border: 1px solid #c89b3c;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--gold-dk), var(--gold-lt));
+  color: #ffffff !important;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-decoration: none !important;
+  text-transform: uppercase;
+  box-shadow: 0 4px 16px rgba(201,151,58,0.35);
+}
+
+.view-books-add-btn:hover {
+  color: #ffffff !important;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(201,151,58,0.45);
+}
+
+.book-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start !important;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px !important;
+  margin-bottom: 12px !important;
+}
+
+.book-actions {
+  display: flex !important;
+  align-items: center;
+  gap: 8px !important;
+  margin-top: 0 !important;
+}
+
+@media (max-width: 768px) {
+  .view-books-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .view-books-add-btn {
+    width: 100%;
+    margin-left: 0;
+  }
+}

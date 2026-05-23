@@ -77,15 +77,6 @@ $recent_borrowed = array_slice(array_reverse($recent_borrowed), 0, 5);
 
     <div class="topbar-spacer"></div>
 
-    <form class="topbar-search" method="GET" action="view_books.php">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"></circle>
-        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-      </svg>
-
-      <input type="text" name="q" placeholder="Search by book title, author...">
-    </form>
-
     <a href="student_req.php" class="topbar-icon-btn" title="Student Requests">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>

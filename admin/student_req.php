@@ -3,21 +3,16 @@ session_start();
 require 'library_data.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
   $request_id = (int)($_POST['request_id'] ?? 0);
   $action = $_POST['action'] ?? '';
 
   foreach ($_SESSION['borrow_requests'] as $index => $request) {
-
     if ((int)($request['id'] ?? 0) === $request_id && ($request['status'] ?? '') === 'pending') {
-
       $book_id = (int)($request['book_id'] ?? 0);
       $book_index = find_book_index($book_id);
 
       if ($action === 'approve') {
-
         if ($book_index !== null && (int)($_SESSION['books'][$book_index]['available'] ?? 0) > 0) {
-
           $_SESSION['books'][$book_index]['available']--;
 
           $_SESSION['borrow_requests'][$index]['status'] = 'approved';
@@ -33,11 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'status' => 'borrowed'
           ];
         }
-
       } elseif ($action === 'reject') {
-
         $_SESSION['borrow_requests'][$index]['status'] = 'rejected';
-
       }
 
       break;
@@ -58,6 +50,7 @@ $requests = $_SESSION['borrow_requests'];
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>Student Requests</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -77,21 +70,6 @@ $requests = $_SESSION['borrow_requests'];
     <span class="topbar-title">Student Requests</span>
 
     <div class="topbar-spacer"></div>
-
-    <form class="topbar-search" method="GET" action="view_books.php">
-
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"></circle>
-        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-      </svg>
-
-      <input
-        type="text"
-        name="q"
-        placeholder="Search by book title, author, or ID..."
-      >
-
-    </form>
 
     <a href="student_req.php" class="topbar-icon-btn" title="Student Borrow Requests">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

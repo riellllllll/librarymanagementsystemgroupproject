@@ -20,11 +20,8 @@ foreach ($_SESSION['books'] as $book) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selected_book) {
-
   foreach ($_SESSION['books'] as $index => $book) {
-
     if ((int)$book['id'] === $book_id) {
-
       $_SESSION['books'][$index]['title'] = trim($_POST['title'] ?? '');
       $_SESSION['books'][$index]['author'] = trim($_POST['author'] ?? '');
       $_SESSION['books'][$index]['genre'] = trim($_POST['genre'] ?? '');
@@ -44,9 +41,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selected_book) {
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>Edit Book</title>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -66,10 +65,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selected_book) {
     <span class="topbar-title">Edit Book</span>
 
     <div class="topbar-spacer"></div>
-
-    <form class="topbar-search" method="GET" action="view_books.php">
-      <input type="text" name="q" placeholder="Search by book title, author, or ID...">
-    </form>
 
     <a href="student_req.php" class="topbar-icon-btn" title="Student Borrow Requests">
 
@@ -166,7 +161,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selected_book) {
               <label>Genre</label>
 
               <div class="input-wrap">
-
                 <select class="no-icon" name="genre" required>
 
                   <?php foreach ($genres as $genre): ?>
@@ -181,7 +175,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selected_book) {
                   <?php endforeach; ?>
 
                 </select>
-
               </div>
             </div>
 

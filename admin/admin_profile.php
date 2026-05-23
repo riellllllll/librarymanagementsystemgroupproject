@@ -18,11 +18,14 @@ $admin = [
   'last_login' => 'May 21, 2026',
 ];
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>Admin Profile - CvSU Library</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -31,6 +34,7 @@ $admin = [
   <link rel="stylesheet" href="../assets/student.css">
   <link rel="stylesheet" href="../assets/admin_profile.css">
 </head>
+
 <body>
 
 <?php include "sideBar.php"; ?>
@@ -38,17 +42,10 @@ $admin = [
 <div class="main-wrapper">
 
   <header class="topbar">
+
     <span class="topbar-title">Admin Profile</span>
 
     <div class="topbar-spacer"></div>
-
-    <div class="topbar-search">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"></circle>
-        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-      </svg>
-      <input type="text" placeholder="Search books...">
-    </div>
 
     <a href="student_req.php" class="topbar-icon-btn" title="Student Borrow Requests">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -67,6 +64,7 @@ $admin = [
         <circle cx="12" cy="7" r="4"></circle>
       </svg>
     </a>
+
   </header>
 
   <main class="page-content">
@@ -214,6 +212,7 @@ $admin = [
     </div>
 
   </main>
+
 </div>
 
 </body>
