@@ -17,15 +17,12 @@ $genres = [
 ];
 
 $selected_genre = $_GET['genre'] ?? 'All';
-
 $search_query = strtolower(trim($_GET['q'] ?? ''));
 
 $per_page = 12;
-
 $current_page_num = max(1, (int)($_GET['page'] ?? 1));
 
 $filtered = array_values(array_filter($_SESSION['books'], function ($book) use ($selected_genre, $search_query) {
-
   $matches_genre =
     $selected_genre === 'All' ||
     $book['genre'] === $selected_genre;
@@ -45,11 +42,8 @@ $filtered = array_values(array_filter($_SESSION['books'], function ($book) use (
 }));
 
 $total = count($filtered);
-
 $total_pages = max(1, ceil($total / $per_page));
-
 $offset = ($current_page_num - 1) * $per_page;
-
 $books = array_slice($filtered, $offset, $per_page);
 ?>
 
@@ -57,7 +51,6 @@ $books = array_slice($filtered, $offset, $per_page);
 <html lang="en">
 
 <head>
-
   <meta charset="UTF-8">
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -68,7 +61,6 @@ $books = array_slice($filtered, $offset, $per_page);
 
   <link rel="stylesheet" href="../assets/student.css">
   <link rel="stylesheet" href="../assets/style.css">
-
 </head>
 
 <body>
@@ -83,7 +75,7 @@ $books = array_slice($filtered, $offset, $per_page);
 
     <div class="topbar-spacer"></div>
 
-    <form class="topbar-search" method="GET" action="view_books.php">
+    <form class="topbar-search" method="GET" action="dashboard.php">
 
       <?php if ($selected_genre !== 'All'): ?>
         <input
@@ -237,13 +229,9 @@ $books = array_slice($filtered, $offset, $per_page);
             <div class="book-info">
 
               <div class="book-category">
-
                 ID #<?= htmlspecialchars($book['id']) ?>
-
                 &middot;
-
                 <?= htmlspecialchars($book['genre']) ?>
-
               </div>
 
               <div class="book-title">

@@ -1,3 +1,98 @@
+<?php
+// ============================================================
+// return_book.php — CvSU Library Return a Book
+// ============================================================
+session_start();
+
+
+
+// ── Handle return form submission ─────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['borrow_id'])) {
+    $borrow_id = intval($_POST['borrow_id']);
+    $today     = date('Y-m-d');
+
+    // TODO: DB operations
+    // require_once '../includes/db_connect.php';
+    //
+    // 1. Verify this borrow belongs to this student and is still active
+    // $stmt = $pdo->prepare("SELECT b.*, bk.title FROM borrows b JOIN books bk ON b.book_id=bk.id
+    //   WHERE b.id=? AND b.student_id=? AND b.status IN ('active','overdue')");
+    // $stmt->execute([$borrow_id, $_SESSION['student_id']]);
+    // $borrow = $stmt->fetch(PDO::FETCH_ASSOC);
+    //
+    // if (!$borrow) { $_SESSION['flash_error'] = 'Invalid borrow record.'; header('Location: return_book.php'); exit; }
+    //
+    // 2. Calculate fine
+    // $due  = new DateTime($borrow['due_date']);
+    // $ret  = new DateTime($today);
+    // $days_late = max(0, $ret->diff($due)->invert ? 0 : $ret->diff($due)->days);
+    // $fine_per_day = 5;
+    // $fine_amount  = $days_late * $fine_per_day;
+    //
+    // 3. Mark book as returned
+    // $upd = $pdo->prepare("UPDATE borrows SET return_date=?, status='returned' WHERE id=?");
+    // $upd->execute([$today, $borrow_id]);
+    //
+    // 4. Create fine record if overdue
+    // if ($fine_amount > 0) {
+    //     $ins = $pdo->prepare("INSERT INTO fines (student_id, borrow_id, amount, status) VALUES (?,?,?,'unpaid')");
+    //     $ins->execute([$_SESSION['student_id'], $borrow_id, $fine_amount]);
+    //     $_SESSION['has_fines'] = true;
+    // }
+    //
+    // 5. Update active_borrows count in session
+    // $_SESSION['active_borrows'] = max(0, ($_SESSION['active_borrows'] ?? 1) - 1);
+
+    // Redirect back with success (PRG pattern prevents re-submission on refresh)
+    $_SESSION['flash_success'] = 'Book returned successfully!';
+    header('Location: return_book.php?returned=1&id=' . $borrow_id);
+    exit;
+}
+
+// ── Flash messages ────────────────────────────────────────────
+$flash_success = $_SESSION['flash_success'] ?? '';
+$flash_error   = $_SESSION['flash_error']   ?? '';
+unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+
+$has_fines = (bool)($_SESSION['has_fines'] ?? false);
+
+// ── Load this student's currently borrowed books ──────────────
+// TODO: DB query
+// $stmt = $pdo->prepare("SELECT b.id, b.borrow_date, b.due_date, bk.title, bk.author,
+//   CASE WHEN b.due_date < CURDATE() THEN 1 ELSE 0 END AS is_overdue,
+//   DATEDIFF(CURDATE(), b.due_date) AS days_late
+//   FROM borrows b JOIN books bk ON b.book_id=bk.id
+//   WHERE b.student_id=? AND b.status IN ('active','overdue')
+//   ORDER BY b.due_date ASC");
+// $stmt->execute([$_SESSION['student_id']]);
+// $borrowed_books = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Placeholder data (remove when DB connected):
+$borrowed_books = [
+    [
+        'id'          => 1,
+        'title'       => 'The Great Gatsby',
+        'author'      => 'F. Scott Fitzgerald',
+        'borrow_date' => '2026-05-10',
+        'due_date'    => '2026-05-25',
+        'is_overdue'  => false,
+        'days_late'   => 0,
+        'fine_per_day'=> 5,
+    ],
+    [
+        'id'          => 2,
+        'title'       => 'To Kill a Mockingbird',
+        'author'      => 'Harper Lee',
+        'borrow_date' => '2026-05-03',
+        'due_date'    => '2026-05-18',
+        'is_overdue'  => true,
+        'days_late'   => 2,
+        'fine_per_day'=> 5,
+    ],
+];
+
+$overdue_books = array_filter($borrowed_books, fn($b) => $b['is_overdue']);
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,115 +106,8 @@
 </head>
 <body>
 
-<!-- ============================================================
-     SIDEBAR
-     ============================================================ -->
-<aside class="sidebar" id="sidebar">
-  <div class="sidebar-logo">
-    <div class="logo-icon">
-      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="6"  y="8"  width="8"  height="32" rx="1.5" fill="#c9973a"/>
-        <rect x="16" y="10" width="6"  height="30" rx="1.5" fill="#e8c26a"/>
-        <rect x="24" y="6"  width="10" height="36" rx="1.5" fill="#c9973a"/>
-        <rect x="36" y="9"  width="6"  height="31" rx="1.5" fill="#a07830"/>
-        <rect x="5"  y="38" width="38" height="2.5" rx="1.25" fill="#7a6030"/>
-      </svg>
-    </div>
-    <div>
-      <h2>Cv<em>SU</em></h2>
-      <div class="sidebar-subtitle">Library System</div>
-    </div>
-  </div>
+<?php require_once '../includes/sidebar.php'; ?>
 
-  <nav class="sidebar-nav">
-    <div class="nav-section-label">Main</div>
-    <a href="dashboard.php" class="nav-link">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
-      </svg>
-      Dashboard
-    </a>
-
-    <div class="nav-section-label">Books</div>
-    <a href="view_books.php" class="nav-link">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-      </svg>
-      Browse Books
-    </a>
-    <a href="search_books.php" class="nav-link">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      </svg>
-      Search Books
-    </a>
-    <a href="request_borrow.php" class="nav-link">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M12 5v14M5 12l7-7 7 7"/>
-      </svg>
-      Request Borrow
-    </a>
-
-    <div class="nav-section-label">My Library</div>
-    <a href="borrowed_books.php" class="nav-link">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-      </svg>
-      Borrowed Books
-      <span class="nav-badge">2</span>
-    </a>
-    <a href="borrow_history.php" class="nav-link">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 0 .5-4"/>
-        <polyline points="3 3 3.05 11 11 10.94"/>
-      </svg>
-      Borrow History
-    </a>
-    <a href="return_book.php" class="nav-link active">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-1"/>
-      </svg>
-      Return a Book
-    </a>
-    <a href="view_fines.php" class="nav-link">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-      </svg>
-      My Fines
-    </a>
-
-    <div class="nav-section-label">Account</div>
-    <a href="profile.php" class="nav-link">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-      </svg>
-      My Profile
-    </a>
-  </nav>
-
-  <div class="sidebar-footer">
-    <div class="sidebar-user">
-      <div class="user-avatar">JD</div>
-      <div class="user-info">
-        <div class="user-name">Juan Dela Cruz</div>
-        <div class="user-role">Student</div>
-      </div>
-    </div>
-    <a href="../includes/logout.php" class="btn-logout">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-        <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-      </svg>
-      Log Out
-    </a>
-  </div>
-</aside>
-
-
-<!-- ============================================================
-     MAIN WRAPPER
-     ============================================================ -->
 <div class="main-wrapper">
 
   <header class="topbar">
@@ -130,19 +118,7 @@
     </button>
     <span class="topbar-title">Return a Book</span>
     <div class="topbar-spacer"></div>
-    <div class="topbar-search">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      </svg>
-      <input type="text" placeholder="Search books…">
-    </div>
-    <a href="view_fines.php" class="topbar-icon-btn" title="Fines &amp; Notifications">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-      </svg>
-      <span class="topbar-notif-dot"></span>
-    </a>
+   
     <a href="profile.php" class="topbar-icon-btn" title="My Profile">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
@@ -153,149 +129,179 @@
 
   <main class="page-content">
 
-    <!-- Page Header -->
     <div class="page-header">
       <h1>Return a <em style="font-style:italic;color:var(--gold)">Book</em></h1>
       <div class="gold-rule"><span></span><i>✦</i><span></span></div>
       <p>Select the book you wish to return below.</p>
     </div>
 
-    <!-- Alert for overdue -->
-    <div class="alert alert-rust" style="margin-bottom:20px;">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-      </svg>
-      <span><strong>Overdue notice:</strong> "To Kill a Mockingbird" was due on May 18, 2026. A fine of ₱5/day will be applied upon return.</span>
-    </div>
+    <?php foreach ($overdue_books as $ob): ?>
+      <div class="alert alert-rust" style="margin-bottom:12px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span>
+          <strong>Overdue notice:</strong>
+          "<?= htmlspecialchars($ob['title']) ?>" was due on <?= date('M j, Y', strtotime($ob['due_date'])) ?>
+          (<?= $ob['days_late'] ?> day<?= $ob['days_late'] !== 1 ? 's' : '' ?> overdue).
+          A fine of ₱<?= $ob['fine_per_day'] ?>/day will be applied upon return.
+        </span>
+      </div>
+    <?php endforeach; ?>
 
-    <div style="display:grid; grid-template-columns: 1fr 360px; gap: 20px; align-items: start;">
-
-      <!-- LEFT: Book selection -->
+    <?php if (empty($borrowed_books)): ?>
       <div class="card">
         <div class="card-body">
-          <div class="card-title">Your Borrowed Books</div>
-          <div class="card-subtitle">Choose a book to return — click to select</div>
-
-          <div class="return-list" id="returnList">
-
-            <!-- Book 1 — on time -->
-            <div class="return-book-item" id="item-1"
-                 data-id="1"
-                 data-title="The Great Gatsby"
-                 data-author="F. Scott Fitzgerald"
-                 data-due="May 25, 2026"
-                 data-borrowed="May 10, 2026"
-                 data-overdue="false"
-                 data-fine="0">
-              <div class="return-radio"></div>
-              <div class="return-spine">📖</div>
-              <div class="return-info">
-                <div class="return-title">The Great Gatsby</div>
-                <div class="return-author">F. Scott Fitzgerald</div>
-                <div class="return-meta">
-                  <span>Borrowed: <strong>May 10, 2026</strong></span>
-                  <span>Due: <strong>May 25, 2026</strong></span>
-                </div>
-              </div>
-              <div class="return-right">
-                <span class="badge badge-sage">On Time</span>
-              </div>
-            </div>
-
-            <!-- Book 2 — overdue -->
-            <div class="return-book-item overdue" id="item-2"
-                 data-id="2"
-                 data-title="To Kill a Mockingbird"
-                 data-author="Harper Lee"
-                 data-due="May 18, 2026"
-                 data-borrowed="May 3, 2026"
-                 data-overdue="true"
-                 data-fine="5">
-              <div class="return-radio"></div>
-              <div class="return-spine">📚</div>
-              <div class="return-info">
-                <div class="return-title">To Kill a Mockingbird</div>
-                <div class="return-author">Harper Lee</div>
-                <div class="return-meta">
-                  <span>Borrowed: <strong>May 3, 2026</strong></span>
-                  <span>Due: <strong style="color:var(--rust)">May 18, 2026</strong></span>
-                </div>
-                <div class="overdue-chip" style="margin-top:6px;">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                  </svg>
-                  Overdue — 1 day
-                </div>
-              </div>
-              <div class="return-right">
-                <span class="badge badge-rust">Overdue</span><br>
-                <span style="font-size:0.75rem;color:var(--rust);margin-top:4px;display:block;">+₱5 fine</span>
-              </div>
-            </div>
-
+          <div class="no-borrow-hint">
+            <div class="nb-icon">📚</div>
+            <h3>No books to return</h3>
+            <p>You don't have any books currently checked out.</p>
           </div>
         </div>
       </div>
+    <?php else: ?>
 
-      <!-- RIGHT: Confirm panel -->
-      <div>
-        <div class="confirm-panel" id="confirmPanel">
-          <div class="confirm-panel-header">
-            <h3>Confirm Return</h3>
-            <p>Review the details before confirming.</p>
-          </div>
-          <div class="confirm-body">
-            <div class="confirm-row">
-              <span class="cr-label">Book</span>
-              <span class="cr-val" id="cp-title">—</span>
+      <div style="display:grid; grid-template-columns: 1fr 360px; gap: 20px; align-items: start;">
+
+        <div class="card">
+          <div class="card-body">
+            <div class="card-title">Your Borrowed Books</div>
+            <div class="card-subtitle">Choose a book to return — click to select</div>
+
+            <div class="return-list" id="returnList">
+              <?php foreach ($borrowed_books as $book): ?>
+                <?php
+                  $overdue_cls = $book['is_overdue'] ? ' overdue' : '';
+                  $fine_total  = $book['days_late'] * $book['fine_per_day'];
+                ?>
+                <div class="return-book-item<?= $overdue_cls ?>"
+                     id="item-<?= $book['id'] ?>"
+                     data-id="<?= $book['id'] ?>"
+                     data-title="<?= htmlspecialchars($book['title']) ?>"
+                     data-author="<?= htmlspecialchars($book['author']) ?>"
+                     data-due="<?= date('M j, Y', strtotime($book['due_date'])) ?>"
+                     data-borrowed="<?= date('M j, Y', strtotime($book['borrow_date'])) ?>"
+                     data-overdue="<?= $book['is_overdue'] ? 'true' : 'false' ?>"
+                     data-fine="<?= $book['fine_per_day'] ?>"
+                     data-days-late="<?= $book['days_late'] ?>">
+                  <div class="return-radio"></div>
+                  <div class="return-spine">📖</div>
+                  <div class="return-info">
+                    <div class="return-title"><?= htmlspecialchars($book['title']) ?></div>
+                    <div class="return-author"><?= htmlspecialchars($book['author']) ?></div>
+                    <div class="return-meta">
+                      <span>Borrowed: <strong><?= date('M j, Y', strtotime($book['borrow_date'])) ?></strong></span>
+                      <span>Due:
+                        <strong <?= $book['is_overdue'] ? 'style="color:var(--rust)"' : '' ?>>
+                          <?= date('M j, Y', strtotime($book['due_date'])) ?>
+                        </strong>
+                      </span>
+                    </div>
+                    <?php if ($book['is_overdue']): ?>
+                      <div class="overdue-chip" style="margin-top:6px;">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                        Overdue — <?= $book['days_late'] ?> day<?= $book['days_late'] !== 1 ? 's' : '' ?>
+                      </div>
+                    <?php endif; ?>
+                  </div>
+                  <div class="return-right">
+                    <?php if ($book['is_overdue']): ?>
+                      <span class="badge badge-rust">Overdue</span>
+                      <span style="font-size:0.75rem;color:var(--rust);margin-top:4px;display:block;">+₱<?= $fine_total ?> fine</span>
+                    <?php else: ?>
+                      <span class="badge badge-sage">On Time</span>
+                    <?php endif; ?>
+                  </div>
+                </div>
+              <?php endforeach; ?>
             </div>
-            <div class="confirm-row">
-              <span class="cr-label">Author</span>
-              <span class="cr-val" id="cp-author">—</span>
-            </div>
-            <div class="confirm-row">
-              <span class="cr-label">Borrowed</span>
-              <span class="cr-val" id="cp-borrowed">—</span>
-            </div>
-            <div class="confirm-row">
-              <span class="cr-label">Due Date</span>
-              <span class="cr-val" id="cp-due">—</span>
-            </div>
-            <div class="confirm-row">
-              <span class="cr-label">Return Date</span>
-              <span class="cr-val" id="cp-return" style="color:var(--gold-dk)">Today</span>
-            </div>
-            <div class="confirm-row" id="cp-fine-row">
-              <span class="cr-label">Fine Incurred</span>
-              <span class="cr-val bad" id="cp-fine">—</span>
-            </div>
-          </div>
-          <div class="confirm-actions">
-            <button class="btn-outline" id="btnCancel" style="flex:1;">Cancel</button>
-            <button class="btn-primary" id="btnConfirm" style="flex:1;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-1"/>
-              </svg>
-              Confirm Return
-            </button>
           </div>
         </div>
 
-        <!-- Placeholder when nothing selected -->
-        <div class="no-borrow-hint" id="selectHint">
-          <div class="nb-icon">👈</div>
-          <h3>Select a book</h3>
-          <p>Click on one of your borrowed books to see return details here.</p>
+        <div>
+          <div class="confirm-panel" id="confirmPanel">
+            <div class="confirm-panel-header">
+              <h3>Confirm Return</h3>
+              <p>Review the details before confirming.</p>
+            </div>
+            <div class="confirm-body">
+              <div class="confirm-row">
+                <span class="cr-label">Book</span>
+                <span class="cr-val" id="cp-title">—</span>
+              </div>
+              <div class="confirm-row">
+                <span class="cr-label">Author</span>
+                <span class="cr-val" id="cp-author">—</span>
+              </div>
+              <div class="confirm-row">
+                <span class="cr-label">Borrowed</span>
+                <span class="cr-val" id="cp-borrowed">—</span>
+              </div>
+              <div class="confirm-row">
+                <span class="cr-label">Due Date</span>
+                <span class="cr-val" id="cp-due">—</span>
+              </div>
+              <div class="confirm-row">
+                <span class="cr-label">Return Date</span>
+                <span class="cr-val" style="color:var(--gold-dk)">
+                  Today — <?= date('M j, Y') ?>
+                </span>
+              </div>
+              <div class="confirm-row" id="cp-fine-row" style="display:none;">
+                <span class="cr-label">Fine (per day)</span>
+                <span class="cr-val bad" id="cp-fine">—</span>
+              </div>
+            </div>
+
+            <form method="POST" action="return_book.php" id="returnForm">
+              <input type="hidden" name="borrow_id" id="returnBorrowId" value="">
+            </form>
+
+            <div class="confirm-actions">
+              <button type="button" class="btn-outline" id="btnCancel" style="flex:1;">Cancel</button>
+              <button type="button" class="btn-primary" id="btnConfirm" style="flex:1;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-1"/>
+                </svg>
+                Confirm Return
+              </button>
+            </div>
+          </div>
+
+          <div class="no-borrow-hint" id="selectHint">
+            <div class="nb-icon">👈</div>
+            <h3>Select a book</h3>
+            <p>Click on one of your borrowed books to see return details here.</p>
+          </div>
         </div>
+
       </div>
 
-    </div>
+    <?php endif; ?>
 
   </main>
 </div>
 
 
-<!-- ── Return Success Modal ── -->
+<div class="modal-backdrop" id="doubleCheckModal">
+  <div class="modal" style="max-width: 400px;">
+    <div class="modal-body" style="text-align:center; padding: 24px;">
+      <div style="font-size:2.8rem;margin-bottom:12px;">⚠️</div>
+      <div class="modal-title" style="text-align:center; margin-bottom: 8px;">Are you sure?</div>
+      <div class="modal-desc" style="text-align:center; margin-bottom: 20px; color: var(--muted);">
+        You are about to process the return for <br><strong id="dcBookTitle" style="color:var(--ink)">""</strong>.<br>Would you like to proceed?
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button type="button" class="btn-outline" id="btnDoubleCheckCancel" style="flex:1;">Go Back</button>
+        <button type="button" class="btn-primary" id="btnDoubleCheckConfirm" style="flex:1; background-color: var(--gold);">Yes, Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <div class="modal-backdrop" id="successModal">
   <div class="modal">
     <div class="modal-top"></div>
@@ -323,7 +329,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  /* ── Mobile ── */
+  /* ── Mobile sidebar toggle ── */
   function checkMobile() {
     const t = document.getElementById('menuToggle');
     t.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
@@ -335,7 +341,7 @@
     document.getElementById('sidebar').classList.toggle('open')
   );
 
-  /* ── Book selection ── */
+  /* ── Book selection — must stay JS (click UI, no page reload needed) ── */
   let selectedItem = null;
 
   document.querySelectorAll('.return-book-item').forEach(item => {
@@ -350,9 +356,10 @@
   function updateConfirmPanel(item) {
     const isOverdue = item.dataset.overdue === 'true';
     const fine      = parseInt(item.dataset.fine);
+    const daysLate  = parseInt(item.dataset.daysLate || '0');
 
-    document.getElementById('cp-title').textContent   = item.dataset.title;
-    document.getElementById('cp-author').textContent  = item.dataset.author;
+    document.getElementById('cp-title').textContent    = item.dataset.title;
+    document.getElementById('cp-author').textContent   = item.dataset.author;
     document.getElementById('cp-borrowed').textContent = item.dataset.borrowed;
 
     const dueEl = document.getElementById('cp-due');
@@ -362,53 +369,78 @@
     const fineRow = document.getElementById('cp-fine-row');
     if (isOverdue && fine > 0) {
       fineRow.style.display = 'flex';
-      document.getElementById('cp-fine').textContent = '₱' + fine + '/day';
+      document.getElementById('cp-fine').textContent = '₱' + fine + '/day (₱' + (fine * daysLate) + ' total so far)';
     } else {
       fineRow.style.display = 'none';
     }
+
+    // Set the hidden borrow ID so the PHP form knows which book to return
+    document.getElementById('returnBorrowId').value = item.dataset.id;
 
     document.getElementById('confirmPanel').classList.add('visible');
     document.getElementById('selectHint').style.display = 'none';
   }
 
-  /* ── Cancel ── */
+  /* ── Cancel side panel selection ── */
   document.getElementById('btnCancel').addEventListener('click', () => {
     document.querySelectorAll('.return-book-item').forEach(i => i.classList.remove('selected'));
     selectedItem = null;
+    document.getElementById('returnBorrowId').value = '';
     document.getElementById('confirmPanel').classList.remove('visible');
     document.getElementById('selectHint').style.display = 'block';
   });
 
-  /* ── Confirm Return ── */
+  /* ── Step 1: Open the Double-Check Modal to prevent accidental clicks ── */
   document.getElementById('btnConfirm').addEventListener('click', () => {
+    if (!selectedItem) return;
+    
+    // Insert the dynamic title into the safety modal text
+    document.getElementById('dcBookTitle').textContent = `"${selectedItem.dataset.title}"`;
+    // Open the safety warning modal
+    document.getElementById('doubleCheckModal').classList.add('open');
+  });
+
+  /* ── Step 2a: Dismiss safety check modal if "Go Back" is clicked ── */
+  document.getElementById('btnDoubleCheckCancel').addEventListener('click', () => {
+    document.getElementById('doubleCheckModal').classList.remove('open');
+  });
+
+  /* ── Step 2b: Action verified! Process receipt modal and change UI state ── */
+  document.getElementById('btnDoubleCheckConfirm').addEventListener('click', () => {
+    // Close the safety modal
+    document.getElementById('doubleCheckModal').classList.remove('open');
+    
     if (!selectedItem) return;
     const isOverdue = selectedItem.dataset.overdue === 'true';
     const fine      = parseInt(selectedItem.dataset.fine);
+    const daysLate  = parseInt(selectedItem.dataset.daysLate || '0');
     const today     = new Date().toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
 
-    // Build receipt
+    // Build receipt HTML for modal display
     let lines = `
       <div class="receipt-line"><span class="rl-label">Book</span><span>${selectedItem.dataset.title}</span></div>
       <div class="receipt-line"><span class="rl-label">Author</span><span>${selectedItem.dataset.author}</span></div>
       <div class="receipt-line"><span class="rl-label">Return Date</span><span>${today}</span></div>
-      <div class="receipt-line"><span class="rl-label">Status</span><span>${isOverdue ? '<span style="color:var(--rust)">Overdue</span>' : '<span style="color:var(--sage)">On Time</span>'}</span></div>
+      <div class="receipt-line"><span class="rl-label">Status</span>
+        <span>${isOverdue ? '<span style="color:var(--rust)">Overdue</span>' : '<span style="color:var(--sage)">On Time</span>'}</span>
+      </div>
     `;
     if (isOverdue) {
       lines += `<div class="receipt-line"><span class="rl-label">Fine (per day)</span><span style="color:var(--rust)">₱${fine}</span></div>`;
     }
 
-    document.getElementById('receiptLines').innerHTML = lines;
-
-    const totalEl = document.getElementById('receiptLines');
     const totalDiv = document.createElement('div');
     totalDiv.className = 'receipt-total' + (isOverdue ? '' : ' no-fine');
-    totalDiv.innerHTML = `<span>Total Fine Due</span><span>${isOverdue ? '₱' + fine + ' (to be settled)' : 'No fine — returned on time!'}</span>`;
-    totalEl.appendChild(totalDiv);
+    totalDiv.innerHTML = `<span>Total Fine Due</span><span>${isOverdue ? '₱' + (fine * daysLate) + ' (to be settled)' : 'No fine — returned on time!'}</span>`;
 
-    // Open modal
+    const receiptEl = document.getElementById('receiptLines');
+    receiptEl.innerHTML = lines;
+    receiptEl.appendChild(totalDiv);
+
+    // Show receipt modal
     document.getElementById('successModal').classList.add('open');
 
-    // Remove item from list
+    // Dim the returned item in the list
     selectedItem.style.opacity = '0.4';
     selectedItem.style.pointerEvents = 'none';
     document.getElementById('confirmPanel').classList.remove('visible');
@@ -416,17 +448,26 @@
     selectedItem = null;
   });
 
-  /* ── Close modal ── */
-  ['modalClose', 'modalCloseBtn'].forEach(id => {
-    document.getElementById(id).addEventListener('click', () =>
-      document.getElementById('successModal').classList.remove('open')
-    );
-  });
-  document.getElementById('successModal').addEventListener('click', function(e) {
-    if (e.target === this) this.classList.remove('open');
+  /* ── Modal close (Done button submits the PHP return form) ── */
+  document.getElementById('modalCloseBtn').addEventListener('click', () => {
+    document.getElementById('successModal').classList.remove('open');
+    // Submit the PHP POST form to record the return in DB
+    document.getElementById('returnForm').submit();
   });
 
-  /* ── Toast ── */
+  document.getElementById('modalClose').addEventListener('click', () => {
+    document.getElementById('successModal').classList.remove('open');
+    document.getElementById('returnForm').submit();
+  });
+
+  document.getElementById('successModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+      this.classList.remove('open');
+      document.getElementById('returnForm').submit();
+    }
+  });
+
+  /* ── Toast helper ── */
   function showToast(msg, type = '') {
     const t = document.getElementById('toast');
     t.textContent = msg;
@@ -435,6 +476,13 @@
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 3000);
   }
+
+  /* ── Show flash from PHP redirect ── */
+  <?php if ($flash_success): ?>
+    window.addEventListener('DOMContentLoaded', () => showToast(<?= json_encode($flash_success) ?>, 'success'));
+  <?php elseif ($flash_error): ?>
+    window.addEventListener('DOMContentLoaded', () => showToast(<?= json_encode($flash_error) ?>, 'error'));
+  <?php endif; ?>
 </script>
 </body>
 </html>

@@ -210,6 +210,12 @@
 
 .fine-row-unpaid:hover { background: rgba(192,57,43,0.04) !important; }
 
+/* ── Payment Confirmation Panel animation ── */
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
 /* ── Responsive ── */
 @media (max-width: 640px) {
   .fine-hero-inner { flex-direction: column; }

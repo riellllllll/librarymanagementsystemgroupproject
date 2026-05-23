@@ -33,6 +33,7 @@ $admin = [
 
   <link rel="stylesheet" href="../assets/student.css">
   <link rel="stylesheet" href="../assets/admin_profile.css">
+  <link rel="stylesheet" href="../assets/style.css">
 </head>
 
 <body>
