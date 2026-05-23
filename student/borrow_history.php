@@ -120,13 +120,7 @@ function days_late(string $due, ?string $returned): int {
     </a>
 
     <div class="nav-section-label">My Library</div>
-    <a href="borrowed_books.php" class="nav-link">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-      </svg>
-      Borrowed Books
-      <span class="nav-badge">2</span>
-    </a>
+   
     <a href="borrow_history.php" class="nav-link active">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 0 .5-4"/>
@@ -191,13 +185,7 @@ function days_late(string $due, ?string $returned): int {
     </button>
     <span class="topbar-title">Borrow History</span>
     <div class="topbar-spacer"></div>
-    <a href="view_fines.php" class="topbar-icon-btn" title="Fines &amp; Notifications">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-      </svg>
-      <?php if ($has_fines): ?><span class="topbar-notif-dot"></span><?php endif; ?>
-    </a>
+ 
     <a href="profile.php" class="topbar-icon-btn" title="My Profile">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
