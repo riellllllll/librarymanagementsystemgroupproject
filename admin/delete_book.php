@@ -43,7 +43,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selected_book) {
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="../assets/student.css">
+<<<<<<< HEAD
+  <link rel="stylesheet" href="../assets/adminStyle.css">
+=======
   <link rel="stylesheet" href="../assets/style.css">
+>>>>>>> 9ffd4670080b55b50ceb8c9034016d9df46783da
 </head>
 
 <body>
@@ -139,6 +143,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selected_book) {
           </form>
 
         <?php else: ?>
+<<<<<<< HEAD
+=======
 
           <div class="alert alert-gold">
             No book selected. Please go to View Books and click Delete.
@@ -149,8 +155,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selected_book) {
       </div>
 
     </div>
+>>>>>>> 9ffd4670080b55b50ceb8c9034016d9df46783da
 
-  </main>
+          <div class="alert alert-gold">
+            No book selected. Please go to View Books and click Delete.
+          </div>
+
+        <?php endif; ?>
+
+      </div>
+
+    </div>
 
   </div>
 

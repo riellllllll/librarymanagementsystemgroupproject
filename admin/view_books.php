@@ -61,6 +61,7 @@ $books = array_slice($filtered, $offset, $per_page);
 
   <link rel="stylesheet" href="../assets/student.css">
   <link rel="stylesheet" href="../assets/style.css">
+  <link rel="stylesheet" href="../assets/adminStyle.css">
 </head>
 
 <body>
