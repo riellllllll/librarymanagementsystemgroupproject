@@ -35,6 +35,14 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
       Dashboard
     </a>
 
+    <a href="admin_profile.php" class="nav-link <?= $current_page === 'admin_profile.php' ? 'active' : '' ?>">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+      My Profile
+    </a>
+
     <div class="nav-section-label">Books</div>
 
     <a href="view_books.php" class="nav-link <?= $current_page === 'view_books.php' ? 'active' : '' ?>">
@@ -128,14 +136,14 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
   </nav>
 
   <div class="sidebar-footer">
-    <a href="admin_profile.php" class="sidebar-user sidebar-user-link <?= $current_page === 'admin_profile.php' ? 'active' : '' ?>">
+    <div class="sidebar-user">
       <div class="user-avatar">AD</div>
 
       <div class="user-info">
         <div class="user-name">Admin</div>
         <div class="user-role">Administrator</div>
       </div>
-    </a>
+    </div>
 
     <a href="logout.php" class="btn-logout">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
