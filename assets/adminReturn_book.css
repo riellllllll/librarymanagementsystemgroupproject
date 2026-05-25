@@ -1,0 +1,239 @@
+/* =====================================================
+   return_book.css — Library Management System
+   Styles for the Return Book admin page
+   ===================================================== */
+
+/* Quick Return form */
+.quick-return-form {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-bottom: 4px;
+}
+
+.quick-return-form .field {
+  flex: 1 1 240px;
+  min-width: 200px;
+  margin-bottom: 0;
+}
+
+.quick-return-form .field label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.quick-return-form .field label span {
+  color: #e74c3c;
+}
+
+.quick-return-form .input-wrap input {
+  width: 100%;
+  height: 42px;
+  padding: 0 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #1e293b;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.quick-return-form .input-wrap input:focus {
+  outline: none;
+  border-color: #c9a84c;
+  box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.12);
+}
+
+.quick-return-form .btn-primary {
+  height: 42px;
+  padding: 0 22px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+/* Search / Filter bar */
+.search-filter-bar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin: 16px 0 20px;
+}
+
+.search-filter-bar .field {
+  flex: 1 1 200px;
+  min-width: 160px;
+  margin-bottom: 0;
+}
+
+.search-filter-bar .field .input-wrap input,
+.search-filter-bar .field .input-wrap select {
+  width: 100%;
+  height: 42px;
+  padding: 0 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #1e293b;
+  background: #fff;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-filter-bar .field .input-wrap input:focus,
+.search-filter-bar .field .input-wrap select:focus {
+  outline: none;
+  border-color: #c9a84c;
+  box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.12);
+}
+
+.search-filter-bar .btn-primary,
+.search-filter-bar .btn-outline {
+  height: 42px;
+  padding: 0 18px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Stat card colors */
+.stat-card.stat-warning {
+  border-top: 3px solid #e74c3c;
+}
+
+.stat-card.stat-warning .stat-icon {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.stat-card.stat-info {
+  border-top: 3px solid #f59e0b;
+}
+
+.stat-card.stat-info .stat-icon {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* Table row highlights */
+.overdue-row {
+  background-color: #fff5f5 !important;
+}
+
+.overdue-row td {
+  color: #7f1d1d;
+}
+
+.overdue-row td .text-muted {
+  color: #b91c1c;
+  opacity: 0.75;
+}
+
+.due-today-row {
+  background-color: #fffbeb !important;
+}
+
+.due-today-row td {
+  color: #78350f;
+}
+
+.due-today-row td .text-muted {
+  color: #92400e;
+  opacity: 0.75;
+}
+
+/* Badges */
+.badge-warning {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.badge-due-today {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  background: #fef3c7;
+  color: #92400e;
+  margin-left: 6px;
+}
+
+/* Table action buttons */
+.return-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.return-actions .btn-outline,
+.return-actions .btn-danger {
+  padding: 5px 14px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .quick-return-form,
+  .search-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .quick-return-form .field,
+  .search-filter-bar .field {
+    flex: 1 1 auto;
+    min-width: unset;
+  }
+
+  .quick-return-form .btn-primary,
+  .search-filter-bar .btn-primary,
+  .search-filter-bar .btn-outline {
+    width: 100%;
+  }
+
+  .stats-grid.issue-book-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid.issue-book-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .return-actions {
+    flex-direction: column;
+  }
+
+  .return-actions .btn-outline,
+  .return-actions .btn-danger {
+    width: 100%;
+    text-align: center;
+  }
+}
