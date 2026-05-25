@@ -153,5 +153,6 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
       </svg>
       Log Out
     </a>
+
   </div>
 </aside>
