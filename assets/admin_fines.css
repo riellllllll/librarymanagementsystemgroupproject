@@ -1,0 +1,422 @@
+/* admin_fines.css - Matching Admin Panel Style */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "Segoe UI", sans-serif;
+    background: #f5f2ed;
+}
+
+/* Main wrapper with sidebar margin */
+.fine-page-wrapper {
+    margin-left: 260px;
+    padding: 30px;
+    min-height: 100vh;
+    background: #f5f2ed;
+}
+
+.fine-container {
+    max-width: 1000px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.fine-main-card {
+    background: transparent;
+    width: 100%;
+}
+
+/* Header Section */
+.fine-header {
+    margin-bottom: 25px;
+    text-align: center;
+}
+
+.fine-header h1 {
+    font-size: 28px;
+    color: #1a110b;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.fine-header p {
+    color: rgba(0, 0, 0, 0.6);
+    font-size: 14px;
+}
+
+/* Tabs Navigation */
+.fine-tabs {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.fine-tab {
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.6);
+    cursor: pointer;
+    border-radius: 8px;
+    background: white;
+    transition: 0.25s ease;
+}
+
+.fine-tab:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.fine-tab.fine-active {
+    background: #c89b3c;
+    color: #1a110b;
+    font-weight: 600;
+}
+
+/* Statistics Grid */
+.fine-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.fine-stat-card {
+    background: #fff;
+    padding: 20px 15px;
+    border-radius: 12px;
+    border-top: 4px solid #c89b3c;
+    transition: 0.25s ease;
+    text-align: center;
+}
+
+.fine-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.fine-stat-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    opacity: 0.6;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    color: #1a110b;
+}
+
+.fine-stat-number {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1a110b;
+    margin-bottom: 5px;
+}
+
+.fine-stat-sub {
+    font-size: 11px;
+    opacity: 0.6;
+    margin-top: 8px;
+    color: #1a110b;
+}
+
+/* Search Section */
+.fine-search-section {
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+}
+
+.fine-search-form {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.fine-input-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.fine-input-group label {
+    display: block;
+    font-size: 12px;
+    opacity: 0.6;
+    margin-bottom: 6px;
+    color: #1a110b;
+}
+
+.fine-input-group input,
+.fine-input-group select {
+    width: 100%;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #eee8e8;
+    font-family: "Segoe UI", sans-serif;
+    font-size: 14px;
+    background: white;
+}
+
+.fine-input-group input:focus,
+.fine-input-group select:focus {
+    outline: none;
+    border-color: #c89b3c;
+}
+
+/* Buttons */
+.fine-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: "Segoe UI", sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    transition: 0.25s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.fine-btn-primary {
+    background: #c89b3c;
+    color: #1a110b;
+}
+
+.fine-btn-primary:hover {
+    background: #b88a2a;
+    transform: translateY(-1px);
+}
+
+.fine-btn-secondary {
+    background: #f0ece7;
+    color: #1a110b;
+    border: 1px solid #eee8e8;
+}
+
+.fine-btn-secondary:hover {
+    background: #e5dfd8;
+}
+
+.fine-btn-success {
+    background: #d4f4dd;
+    color: #2e7d32;
+    padding: 5px 12px;
+    font-size: 12px;
+}
+
+.fine-btn-success:hover {
+    background: #c0e8cc;
+}
+
+.fine-btn-danger {
+    background: #ffd6d6;
+    color: #c62828;
+    padding: 8px 16px;
+}
+
+.fine-btn-danger:hover {
+    background: #ffc2c2;
+}
+
+.fine-btn-sm {
+    padding: 5px 12px;
+    font-size: 12px;
+}
+
+/* Alert Message */
+.fine-alert {
+    background: #d4f4dd;
+    color: #2e7d32;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    text-align: center;
+}
+
+/* Student Info Bar */
+.fine-student-info {
+    background: #1a110b;
+    padding: 16px 20px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    color: white;
+    text-align: center;
+}
+
+.fine-student-details {
+    display: flex;
+    gap: 25px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.fine-student-detail-item {
+    display: flex;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.fine-student-detail-label {
+    opacity: 0.7;
+}
+
+.fine-student-detail-value {
+    font-weight: 500;
+}
+
+/* Section Title */
+.fine-section-title {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+    text-align: center;
+}
+
+.fine-section-title span {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a110b;
+}
+
+/* Table */
+.fine-table-wrapper {
+    background: #fff;
+    border-radius: 12px;
+    overflow-x: auto;
+    margin-bottom: 25px;
+}
+
+.fine-fines-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.fine-fines-table th {
+    text-align: left;
+    padding: 12px 16px;
+    border-bottom: 1px solid #eee;
+    font-size: 12px;
+    opacity: 0.6;
+    font-weight: 600;
+    color: #1a110b;
+}
+
+.fine-fines-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+    color: #1a110b;
+}
+
+.fine-fines-table tr:last-child td {
+    border-bottom: none;
+}
+
+.fine-fines-table tr:hover {
+    background: #faf8f5;
+}
+
+/* Status Badges */
+.fine-status-badge {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+}
+
+.fine-status-pending {
+    background: #ffd6d6;
+    color: #c62828;
+}
+
+.fine-status-paid {
+    background: #d4f4dd;
+    color: #2e7d32;
+}
+
+.fine-fine-amount {
+    font-weight: 700;
+    color: #c62828;
+}
+
+/* Total Summary */
+.fine-total-summary {
+    background: #fff8f0;
+    border: 1px solid #e8dcc8;
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.fine-total-label {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a110b;
+}
+
+.fine-total-amount {
+    font-size: 24px;
+    font-weight: 700;
+    color: #c62828;
+}
+
+/* No Data Message */
+.fine-no-data {
+    background: #fff;
+    text-align: center;
+    padding: 50px 20px;
+    border-radius: 12px;
+    color: rgba(0, 0, 0, 0.5);
+    font-size: 14px;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .fine-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+    .fine-page-wrapper {
+        margin-left: 0;
+        padding: 20px;
+    }
+    .fine-container {
+        max-width: 95%;
+    }
+}
+
+@media (max-width: 768px) {
+    .fine-page-wrapper {
+        padding: 15px;
+    }
+    .fine-stats-grid {
+        grid-template-columns: 1fr;
+    }
+    .fine-search-form {
+        flex-direction: column;
+    }
+    .fine-btn {
+        width: 100%;
+        text-align: center;
+    }
+    .fine-student-details {
+        gap: 12px;
+        flex-direction: column;
+        align-items: center;
+    }
+    .fine-total-summary {
+        flex-direction: column;
+        text-align: center;
+    }
+}
