@@ -170,8 +170,5 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
       Log Out
     </a>
 
-    <a href="return_book.php" class="<?php echo basename($_SERVER['PHP_SELF']) === 'return_book.php' ? 'active' : ''; ?>">
-  <span>Return Book</span>
-</a>
   </div>
 </aside>
