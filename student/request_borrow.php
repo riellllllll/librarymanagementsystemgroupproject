@@ -1,5 +1,6 @@
 <?php
 // request_borrow.php
+session_start();
 $active_page = 'request';
 
 $all_books = [
@@ -30,6 +31,20 @@ foreach ($all_books as $b) {
 $submitted = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $submitted = true;
+  $posted_book_id = (int)($_POST['book_id'] ?? 0);
+  foreach ($all_books as $b) {
+    if ($b['id'] === $posted_book_id) {
+      $_SESSION['student_notifications'] ??= [];
+      $_SESSION['student_notifications'][] = [
+        'type' => 'approved',
+        'title' => 'Borrow request approved',
+        'message' => 'Your request for "' . $b['title'] . '" has been approved.',
+        'time' => 'Just now',
+        'unread' => true
+      ];
+      break;
+    }
+  }
 }
 ?>
 <!DOCTYPE html>
@@ -152,6 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </button>
     <span class="topbar-title">Request Borrow</span>
     <div class="topbar-spacer"></div>
+    <?php require_once '../includes/student_notifications.php'; ?>
    
   
     <a href="profile.php" class="topbar-icon-btn" title="My Profile">
