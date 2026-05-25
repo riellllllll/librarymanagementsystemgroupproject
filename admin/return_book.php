@@ -31,7 +31,7 @@ function days_overdue($due_date) {
   return 0;
 }
 
-// Process return action
+// Process return via GET (table button)
 if (isset($_GET['return_id'])) {
   $found = false;
   foreach ($_SESSION['borrowed_books'] as &$book) {
@@ -57,12 +57,12 @@ if (isset($_GET['return_id'])) {
   }
 }
 
-// Process bulk return via POST
+// Process return via POST (quick return form)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
   $borrow_id = trim($_POST['borrow_id'] ?? '');
 
   if ($borrow_id === '') {
-    $error = "Please enter a Borrow Record ID.";
+    $error = "Please enter a Borrow Record ID or Book ID.";
   } else {
     $found = false;
     foreach ($_SESSION['borrowed_books'] as &$book) {
@@ -170,17 +170,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
   <link rel="stylesheet" href="../assets/style.css">
   <link rel="stylesheet" href="../assets/adminStyle.css">
   <link rel="stylesheet" href="../assets/issue_book.css">
-  <style>
-    .return-search-form { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; align-items:end; }
-    .return-search-form .field { flex:1; min-width:200px; }
-    .return-search-form .btn-primary { height:42px; }
-    .overdue-row { background:#fff5f5 !important; }
-    .overdue-row td { color:#c0392b; }
-    .overdue-badge { background:#fee2e2; color:#991b1b; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; margin-left:6px; }
-    .due-today-row { background:#fffbeb !important; }
-    .stat-warning { border-top-color: #e74c3c; }
-    .stat-info { border-top-color: #f59e0b; }
-  </style>
+  <link rel="stylesheet" href="../assets/return_book.css">
 </head>
 <body>
 
@@ -277,7 +267,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         <div class="card-title">Quick Return</div>
         <p class="card-subtitle">Enter a Borrow Record ID or Book ID to process a return instantly.</p>
 
-        <form method="POST" action="return_book.php" class="return-search-form">
+        <form method="POST" action="return_book.php" class="quick-return-form">
           <div class="field">
             <label for="borrow_id">Borrow / Book ID <span>*</span></label>
             <div class="input-wrap">
@@ -294,7 +284,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
         <div class="card-title">Borrowed Books</div>
         <p class="card-subtitle">All active borrow records. Overdue entries are highlighted in red.</p>
 
-        <form method="GET" action="return_book.php" class="return-search-form" style="margin-top:16px;">
+        <form method="GET" action="return_book.php" class="search-filter-bar">
           <div class="field">
             <div class="input-wrap">
               <input class="no-icon" type="text" name="search" placeholder="Search student, book, or ID..." value="<?php echo htmlspecialchars($search); ?>">
@@ -302,7 +292,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
           </div>
           <div class="field">
             <div class="input-wrap">
-              <select class="no-icon" name="filter" style="height:42px; border-radius:8px; border:1px solid #e2e8f0; padding:0 12px;">
+              <select class="no-icon" name="filter">
                 <option value="all" <?php echo $filter === 'all' ? 'selected' : ''; ?>>All Active</option>
                 <option value="overdue" <?php echo $filter === 'overdue' ? 'selected' : ''; ?>>Overdue Only</option>
                 <option value="due_today" <?php echo $filter === 'due_today' ? 'selected' : ''; ?>>Due Today</option>
@@ -311,7 +301,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
           </div>
           <button type="submit" class="btn-primary">Filter</button>
           <?php if ($search !== '' || $filter !== 'all'): ?>
-            <a href="return_book.php" class="btn-outline" style="height:42px; display:flex; align-items:center;">Clear</a>
+            <a href="return_book.php" class="btn-outline">Clear</a>
           <?php endif; ?>
         </form>
 
@@ -352,16 +342,16 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                     <td>
                       <?php echo htmlspecialchars(format_book_date($row['due_date'] ?? '')); ?>
                       <?php if ($isOverdue): ?>
-                        <span class="overdue-badge"><?php echo $overdueDays; ?> day<?php echo $overdueDays > 1 ? 's' : ''; ?> overdue</span>
+                        <span class="badge-warning"><?php echo $overdueDays; ?> day<?php echo $overdueDays > 1 ? 's' : ''; ?> overdue</span>
                       <?php elseif ($isDueToday): ?>
-                        <span class="overdue-badge" style="background:#fef3c7; color:#92400e;">Due today</span>
+                        <span class="badge-due-today">Due today</span>
                       <?php endif; ?>
                     </td>
                     <td>
                       <span class="badge badge-gold">Borrowed</span>
                     </td>
                     <td>
-                      <div class="issue-book-table-actions">
+                      <div class="return-actions">
                         <a href="return_book.php?return_id=<?php echo urlencode($row['id'] ?? ''); ?>" class="btn-outline btn-small" onclick="return confirm('Mark this book as returned?');">Return</a>
                       </div>
                     </td>
