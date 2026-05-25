@@ -37,30 +37,6 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
 
     <div class="nav-section-label">Books</div>
 
-    <a href="add_book.php" class="nav-link <?= $current_page === 'add_book.php' ? 'active' : '' ?>">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M12 5v14M5 12h14"/>
-      </svg>
-      Add Book
-    </a>
-
-    <a href="edit_book.php" class="nav-link <?= $current_page === 'edit_book.php' ? 'active' : '' ?>">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M12 20h9"/>
-        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
-      </svg>
-      Edit Book
-    </a>
-
-    <a href="delete_book.php" class="nav-link <?= $current_page === 'delete_book.php' ? 'active' : '' ?>">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <polyline points="3 6 5 6 21 6"/>
-        <path d="M8 6V4h8v2"/>
-        <path d="M19 6l-1 14H6L5 6"/>
-      </svg>
-      Delete Book
-    </a>
-
     <a href="view_books.php" class="nav-link <?= $current_page === 'view_books.php' ? 'active' : '' ?>">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
