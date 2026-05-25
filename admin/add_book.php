@@ -168,9 +168,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
           </div>
 
-          <button class="btn-primary" type="submit">
-            Save Book
-          </button>
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <button class="btn-primary" type="submit">
+              Save Book
+            </button>
+
+            <a href="view_books.php" class="btn-outline">
+              Return
+            </a>
+          </div>
 
         </form>
 

@@ -339,3 +339,120 @@
   background: rgba(192,57,43,0.15) !important;
   color: #e8a09a !important;
 }
+
+.admin-profile-page .admin-profile-actions {
+  margin-left: auto;
+  align-self: center;
+}
+
+.admin-profile-page .btn-edit-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgba(201,151,58,0.45);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--gold-dk);
+  padding: 9px 16px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-profile-page .btn-edit-toggle:hover,
+.admin-profile-page .btn-edit-toggle.editing {
+  background: var(--gold);
+  color: #fff;
+}
+
+.admin-profile-page .view-mode.hidden {
+  display: none;
+}
+
+.admin-profile-page .edit-form {
+  display: none;
+  margin-top: 18px;
+}
+
+.admin-profile-page .edit-form.active {
+  display: block;
+}
+
+.admin-profile-page .admin-profile-form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+.admin-profile-page .password-strength {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--border);
+  margin-top: 8px;
+}
+
+.admin-profile-page .password-strength-bar {
+  width: 0;
+  height: 100%;
+  transition: width 0.2s ease, background 0.2s ease;
+}
+
+.admin-profile-page .password-strength-bar.strength-weak {
+  width: 33%;
+  background: var(--rust);
+}
+
+.admin-profile-page .password-strength-bar.strength-medium {
+  width: 66%;
+  background: var(--gold);
+}
+
+.admin-profile-page .password-strength-bar.strength-strong {
+  width: 100%;
+  background: var(--sage);
+}
+
+.admin-profile-page .password-strength-label {
+  margin-top: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.toast.success {
+  border-color: var(--sage);
+  color: #7dcba8;
+}
+
+.toast.error {
+  border-color: var(--rust);
+  color: #e8a09a;
+}
+
+@media (max-width: 700px) {
+  .admin-profile-page .admin-profile-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .admin-profile-page .btn-edit-toggle {
+    width: 100%;
+  }
+
+  .admin-profile-page .admin-profile-form-actions {
+    flex-direction: column;
+  }
+
+  .admin-profile-page .admin-profile-form-actions .btn-outline,
+  .admin-profile-page .admin-profile-form-actions .btn-primary {
+    width: 100%;
+  }
+}
