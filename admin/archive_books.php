@@ -7,13 +7,10 @@ $pending_count = count(array_filter($_SESSION['borrow_requests'], function ($req
 }));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
   $book_id = (int)($_POST['book_id'] ?? 0);
 
   foreach ($_SESSION['archived_books'] as $index => $book) {
-
     if ((int)$book['id'] === $book_id) {
-
       $_SESSION['books'][] = $book;
 
       unset($_SESSION['archived_books'][$index]);
@@ -33,9 +30,7 @@ $archived_books = $_SESSION['archived_books'];
 <html lang="en">
 
 <head>
-
   <meta charset="UTF-8">
-
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <title>Archive Books</title>
@@ -43,8 +38,7 @@ $archived_books = $_SESSION['archived_books'];
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="../assets/student.css">
-  <link rel="stylesheet" href="../assets/admin-extra.css">
-
+  <link rel="stylesheet" href="../assets/adminStyle.css">
 </head>
 
 <body>
@@ -58,16 +52,6 @@ $archived_books = $_SESSION['archived_books'];
     <span class="topbar-title">Archive Books</span>
 
     <div class="topbar-spacer"></div>
-
-    <form class="topbar-search" method="GET" action="view_books.php">
-
-      <input
-        type="text"
-        name="q"
-        placeholder="Search by book title, author, or ID..."
-      >
-
-    </form>
 
     <a href="student_req.php" class="topbar-icon-btn" title="Student Borrow Requests">
 
@@ -130,7 +114,6 @@ $archived_books = $_SESSION['archived_books'];
           <table>
 
             <thead>
-
               <tr>
                 <th>ID #</th>
                 <th>Book Title</th>
@@ -139,7 +122,6 @@ $archived_books = $_SESSION['archived_books'];
                 <th>Copies</th>
                 <th>Action</th>
               </tr>
-
             </thead>
 
             <tbody>
@@ -147,11 +129,9 @@ $archived_books = $_SESSION['archived_books'];
               <?php if (empty($archived_books)): ?>
 
                 <tr>
-
                   <td colspan="6">
                     No archived books yet.
                   </td>
-
                 </tr>
 
               <?php else: ?>
@@ -159,19 +139,13 @@ $archived_books = $_SESSION['archived_books'];
                 <?php foreach ($archived_books as $book): ?>
 
                   <tr>
-
                     <td><?= htmlspecialchars($book['id']) ?></td>
-
                     <td><?= htmlspecialchars($book['title']) ?></td>
-
                     <td><?= htmlspecialchars($book['author']) ?></td>
-
                     <td><?= htmlspecialchars($book['genre']) ?></td>
-
                     <td><?= htmlspecialchars($book['copies']) ?></td>
 
                     <td>
-
                       <form method="POST" action="archive_books.php">
 
                         <input
@@ -185,9 +159,7 @@ $archived_books = $_SESSION['archived_books'];
                         </button>
 
                       </form>
-
                     </td>
-
                   </tr>
 
                 <?php endforeach; ?>

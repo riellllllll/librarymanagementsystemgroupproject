@@ -1,58 +1,44 @@
-:root {
-  --cream: #fffaf0;
-  --ink: #2f2a1f;
-  --muted: #7b705f;
-  --gold: #c9973a;
-  --sage: #5f8b68;
-  --rust: #b85c38;
-  --line: rgba(92, 74, 43, 0.16);
-  --shadow: 0 18px 45px rgba(63, 47, 25, 0.12);
-}
-
-body {
-  font-family: 'Inter', sans-serif;
-  color: var(--ink);
-  background: linear-gradient(135deg, #f8f3e8 0%, #f5ecd9 48%, #fbf7ed 100%);
-}
-
-.page-header h1 em {
+.admin-profile-page .page-header h1 em {
   color: var(--gold);
   font-style: italic;
 }
 
-.gold-rule i {
+.admin-profile-page .gold-rule i {
   color: var(--gold);
   font-style: normal;
 }
 
-.admin-profile-hero {
+.admin-profile-page .admin-profile-hero {
   background: var(--card-bg);
   border-radius: var(--radius-card);
   overflow: hidden;
-  box-shadow: var(--shadow);
+  box-shadow:
+    0 4px 24px rgba(15, 22, 35, 0.07),
+    0 0 0 1px rgba(201, 151, 58, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
   margin-bottom: 20px;
   border: 1px solid rgba(201, 151, 58, 0.12);
 }
 
-.profile-banner {
+.admin-profile-page .profile-banner {
   height: 92px;
   background: linear-gradient(135deg, #2f2a1f 0%, #57411f 55%, #8f6a2a 100%);
 }
 
-.admin-profile-body {
+.admin-profile-page .admin-profile-body {
   display: flex;
   align-items: flex-end;
   gap: 18px;
   padding: 0 28px 24px;
 }
 
-.admin-avatar-xl {
+.admin-profile-page .admin-avatar-xl {
   width: 88px;
   height: 88px;
   margin-top: -44px;
   border-radius: 50%;
   border: 4px solid var(--card-bg);
-  background: linear-gradient(135deg, var(--gold), #e8c26a);
+  background: linear-gradient(135deg, var(--gold-dk), var(--gold-lt));
   color: #fff;
   font-size: 2.1rem;
   font-weight: 800;
@@ -62,26 +48,26 @@ body {
   box-shadow: 0 8px 24px rgba(201, 151, 58, 0.35);
 }
 
-.admin-profile-info h2 {
+.admin-profile-page .admin-profile-info h2 {
   margin: 0 0 4px;
   font-size: 1.3rem;
   color: var(--ink);
 }
 
-.admin-id {
+.admin-profile-page .admin-id {
   color: var(--muted);
   font-size: 0.75rem;
   letter-spacing: 0.08em;
   margin-bottom: 10px;
 }
 
-.admin-chips {
+.admin-profile-page .admin-chips {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.admin-chip {
+.admin-profile-page .admin-chip {
   display: inline-flex;
   padding: 5px 10px;
   border-radius: 20px;
@@ -92,19 +78,19 @@ body {
   color: var(--muted);
 }
 
-.chip-gold {
-  color: var(--gold);
+.admin-profile-page .chip-gold {
+  color: var(--gold-dk);
   background: #fdf8ee;
   border-color: rgba(201, 151, 58, 0.25);
 }
 
-.chip-sage {
+.admin-profile-page .chip-sage {
   color: var(--sage);
   background: #eef5f1;
-  border-color: rgba(95, 139, 104, 0.2);
+  border-color: rgba(46, 125, 94, 0.2);
 }
 
-.admin-stats {
+.admin-profile-page .admin-stats {
   display: flex;
   gap: 20px;
   padding: 16px 24px;
@@ -112,59 +98,59 @@ body {
   border-top: 1px solid var(--border);
 }
 
-.admin-stat-item {
+.admin-profile-page .admin-stat-item {
   display: flex;
   flex-direction: column;
   gap: 3px;
 }
 
-.admin-stat-value {
+.admin-profile-page .admin-stat-value {
   color: var(--ink);
   font-size: 1.2rem;
   font-weight: 700;
 }
 
-.admin-stat-label {
+.admin-profile-page .admin-stat-label {
   color: var(--muted);
   font-size: 0.62rem;
   letter-spacing: 0.13em;
   text-transform: uppercase;
 }
 
-.admin-stat-divider {
+.admin-profile-page .admin-stat-divider {
   width: 1px;
   background: var(--border);
 }
 
-.admin-profile-layout {
+.admin-profile-page .admin-profile-layout {
   display: grid;
   grid-template-columns: 1fr 340px;
   gap: 20px;
   align-items: start;
 }
 
-.info-grid {
+.admin-profile-page .info-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0;
   margin-top: 12px;
 }
 
-.info-cell {
+.admin-profile-page .info-cell {
   padding: 14px 0;
   border-bottom: 1px solid rgba(221, 227, 239, 0.7);
 }
 
-.info-cell:nth-child(odd) {
+.admin-profile-page .info-cell:nth-child(odd) {
   padding-right: 20px;
 }
 
-.info-cell:nth-child(even) {
+.admin-profile-page .info-cell:nth-child(even) {
   padding-left: 20px;
   border-left: 1px solid var(--border);
 }
 
-.info-label {
+.admin-profile-page .info-label {
   color: #aab4cc;
   font-size: 0.63rem;
   letter-spacing: 0.14em;
@@ -172,24 +158,24 @@ body {
   margin-bottom: 4px;
 }
 
-.info-value {
+.admin-profile-page .info-value {
   color: var(--ink);
   font-size: 0.9rem;
   font-weight: 500;
 }
 
-.admin-side-card {
+.admin-profile-page .admin-side-card {
   margin-bottom: 16px;
 }
 
-.detail-list {
+.admin-profile-page .detail-list {
   display: flex;
   flex-direction: column;
   gap: 13px;
   margin-top: 12px;
 }
 
-.detail-list div {
+.admin-profile-page .detail-list div {
   display: flex;
   justify-content: space-between;
   gap: 12px;
@@ -197,25 +183,25 @@ body {
   border-bottom: 1px solid rgba(221, 227, 239, 0.7);
 }
 
-.detail-list span {
+.admin-profile-page .detail-list span {
   color: var(--muted);
   font-size: 0.76rem;
 }
 
-.detail-list strong {
+.admin-profile-page .detail-list strong {
   color: var(--ink);
   font-size: 0.8rem;
   text-align: right;
 }
 
-.admin-quick-links {
+.admin-profile-page .admin-quick-links {
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin-top: 12px;
 }
 
-.admin-quick-links a {
+.admin-profile-page .admin-quick-links a {
   padding: 10px 12px;
   border-radius: 8px;
   background: var(--input-bg);
@@ -226,32 +212,32 @@ body {
   font-weight: 500;
 }
 
-.admin-quick-links a:hover {
+.admin-profile-page .admin-quick-links a:hover {
   border-color: var(--gold);
   background: #fdf8ee;
 }
 
-.admin-assistance {
-  border: 1px solid rgba(184, 92, 56, 0.22);
+.admin-profile-page .admin-assistance {
+  border: 1px solid rgba(192, 57, 43, 0.22);
   border-radius: 12px;
   padding: 18px 20px;
-  background: rgba(184, 92, 56, 0.04);
+  background: rgba(192, 57, 43, 0.04);
 }
 
-.admin-assistance h4 {
+.admin-profile-page .admin-assistance h4 {
   color: var(--rust);
   font-size: 0.86rem;
   margin-bottom: 6px;
 }
 
-.admin-assistance p {
+.admin-profile-page .admin-assistance p {
   color: var(--muted);
   font-size: 0.76rem;
   line-height: 1.5;
   margin-bottom: 12px;
 }
 
-.admin-assistance a {
+.admin-profile-page .admin-assistance a {
   display: inline-flex;
   padding: 8px 14px;
   border-radius: 8px;
@@ -263,31 +249,93 @@ body {
 }
 
 @media (max-width: 900px) {
-  .admin-profile-layout {
+  .admin-profile-page .admin-profile-layout {
     grid-template-columns: 1fr;
   }
 
-  .admin-stats {
+  .admin-profile-page .admin-stats {
     flex-wrap: wrap;
   }
 
-  .info-grid {
+  .admin-profile-page .info-grid {
     grid-template-columns: 1fr;
   }
 
-  .info-cell:nth-child(even) {
+  .admin-profile-page .info-cell:nth-child(even) {
     padding-left: 0;
     border-left: none;
   }
 }
 
 @media (max-width: 580px) {
-  .admin-profile-body {
+  .admin-profile-page .admin-profile-body {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .admin-stats {
+  .admin-profile-page .admin-stats {
     gap: 14px;
   }
+}
+
+/* Force Admin Profile sidebar to match the shared sidebar */
+.admin-profile-page ~ .sidebar,
+.sidebar {
+  width: var(--sidebar-width) !important;
+  min-height: 100vh !important;
+  background: var(--ink) !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+}
+
+.sidebar-logo h2 {
+  color: var(--parchment) !important;
+}
+
+.sidebar-logo h2 em {
+  color: var(--gold-lt) !important;
+}
+
+.sidebar-subtitle,
+.nav-section-label,
+.user-role {
+  color: rgba(232,237,245,0.35) !important;
+}
+
+.nav-link {
+  color: rgba(232,237,245,0.52) !important;
+  background: transparent !important;
+}
+
+.nav-link:hover {
+  background: rgba(201,151,58,0.12) !important;
+  color: var(--parchment) !important;
+}
+
+.nav-link.active {
+  background: var(--gold) !important;
+  color: #fff !important;
+  font-weight: 500 !important;
+  box-shadow: 0 4px 16px rgba(201,151,58,0.35) !important;
+}
+
+.sidebar-user {
+  background: rgba(201,151,58,0.1) !important;
+  border: 1px solid rgba(201,151,58,0.2) !important;
+}
+
+.user-avatar {
+  background: linear-gradient(135deg, var(--gold-dk), var(--gold-lt)) !important;
+  color: #fff !important;
+}
+
+.btn-logout {
+  background: transparent !important;
+  color: rgba(232,237,245,0.38) !important;
+}
+
+.btn-logout:hover {
+  background: rgba(192,57,43,0.15) !important;
+  color: #e8a09a !important;
 }
