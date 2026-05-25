@@ -1,5 +1,6 @@
 <?php
 // search_books.php
+session_start();
 $active_page = 'search';
 
 $all_books = [
@@ -169,6 +170,7 @@ function hl(string $text, string $q): string {
     </button>
     <span class="topbar-title">Search Books</span>
     <div class="topbar-spacer"></div>
+    <?php require_once '../includes/student_notifications.php'; ?>
   
     <a href="profile.php" class="topbar-icon-btn" title="My Profile">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
