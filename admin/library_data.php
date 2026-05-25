@@ -3,7 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
-if (!isset($_SESSION['books']) || !is_array($_SESSION['books']) || count($_SESSION['books']) < 16) {
+if (!isset($_SESSION['books']) || !is_array($_SESSION['books'])) {
   $_SESSION['books'] = [
     ['id'=>1,'title'=>'The Great Gatsby','author'=>'F. Scott Fitzgerald','genre'=>'Fiction','category'=>'Fiction','copies'=>3,'available'=>2,'color'=>'color-a'],
     ['id'=>2,'title'=>'To Kill a Mockingbird','author'=>'Harper Lee','genre'=>'Fiction','category'=>'Fiction','copies'=>4,'available'=>1,'color'=>'color-b'],

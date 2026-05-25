@@ -311,6 +311,6 @@ $books = array_slice($filtered, $offset, $per_page);
   </main>
 
 </div>
- 
+
 </body>
 </html>

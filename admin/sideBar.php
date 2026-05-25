@@ -35,31 +35,15 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
       Dashboard
     </a>
 
+    <a href="admin_profile.php" class="nav-link <?= $current_page === 'admin_profile.php' ? 'active' : '' ?>">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+      My Profile
+    </a>
+
     <div class="nav-section-label">Books</div>
-
-    <a href="add_book.php" class="nav-link <?= $current_page === 'add_book.php' ? 'active' : '' ?>">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M12 5v14M5 12h14"/>
-      </svg>
-      Add Book
-    </a>
-
-    <a href="edit_book.php" class="nav-link <?= $current_page === 'edit_book.php' ? 'active' : '' ?>">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M12 20h9"/>
-        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
-      </svg>
-      Edit Book
-    </a>
-
-    <a href="delete_book.php" class="nav-link <?= $current_page === 'delete_book.php' ? 'active' : '' ?>">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <polyline points="3 6 5 6 21 6"/>
-        <path d="M8 6V4h8v2"/>
-        <path d="M19 6l-1 14H6L5 6"/>
-      </svg>
-      Delete Book
-    </a>
 
     <a href="view_books.php" class="nav-link <?= $current_page === 'view_books.php' ? 'active' : '' ?>">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -152,14 +136,14 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
   </nav>
 
   <div class="sidebar-footer">
-    <a href="admin_profile.php" class="sidebar-user sidebar-user-link <?= $current_page === 'admin_profile.php' ? 'active' : '' ?>">
+    <div class="sidebar-user">
       <div class="user-avatar">AD</div>
 
       <div class="user-info">
         <div class="user-name">Admin</div>
         <div class="user-role">Administrator</div>
       </div>
-    </a>
+    </div>
 
     <a href="logout.php" class="btn-logout">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
