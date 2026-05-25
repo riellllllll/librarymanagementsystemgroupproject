@@ -11,7 +11,7 @@ $unread_count = count(array_filter($notifications, fn($notification) => !empty($
 $mark_read_url = htmlspecialchars(strtok($_SERVER['REQUEST_URI'], '?') . '?notifications_read=1');
 ?>
 <div class="student-notifications">
-  <input type="checkbox" class="notification-check" id="notificationToggle">
+  <input type="checkbox" class="notification-check" id="notificationToggle" autocomplete="off">
   <label class="topbar-icon-btn notification-btn" for="notificationToggle" aria-label="Notifications">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/>
