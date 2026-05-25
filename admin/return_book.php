@@ -1,0 +1,382 @@
+<?php
+require 'library_data.php';
+
+$message = '';
+$error = '';
+
+if (!isset($_SESSION['borrowed_books']) || !is_array($_SESSION['borrowed_books'])) {
+  $_SESSION['borrowed_books'] = [];
+}
+
+function redirect_with_message($type, $text) {
+  header("Location: return_book.php?$type=" . urlencode($text));
+  exit();
+}
+
+function format_book_date($date) {
+  if (empty($date)) {
+    return '-';
+  }
+  $time = strtotime($date);
+  return $time ? date('M d, Y', $time) : $date;
+}
+
+function days_overdue($due_date) {
+  if (empty($due_date)) return 0;
+  $due = strtotime($due_date);
+  $today = strtotime(date('Y-m-d'));
+  if ($due && $today > $due) {
+    return floor(($today - $due) / 86400);
+  }
+  return 0;
+}
+
+// Process return via GET (table button)
+if (isset($_GET['return_id'])) {
+  $found = false;
+  foreach ($_SESSION['borrowed_books'] as &$book) {
+    if (($book['id'] ?? '') === $_GET['return_id']) {
+      if (($book['status'] ?? '') === 'borrowed') {
+        $book['status'] = 'returned';
+        $book['return_date'] = date('Y-m-d');
+
+        $book_index = find_book_index($book['book_id'] ?? 0);
+        if ($book_index !== null) {
+          $_SESSION['books'][$book_index]['available']++;
+        }
+        $found = true;
+        redirect_with_message('msg', 'Book returned successfully.');
+      } else {
+        redirect_with_message('err', 'This book has already been returned.');
+      }
+    }
+  }
+  unset($book);
+  if (!$found) {
+    redirect_with_message('err', 'Record not found.');
+  }
+}
+
+// Process return via POST (quick return form)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
+  $borrow_id = trim($_POST['borrow_id'] ?? '');
+
+  if ($borrow_id === '') {
+    $error = "Please enter a Borrow Record ID or Book ID.";
+  } else {
+    $found = false;
+    foreach ($_SESSION['borrowed_books'] as &$book) {
+      if (($book['id'] ?? '') === $borrow_id || (string)($book['book_id'] ?? '') === $borrow_id) {
+        if (($book['status'] ?? '') === 'borrowed') {
+          $book['status'] = 'returned';
+          $book['return_date'] = date('Y-m-d');
+
+          $book_index = find_book_index($book['book_id'] ?? 0);
+          if ($book_index !== null) {
+            $_SESSION['books'][$book_index]['available']++;
+          }
+          $found = true;
+          redirect_with_message('msg', 'Book returned successfully.');
+        } else {
+          redirect_with_message('err', 'This book has already been returned.');
+        }
+      }
+    }
+    unset($book);
+    if (!$found) {
+      $error = "No active borrow record found with that ID.";
+    }
+  }
+}
+
+if (isset($_GET['msg'])) {
+  $message = $_GET['msg'];
+}
+
+if (isset($_GET['err'])) {
+  $error = $_GET['err'];
+}
+
+// Filter and sort borrowed books
+$search = trim($_GET['search'] ?? '');
+$filter = $_GET['filter'] ?? 'all';
+
+$borrowedBooks = array_filter($_SESSION['borrowed_books'], function ($book) {
+  return ($book['status'] ?? '') === 'borrowed';
+});
+
+// Apply search
+if ($search !== '') {
+  $search_lower = strtolower($search);
+  $borrowedBooks = array_filter($borrowedBooks, function ($book) use ($search_lower) {
+    return
+      str_contains(strtolower($book['student'] ?? ''), $search_lower) ||
+      str_contains(strtolower($book['student_id'] ?? ''), $search_lower) ||
+      str_contains(strtolower($book['book_title'] ?? ''), $search_lower) ||
+      str_contains((string)($book['book_id'] ?? ''), $search_lower) ||
+      str_contains(strtolower($book['id'] ?? ''), $search_lower);
+  });
+}
+
+// Apply filter
+if ($filter === 'overdue') {
+  $borrowedBooks = array_filter($borrowedBooks, function ($book) {
+    return !empty($book['due_date']) && $book['due_date'] < date('Y-m-d');
+  });
+} elseif ($filter === 'due_today') {
+  $borrowedBooks = array_filter($borrowedBooks, function ($book) {
+    return ($book['due_date'] ?? '') === date('Y-m-d');
+  });
+}
+
+// Sort: overdue first, then by due date
+usort($borrowedBooks, function ($a, $b) {
+  $overdueA = !empty($a['due_date']) && $a['due_date'] < date('Y-m-d') ? 1 : 0;
+  $overdueB = !empty($b['due_date']) && $b['due_date'] < date('Y-m-d') ? 1 : 0;
+  if ($overdueA !== $overdueB) {
+    return $overdueB - $overdueA;
+  }
+  return strtotime($a['due_date'] ?? '9999-12-31') - strtotime($b['due_date'] ?? '9999-12-31');
+});
+
+$totalBorrowed = count(array_filter($_SESSION['borrowed_books'], function ($b) {
+  return ($b['status'] ?? '') === 'borrowed';
+}));
+
+$overdueCount = count(array_filter($_SESSION['borrowed_books'], function ($b) {
+  return ($b['status'] ?? '') === 'borrowed' && !empty($b['due_date']) && $b['due_date'] < date('Y-m-d');
+}));
+
+$dueTodayCount = count(array_filter($_SESSION['borrowed_books'], function ($b) {
+  return ($b['status'] ?? '') === 'borrowed' && ($b['due_date'] ?? '') === date('Y-m-d');
+}));
+
+$returnedToday = count(array_filter($_SESSION['borrowed_books'], function ($b) {
+  return ($b['status'] ?? '') === 'returned' && ($b['return_date'] ?? '') === date('Y-m-d');
+}));
+
+$pending_count = pending_request_count();
+$currentPage = basename($_SERVER['PHP_SELF']);
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Return Book</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/student.css">
+  <link rel="stylesheet" href="../assets/style.css">
+  <link rel="stylesheet" href="../assets/adminStyle.css">
+  <link rel="stylesheet" href="../assets/issue_book.css">
+  <link rel="stylesheet" href="../assets/return_book.css">
+</head>
+<body>
+
+<?php include 'sideBar.php'; ?>
+
+<div class="main-wrapper issue-book-page">
+
+  <header class="topbar">
+    <span class="topbar-title">Return Book</span>
+    <div class="topbar-spacer"></div>
+    <a href="student_req.php" class="topbar-icon-btn" title="Student Borrow Requests">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+      </svg>
+      <?php if ($pending_count > 0): ?>
+        <span class="topbar-notif-dot"></span>
+      <?php endif; ?>
+    </a>
+    <a href="admin_profile.php" class="topbar-icon-btn" title="Admin Profile">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+    </a>
+  </header>
+
+  <main class="page-content">
+
+    <div class="page-header">
+      <h1>Return Book</h1>
+      <p>Process book returns and view all currently borrowed records.</p>
+      <div class="gold-rule"><span></span><i>*</i><span></span></div>
+    </div>
+
+    <?php if ($message): ?>
+      <div class="alert alert-sage"><?php echo htmlspecialchars($message); ?></div>
+    <?php endif; ?>
+
+    <?php if ($error): ?>
+      <div class="alert alert-rust"><?php echo htmlspecialchars($error); ?></div>
+    <?php endif; ?>
+
+    <div class="stats-grid issue-book-stats">
+
+      <div class="stat-card">
+        <div class="stat-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"></path>
+          </svg>
+        </div>
+        <div class="stat-value"><?php echo $totalBorrowed; ?></div>
+        <div class="stat-label">Currently Borrowed</div>
+      </div>
+
+      <div class="stat-card stat-warning">
+        <div class="stat-icon icon-danger">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M12 7v6M12 17h.01"></path>
+          </svg>
+        </div>
+        <div class="stat-value"><?php echo $overdueCount; ?></div>
+        <div class="stat-label">Overdue</div>
+      </div>
+
+      <div class="stat-card stat-info">
+        <div class="stat-icon" style="color:#f59e0b;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M12 7v5l3 3"></path>
+          </svg>
+        </div>
+        <div class="stat-value"><?php echo $dueTodayCount; ?></div>
+        <div class="stat-label">Due Today</div>
+      </div>
+
+      <div class="stat-card stat-sage">
+        <div class="stat-icon icon-sage">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="m8 12 3 3 5-6"></path>
+          </svg>
+        </div>
+        <div class="stat-value"><?php echo $returnedToday; ?></div>
+        <div class="stat-label">Returned Today</div>
+      </div>
+
+    </div>
+
+    <div class="card issue-book-card">
+      <div class="card-body">
+        <div class="card-title">Quick Return</div>
+        <p class="card-subtitle">Enter a Borrow Record ID or Book ID to process a return instantly.</p>
+
+        <form method="POST" action="return_book.php" class="quick-return-form">
+          <div class="field">
+            <label for="borrow_id">Borrow / Book ID <span>*</span></label>
+            <div class="input-wrap">
+              <input class="no-icon" type="text" id="borrow_id" name="borrow_id" placeholder="Enter ID" required>
+            </div>
+          </div>
+          <button type="submit" name="return_book" class="btn-primary">Process Return</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card issue-book-card">
+      <div class="card-body">
+        <div class="card-title">Borrowed Books</div>
+        <p class="card-subtitle">All active borrow records. Overdue entries are highlighted in red.</p>
+
+        <form method="GET" action="return_book.php" class="search-filter-bar">
+          <div class="field">
+            <div class="input-wrap">
+              <input class="no-icon" type="text" name="search" placeholder="Search student, book, or ID..." value="<?php echo htmlspecialchars($search); ?>">
+            </div>
+          </div>
+          <div class="field">
+            <div class="input-wrap">
+              <select class="no-icon" name="filter">
+                <option value="all" <?php echo $filter === 'all' ? 'selected' : ''; ?>>All Active</option>
+                <option value="overdue" <?php echo $filter === 'overdue' ? 'selected' : ''; ?>>Overdue Only</option>
+                <option value="due_today" <?php echo $filter === 'due_today' ? 'selected' : ''; ?>>Due Today</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="btn-primary">Filter</button>
+          <?php if ($search !== '' || $filter !== 'all'): ?>
+            <a href="return_book.php" class="btn-outline">Clear</a>
+          <?php endif; ?>
+        </form>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Borrow ID</th>
+                <th>Book</th>
+                <th>Student</th>
+                <th>Issue Date</th>
+                <th>Due Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php if (!empty($borrowedBooks)): ?>
+                <?php foreach ($borrowedBooks as $row):
+                  $isOverdue = !empty($row['due_date']) && $row['due_date'] < date('Y-m-d');
+                  $isDueToday = ($row['due_date'] ?? '') === date('Y-m-d');
+                  $rowClass = $isOverdue ? 'overdue-row' : ($isDueToday ? 'due-today-row' : '');
+                  $overdueDays = days_overdue($row['due_date'] ?? '');
+                ?>
+                  <tr class="<?php echo $rowClass; ?>">
+                    <td><?php echo htmlspecialchars($row['id'] ?? '-'); ?></td>
+                    <td>
+                      <?php echo htmlspecialchars($row['book_title'] ?? 'Unknown Book'); ?>
+                      <br>
+                      <small class="text-muted">Book ID: <?php echo htmlspecialchars($row['book_id'] ?? '-'); ?></small>
+                    </td>
+                    <td>
+                      <?php echo htmlspecialchars($row['student'] ?? 'Unknown Student'); ?>
+                      <br>
+                      <small class="text-muted"><?php echo htmlspecialchars($row['student_id'] ?? '-'); ?></small>
+                    </td>
+                    <td><?php echo htmlspecialchars(format_book_date($row['issue_date'] ?? $row['date'] ?? '')); ?></td>
+                    <td>
+                      <?php echo htmlspecialchars(format_book_date($row['due_date'] ?? '')); ?>
+                      <?php if ($isOverdue): ?>
+                        <span class="badge-warning"><?php echo $overdueDays; ?> day<?php echo $overdueDays > 1 ? 's' : ''; ?> overdue</span>
+                      <?php elseif ($isDueToday): ?>
+                        <span class="badge-due-today">Due today</span>
+                      <?php endif; ?>
+                    </td>
+                    <td>
+                      <span class="badge badge-gold">Borrowed</span>
+                    </td>
+                    <td>
+                      <div class="return-actions">
+                        <a href="return_book.php?return_id=<?php echo urlencode($row['id'] ?? ''); ?>" class="btn-outline btn-small" onclick="return confirm('Mark this book as returned?');">Return</a>
+                      </div>
+                    </td>
+                  </tr>
+                <?php endforeach; ?>
+              <?php else: ?>
+                <tr>
+                  <td colspan="7">
+                    <div class="empty-state">
+                      <h3>No borrowed books found</h3>
+                      <p><?php echo $search !== '' ? 'Try a different search term.' : 'All books have been returned.'; ?></p>
+                    </div>
+                  </td>
+                </tr>
+              <?php endif; ?>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+</div>
+
+</body>
+</html>
