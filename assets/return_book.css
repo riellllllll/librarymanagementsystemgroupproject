@@ -5,7 +5,32 @@
    ============================================================ */
 
 /* ── Selectable Book Row ── */
-.return-list { display: flex; flex-direction: column; gap: 10px; }
+.return-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 480px;        /* ~4–5 books before scroll kicks in */
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;       /* breathing room so shadow isn't clipped */
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar — matches the gold/ink palette */
+.return-list::-webkit-scrollbar {
+  width: 6px;
+}
+.return-list::-webkit-scrollbar-track {
+  background: var(--border);
+  border-radius: 10px;
+}
+.return-list::-webkit-scrollbar-thumb {
+  background: rgba(201,151,58,0.45);
+  border-radius: 10px;
+}
+.return-list::-webkit-scrollbar-thumb:hover {
+  background: var(--gold);
+}
 
 .return-book-item {
   display: flex;

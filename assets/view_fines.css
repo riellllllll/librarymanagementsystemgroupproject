@@ -94,6 +94,38 @@
   color: var(--muted);
 }
 
+/* ── Scrollable Fine Table ── */
+.table-wrap {
+  max-height: 420px;        /* ~5–6 rows before scroll kicks in */
+  overflow-y: auto;
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+/* Stick the header so column labels stay visible while scrolling */
+.table-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--input-bg, #f4f6fb);
+  box-shadow: 0 1px 0 var(--border);
+}
+
+/* Custom scrollbar — rust accent to match the page palette */
+.table-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+.table-wrap::-webkit-scrollbar-track {
+  background: var(--border);
+  border-radius: 10px;
+}
+.table-wrap::-webkit-scrollbar-thumb {
+  background: rgba(192,57,43,0.35);
+  border-radius: 10px;
+}
+.table-wrap::-webkit-scrollbar-thumb:hover {
+  background: var(--rust);
+}
+
 /* ── Fine Table Row accent ── */
 .fine-row-unpaid td:first-child {
   border-left: 3px solid var(--rust);
