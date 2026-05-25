@@ -193,9 +193,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selected_book) {
               </div>
             </div>
 
-            <button class="btn-primary" type="submit">
-              Update Book
-            </button>
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+              <button class="btn-primary" type="submit">
+                Update Book
+              </button>
+
+              <a href="view_books.php" class="btn-outline">
+                Return
+              </a>
+            </div>
 
           </form>
 
@@ -204,6 +210,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selected_book) {
           <div class="alert alert-gold">
             No book selected. Please go to View Books and click Edit.
           </div>
+
+          <a href="view_books.php" class="btn-outline">
+            Return
+          </a>
 
         <?php endif; ?>
 
