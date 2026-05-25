@@ -1,7 +1,9 @@
 <?php
 // view_fines.php - Library Fine Management System
+session_start();
+require 'library_data.php';
 
-// Mock database for demonstration - replace with actual database queries
+// Mock database for demonstration
 $fines_data = [
     'STU1001' => [
         'student_name' => 'Emma Watson',
@@ -48,31 +50,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $student_id = $_POST['student_id'];
         $book_id = $_POST['book_id'];
         $amount = $_POST['amount'];
-        
         $payment_message = "Payment of PHP $amount received for Book ID: $book_id";
-        
-        if (isset($fines_data[$student_id])) {
-            foreach ($fines_data[$student_id]['fines'] as &$fine) {
-                if ($fine['book_id'] === $book_id) {
-                    $fine['status'] = 'paid';
-                    break;
-                }
-            }
-        }
     }
-    
     if (isset($_POST['pay_all'])) {
         $student_id = $_POST['student_id'];
         $total_amount = $_POST['total_amount'];
         $payment_message = "Payment of PHP $total_amount received for all pending fines";
-        
-        if (isset($fines_data[$student_id])) {
-            foreach ($fines_data[$student_id]['fines'] as &$fine) {
-                if ($fine['status'] === 'pending' && $fine['fine_amount'] > 0) {
-                    $fine['status'] = 'paid';
-                }
-            }
-        }
     }
 }
 
@@ -98,66 +81,92 @@ if ($student_data) {
     }
 }
 
-// Get filter from URL
 $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>View Fines - Library Management System</title>
+    <title>View Fines - Admin Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/student.css">
+    <link rel="stylesheet" href="../assets/adminStyle.css">
     <link rel="stylesheet" href="../assets/admin_fines.css">
 </head>
+
 <body>
-<div class="fine-page-wrapper">
-    <div class="fine-container">
-        <div class="fine-main-card">
-            <div class="fine-header">
-                <h1>📚 View Fines</h1>
-                <p>View and manage outstanding fines per student</p>
+
+<?php include 'sideBar.php'; ?>
+
+<div class="main-wrapper">
+
+    <header class="topbar">
+        <span class="topbar-title">View Fines</span>
+        <div class="topbar-spacer"></div>
+        <a href="student_req.php" class="topbar-icon-btn" title="Student Requests">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+        </a>
+        <a href="admin_profile.php" class="topbar-icon-btn" title="Admin Profile">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+        </a>
+    </header>
+
+    <main class="page-content">
+
+        <div class="page-header">
+            <h1>View Fines</h1>
+            <div class="gold-rule">
+                <span></span>
+                <i>*</i>
+                <span></span>
+            </div>
+        </div>
+
+        <div class="fines-container">
+
+            <?php if ($payment_message): ?>
+                <div class="alert-fines">✓ <?php echo htmlspecialchars($payment_message); ?></div>
+            <?php endif; ?>
+
+            <div class="stats-fines-grid">
+                <div class="stat-fines-card">
+                    <div class="stat-fines-label">💰 TOTAL FINES</div>
+                    <div class="stat-fines-number">PHP <?php echo number_format($total_fines, 2); ?></div>
+                    <div class="stat-fines-sub">Accrued overall</div>
+                </div>
+                <div class="stat-fines-card">
+                    <div class="stat-fines-label">⏳ PENDING FINES</div>
+                    <div class="stat-fines-number">PHP <?php echo number_format($pending_fines, 2); ?></div>
+                    <div class="stat-fines-sub">Unpaid</div>
+                </div>
+                <div class="stat-fines-card">
+                    <div class="stat-fines-label">✅ PAID FINES</div>
+                    <div class="stat-fines-number">PHP <?php echo number_format($paid_fines, 2); ?></div>
+                    <div class="stat-fines-sub">Total cleared</div>
+                </div>
+                <div class="stat-fines-card">
+                    <div class="stat-fines-label">📖 OVERDUE BOOKS</div>
+                    <div class="stat-fines-number"><?php echo $overdue_books; ?></div>
+                    <div class="stat-fines-sub">Contributing to fines</div>
+                </div>
             </div>
 
-            <div class="fine-tabs">
-                <div class="fine-tab">BORROWING</div>
-                <div class="fine-tab">Student Requests</div>
-                <div class="fine-tab">Borrowed Books</div>
-                <div class="fine-tab">Issue Book</div>
-                <div class="fine-tab">Return Book</div>
-                <div class="fine-tab fine-active">View Fines</div>
-            </div>
-
-            <div class="fine-stats-grid">
-                <div class="fine-stat-card">
-                    <div class="fine-stat-label">💰 TOTAL FINES</div>
-                    <div class="fine-stat-number">PHP <?php echo number_format($total_fines, 2); ?></div>
-                    <div class="fine-stat-sub">Accrued overall</div>
-                </div>
-                <div class="fine-stat-card">
-                    <div class="fine-stat-label">⏳ PENDING FINES</div>
-                    <div class="fine-stat-number">PHP <?php echo number_format($pending_fines, 2); ?></div>
-                    <div class="fine-stat-sub">Unpaid</div>
-                </div>
-                <div class="fine-stat-card">
-                    <div class="fine-stat-label">✅ PAID FINES</div>
-                    <div class="fine-stat-number">PHP <?php echo number_format($paid_fines, 2); ?></div>
-                    <div class="fine-stat-sub">Total cleared</div>
-                </div>
-                <div class="fine-stat-card">
-                    <div class="fine-stat-label">📖 OVERDUE BOOKS</div>
-                    <div class="fine-stat-number"><?php echo $overdue_books; ?></div>
-                    <div class="fine-stat-sub">Contributing to fines</div>
-                </div>
-            </div>
-
-            <div class="fine-search-section">
-                <form method="GET" action="" class="fine-search-form">
-                    <div class="fine-input-group">
+            <div class="search-fines-section">
+                <form method="GET" action="" class="search-fines-form">
+                    <div class="input-fines-group">
                         <label>👩‍🎓 STUDENT ID *</label>
                         <input type="text" name="student_id" placeholder="Enter Student ID" value="<?php echo htmlspecialchars($selected_student_id); ?>" required>
                     </div>
-                    <div class="fine-input-group">
+                    <div class="input-fines-group">
                         <label>📋 FILTER BY STATUS</label>
                         <select name="status_filter">
                             <option value="all" <?php echo $status_filter == 'all' ? 'selected' : ''; ?>>All Fines</option>
@@ -165,45 +174,27 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
                             <option value="paid" <?php echo $status_filter == 'paid' ? 'selected' : ''; ?>>Paid Only</option>
                         </select>
                     </div>
-                    <button type="submit" class="fine-btn fine-btn-primary">🔍 View Fines</button>
-                    <a href="view_fines.php" class="fine-btn fine-btn-secondary">Clear</a>
+                    <button type="submit" class="btn-fines btn-fines-primary">🔍 View Fines</button>
+                    <a href="view_fines.php" class="btn-fines btn-fines-secondary">Clear</a>
                 </form>
             </div>
 
-            <?php if ($payment_message): ?>
-                <div class="fine-alert">
-                    ✓ <?php echo htmlspecialchars($payment_message); ?>
-                </div>
-            <?php endif; ?>
-
             <?php if ($selected_student_id && $student_data): ?>
-                <div class="fine-student-info">
-                    <div class="fine-student-details">
-                        <div class="fine-student-detail-item">
-                            <span class="fine-student-detail-label">🎓 Student:</span>
-                            <span class="fine-student-detail-value"><?php echo htmlspecialchars($student_data['student_name']); ?></span>
-                        </div>
-                        <div class="fine-student-detail-item">
-                            <span class="fine-student-detail-label">🆔 ID:</span>
-                            <span class="fine-student-detail-value"><?php echo htmlspecialchars($selected_student_id); ?></span>
-                        </div>
-                        <div class="fine-student-detail-item">
-                            <span class="fine-student-detail-label">📚 Class:</span>
-                            <span class="fine-student-detail-value"><?php echo htmlspecialchars($student_data['student_class']); ?></span>
-                        </div>
-                        <div class="fine-student-detail-item">
-                            <span class="fine-student-detail-label">✉️ Email:</span>
-                            <span class="fine-student-detail-value"><?php echo htmlspecialchars($student_data['email']); ?></span>
-                        </div>
+                <div class="student-fines-info">
+                    <div class="student-fines-details">
+                        <span>🎓 <strong>Student:</strong> <?php echo htmlspecialchars($student_data['student_name']); ?></span>
+                        <span>🆔 <strong>ID:</strong> <?php echo htmlspecialchars($selected_student_id); ?></span>
+                        <span>📚 <strong>Class:</strong> <?php echo htmlspecialchars($student_data['student_class']); ?></span>
+                        <span>✉️ <strong>Email:</strong> <?php echo htmlspecialchars($student_data['email']); ?></span>
                     </div>
                 </div>
 
-                <div class="fine-section-title">
+                <div class="section-fines-title">
                     <span>📋 Pending & Outstanding Fines</span>
                 </div>
 
-                <div class="fine-table-wrapper">
-                    <table class="fine-fines-table">
+                <div class="table-fines-wrapper">
+                    <table class="table-fines">
                         <thead>
                             <tr>
                                 <th>Book ID</th>
@@ -218,12 +209,9 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
                             </tr>
                         </thead>
                         <tbody>
-                            <?php 
-                            $display_count = 0;
-                            foreach ($student_data['fines'] as $fine):
+                            <?php foreach ($student_data['fines'] as $fine):
                                 if ($status_filter === 'pending' && $fine['status'] !== 'pending') continue;
                                 if ($status_filter === 'paid' && $fine['status'] !== 'paid') continue;
-                                $display_count++;
                             ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($fine['book_id']); ?></td>
@@ -232,9 +220,9 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
                                 <td><?php echo date('d/m/Y', strtotime($fine['due_date'])); ?></td>
                                 <td><?php echo $fine['return_date'] ? date('d/m/Y', strtotime($fine['return_date'])) : '—'; ?></td>
                                 <td><?php echo $fine['days_overdue']; ?></td>
-                                <td class="fine-fine-amount">PHP <?php echo number_format($fine['fine_amount'], 2); ?></td>
+                                <td class="fine-amount">PHP <?php echo number_format($fine['fine_amount'], 2); ?></td>
                                 <td>
-                                    <span class="fine-status-badge <?php echo $fine['status'] === 'pending' ? 'fine-status-pending' : 'fine-status-paid'; ?>">
+                                    <span class="status-badge <?php echo $fine['status'] === 'pending' ? 'status-pending' : 'status-paid'; ?>">
                                         <?php echo ucfirst($fine['status']); ?>
                                     </span>
                                 </td>
@@ -244,35 +232,28 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
                                             <input type="hidden" name="student_id" value="<?php echo htmlspecialchars($selected_student_id); ?>">
                                             <input type="hidden" name="book_id" value="<?php echo htmlspecialchars($fine['book_id']); ?>">
                                             <input type="hidden" name="amount" value="<?php echo $fine['fine_amount']; ?>">
-                                            <button type="submit" name="pay_fine" class="fine-btn fine-btn-success">
+                                            <button type="submit" name="pay_fine" class="btn-fines btn-fines-success">
                                                 Pay PHP <?php echo number_format($fine['fine_amount'], 2); ?>
                                             </button>
                                         </form>
                                     <?php else: ?>
-                                        <span style="color: #2e7d32;">✓ Cleared</span>
+                                        <span style="color: #155724;">✓ Cleared</span>
                                     <?php endif; ?>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
-                            <?php if ($display_count === 0): ?>
-                            <tr>
-                                <td colspan="9" style="text-align: center; padding: 40px;">
-                                    No fines found with the selected filter
-                                <\/td>
-                            </tr>
-                            <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
 
                 <?php if ($pending_fines > 0): ?>
-                <div class="fine-total-summary">
-                    <span class="fine-total-label">🔔 Total Pending Fine (Unpaid)</span>
-                    <span class="fine-total-amount">PHP <?php echo number_format($pending_fines, 2); ?></span>
+                <div class="total-summary-fines">
+                    <span><strong>🔔 Total Pending Fine (Unpaid)</strong></span>
+                    <span style="font-size: 24px; font-weight: 700; color: #dc3545;">PHP <?php echo number_format($pending_fines, 2); ?></span>
                     <form method="POST">
                         <input type="hidden" name="student_id" value="<?php echo htmlspecialchars($selected_student_id); ?>">
                         <input type="hidden" name="total_amount" value="<?php echo $pending_fines; ?>">
-                        <button type="submit" name="pay_all" class="fine-btn fine-btn-danger">
+                        <button type="submit" name="pay_all" class="btn-fines btn-fines-danger">
                             💳 Pay All Pending Fines (PHP <?php echo number_format($pending_fines, 2); ?>)
                         </button>
                     </form>
@@ -280,19 +261,22 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
                 <?php endif; ?>
 
             <?php elseif ($selected_student_id && !$student_data): ?>
-                <div class="fine-no-data">
+                <div class="no-data-fines">
                     ❌ No student found with ID: <?php echo htmlspecialchars($selected_student_id); ?>
-                    <p style="margin-top: 10px; font-size: 13px;">Please check the Student ID and try again.</p>
-                    <p style="margin-top: 5px; font-size: 12px;">Try: STU1001, STU1002, STU1003, or STU1004</p>
+                    <p style="margin-top: 10px;">Try: STU1001, STU1002, STU1003, or STU1004</p>
                 </div>
             <?php else: ?>
-                <div class="fine-no-data">
+                <div class="no-data-fines">
                     🔍 Enter a Student ID above to view outstanding fines
-                    <p style="margin-top: 10px; font-size: 13px;">Example: STU1001, STU1002, STU1003, STU1004</p>
+                    <p style="margin-top: 10px;">Example: STU1001, STU1002, STU1003, STU1004</p>
                 </div>
             <?php endif; ?>
+
         </div>
-    </div>
+
+    </main>
+
 </div>
+
 </body>
 </html>
