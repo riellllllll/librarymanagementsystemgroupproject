@@ -2,6 +2,10 @@
 session_start();
 require 'library_data.php';
 
+if (!isset($_SESSION['archived_books'])) {
+  $_SESSION['archived_books'] = [];
+}
+
 $pending_count = count(array_filter($_SESSION['borrow_requests'], function ($req) {
   return $req['status'] === 'pending';
 }));
@@ -20,7 +24,19 @@ foreach ($_SESSION['books'] as $book) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selected_book) {
   foreach ($_SESSION['books'] as $index => $book) {
     if ((int)$book['id'] === $book_id) {
-      $_SESSION['archived_books'][] = $book;
+      $already_archived = false;
+
+      foreach ($_SESSION['archived_books'] as $archived_book) {
+        if ((int)$archived_book['id'] === $book_id) {
+          $already_archived = true;
+          break;
+        }
+      }
+
+      if (!$already_archived) {
+        $_SESSION['archived_books'][] = $book;
+      }
+
       unset($_SESSION['books'][$index]);
       $_SESSION['books'] = array_values($_SESSION['books']);
 
@@ -53,13 +69,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selected_book) {
 <div class="main-wrapper">
 
   <header class="topbar">
-
     <span class="topbar-title">Delete Book</span>
-
     <div class="topbar-spacer"></div>
 
     <a href="student_req.php" class="topbar-icon-btn" title="Student Borrow Requests">
-
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
         <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
@@ -68,24 +81,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selected_book) {
       <?php if ($pending_count > 0): ?>
         <span class="topbar-notif-dot"></span>
       <?php endif; ?>
-
     </a>
 
     <a href="admin_profile.php" class="topbar-icon-btn" title="Admin Profile">
-
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
         <circle cx="12" cy="7" r="4"/>
       </svg>
-
     </a>
-
   </header>
 
   <main class="page-content">
 
     <div class="page-header">
-
       <h1>Delete Book</h1>
 
       <div class="gold-rule">
@@ -93,7 +101,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selected_book) {
         <i>*</i>
         <span></span>
       </div>
-
     </div>
 
     <div class="card">
@@ -117,7 +124,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selected_book) {
           </div>
 
           <form method="POST">
-
             <input
               type="hidden"
               name="book_id"
@@ -125,7 +131,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selected_book) {
             >
 
             <div style="display:flex; gap:10px;">
-
               <button type="submit" class="btn-danger">
                 Move to Archive
               </button>
@@ -133,9 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selected_book) {
               <a href="view_books.php" class="btn-outline">
                 Cancel
               </a>
-
             </div>
-
           </form>
 
         <?php else: ?>
