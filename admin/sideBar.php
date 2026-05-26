@@ -147,13 +147,64 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
       </div>
     </div>
 
-    <a href="logout.php" class="btn-logout">
+    <label for="logoutModalToggle" class="btn-logout">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
         <polyline points="16 17 21 12 16 7"/>
         <line x1="21" y1="12" x2="9" y2="12"/>
       </svg>
       Log Out
-    </a>
+    </label>
   </div>
 </aside>
+
+<input type="checkbox" id="logoutModalToggle" class="logout-modal-check">
+
+<div class="modal-backdrop logout-modal" role="dialog" aria-modal="true">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-top" style="background:linear-gradient(90deg,#8b3a2a,#c06040,#8b3a2a);"></div>
+
+    <label for="logoutModalToggle" class="modal-close" aria-label="Cancel">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"/>
+        <line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </label>
+
+    <div class="modal-body" style="text-align:center;">
+      <div style="width:60px;height:60px;border-radius:50%;background:rgba(192,57,43,0.1);border:1px solid rgba(192,57,43,0.2);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c0392b" stroke-width="1.8">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+      </div>
+
+      <div class="modal-title" style="font-size:1.15rem;">
+        Log Out?
+      </div>
+
+      <p class="modal-desc" style="margin-bottom:24px;">
+        Are you sure you want to log out of the CvSU Library System?
+        Any unsaved changes will be lost.
+      </p>
+
+      <div style="display:flex;gap:10px;">
+        <label for="logoutModalToggle" class="btn-outline" style="flex:1;">
+          Stay
+        </label>
+
+        <a href="logout.php"
+           class="btn-danger"
+           style="flex:1;padding:10px 20px;border-radius:10px;font-size:0.85rem;justify-content:center;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          Yes, Log Out
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
