@@ -2,6 +2,10 @@
 session_start();
 require 'library_data.php';
 
+if (!isset($_SESSION['archived_books'])) {
+  $_SESSION['archived_books'] = [];
+}
+
 $pending_count = count(array_filter($_SESSION['borrow_requests'], function ($req) {
   return $req['status'] === 'pending';
 }));
@@ -11,10 +15,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   foreach ($_SESSION['archived_books'] as $index => $book) {
     if ((int)$book['id'] === $book_id) {
-      $_SESSION['books'][] = $book;
+      $already_in_books = false;
+
+      foreach ($_SESSION['books'] as $existing_book) {
+        if ((int)$existing_book['id'] === $book_id) {
+          $already_in_books = true;
+          break;
+        }
+      }
+
+      if (!$already_in_books) {
+        $_SESSION['books'][] = $book;
+      }
 
       unset($_SESSION['archived_books'][$index]);
-
       $_SESSION['archived_books'] = array_values($_SESSION['archived_books']);
 
       header('Location: view_books.php?retrieved=1');
@@ -48,13 +62,10 @@ $archived_books = $_SESSION['archived_books'];
 <div class="main-wrapper">
 
   <header class="topbar">
-
     <span class="topbar-title">Archive Books</span>
-
     <div class="topbar-spacer"></div>
 
     <a href="student_req.php" class="topbar-icon-btn" title="Student Borrow Requests">
-
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
         <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
@@ -63,24 +74,19 @@ $archived_books = $_SESSION['archived_books'];
       <?php if ($pending_count > 0): ?>
         <span class="topbar-notif-dot"></span>
       <?php endif; ?>
-
     </a>
 
     <a href="admin_profile.php" class="topbar-icon-btn" title="Admin Profile">
-
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
         <circle cx="12" cy="7" r="4"/>
       </svg>
-
     </a>
-
   </header>
 
   <main class="page-content">
 
     <div class="page-header">
-
       <h1>
         Archive <em style="color:var(--gold);font-style:italic;">Books</em>
       </h1>
@@ -94,7 +100,6 @@ $archived_books = $_SESSION['archived_books'];
         <i>*</i>
         <span></span>
       </div>
-
     </div>
 
     <div class="card">
@@ -147,7 +152,6 @@ $archived_books = $_SESSION['archived_books'];
 
                     <td>
                       <form method="POST" action="archive_books.php">
-
                         <input
                           type="hidden"
                           name="book_id"
@@ -157,7 +161,6 @@ $archived_books = $_SESSION['archived_books'];
                         <button type="submit" class="btn-primary">
                           Retrieve
                         </button>
-
                       </form>
                     </td>
                   </tr>
