@@ -1,0 +1,37 @@
+.book-meta {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.book-meta > div {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.book-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.book-actions .btn-outline,
+.book-actions .btn-danger {
+  min-width: 82px;
+  min-height: 38px;
+  padding: 9px 16px;
+}
+
+@media (max-width: 520px) {
+  .book-actions .btn-outline,
+  .book-actions .btn-danger {
+    flex: 1;
+    min-width: 0;
+  }
+}

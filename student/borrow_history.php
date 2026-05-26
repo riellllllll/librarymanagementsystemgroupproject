@@ -185,7 +185,8 @@ function days_late(string $due, ?string $returned): int {
     </button>
     <span class="topbar-title">Borrow History</span>
     <div class="topbar-spacer"></div>
- 
+    <?php require_once '../includes/student_notifications.php'; ?>
+
     <a href="profile.php" class="topbar-icon-btn" title="My Profile">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
