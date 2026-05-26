@@ -1,7 +1,13 @@
 <?php
-session_start();
+require 'library_data.php';
 
-$pending_count = 1;
+$currentPage = basename($_SERVER['PHP_SELF']);
+$pending_count = pending_request_count();
+
+$returns_today = count(array_filter($_SESSION['borrowed_books'], function ($book) {
+  return ($book['status'] ?? '') === 'returned'
+    && ($book['return_date'] ?? '') === date('Y-m-d');
+}));
 
 $admin = [
   'name' => 'Admin Librarian',
@@ -32,15 +38,16 @@ $admin = [
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="../assets/student.css">
-  <link rel="stylesheet" href="../assets/admin_profile.css">
   <link rel="stylesheet" href="../assets/style.css">
+  <link rel="stylesheet" href="../assets/adminStyle.css">
+  <link rel="stylesheet" href="../assets/admin_profile.css">
 </head>
 
 <body>
 
 <?php include "sideBar.php"; ?>
 
-<div class="main-wrapper">
+<div class="main-wrapper admin-profile-page">
 
   <header class="topbar">
 
@@ -72,7 +79,13 @@ $admin = [
 
     <div class="page-header">
       <h1>Admin <em>Profile</em></h1>
-      <div class="gold-rule"><span></span><i>*</i><span></span></div>
+
+      <div class="gold-rule">
+        <span></span>
+        <i>*</i>
+        <span></span>
+      </div>
+
       <p>Administrator account information and library system access details.</p>
     </div>
 
@@ -86,7 +99,10 @@ $admin = [
 
         <div class="admin-profile-info">
           <h2><?= htmlspecialchars($admin['name']) ?></h2>
-          <div class="admin-id">Admin ID: <?= htmlspecialchars($admin['admin_id']) ?></div>
+
+          <div class="admin-id">
+            Admin ID: <?= htmlspecialchars($admin['admin_id']) ?>
+          </div>
 
           <div class="admin-chips">
             <span class="admin-chip chip-gold"><?= htmlspecialchars($admin['role']) ?></span>
@@ -98,22 +114,28 @@ $admin = [
 
       <div class="admin-stats">
         <div class="admin-stat-item">
-          <span class="admin-stat-value">128</span>
+          <span class="admin-stat-value"><?= active_book_count() ?></span>
           <span class="admin-stat-label">Books Managed</span>
         </div>
+
         <div class="admin-stat-divider"></div>
+
         <div class="admin-stat-item">
           <span class="admin-stat-value">24</span>
           <span class="admin-stat-label">Students</span>
         </div>
+
         <div class="admin-stat-divider"></div>
+
         <div class="admin-stat-item">
           <span class="admin-stat-value"><?= $pending_count ?></span>
           <span class="admin-stat-label">Pending Requests</span>
         </div>
+
         <div class="admin-stat-divider"></div>
+
         <div class="admin-stat-item">
-          <span class="admin-stat-value">5</span>
+          <span class="admin-stat-value"><?= $returns_today ?></span>
           <span class="admin-stat-label">Returns Today</span>
         </div>
       </div>
@@ -198,7 +220,7 @@ $admin = [
               <a href="student_req.php">Student Requests</a>
               <a href="view_books.php">View Books</a>
               <a href="borrowed_books.php">Borrowed Books</a>
-              <a href="view_students.php">Students</a>
+              <a href="students.php">Students</a>
             </div>
           </div>
         </section>
