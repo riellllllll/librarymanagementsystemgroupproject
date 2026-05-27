@@ -114,16 +114,13 @@ function _nav_active(string $href, string $current): string {
 
   <!-- User info + Logout -->
   <div class="sidebar-footer">
-    <a href="profile.php" class="sidebar-user<?= $_s_page === 'profile.php' ? ' sidebar-user--active' : '' ?>" title="View My Profile" style="text-decoration:none;">
+    <div class="sidebar-user">
       <div class="user-avatar"><?= $_s_initials ?></div>
       <div class="user-info">
         <div class="user-name"><?= $_s_name ?></div>
         <div class="user-role">Student</div>
       </div>
-      <svg class="sidebar-user-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="9 18 15 12 9 6"/>
-      </svg>
-    </a>
+    </div>
     <button type="button" class="btn-logout" onclick="openLogoutModal()">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>

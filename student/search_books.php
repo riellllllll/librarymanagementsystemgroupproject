@@ -141,16 +141,13 @@ function hl(string $text, string $q): string {
   </nav>
 
   <div class="sidebar-footer">
-    <a href="profile.php" class="sidebar-user">
+    <div class="sidebar-user">
       <div class="user-avatar">JC</div>
       <div class="user-info">
         <div class="user-name">Juan Dela Cruz</div>
         <div class="user-role">Student</div>
       </div>
-      <svg class="sidebar-user-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="9 18 15 12 9 6"/>
-      </svg>
-    </a>
+    </div>
     <a href="../includes/logout.php" class="btn-logout">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
