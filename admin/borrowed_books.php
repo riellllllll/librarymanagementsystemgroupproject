@@ -172,6 +172,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
   <link rel="stylesheet" href="../assets/student.css">
   <link rel="stylesheet" href="../assets/style.css">
   <link rel="stylesheet" href="../assets/adminStyle.css">
+  
+  <style>
+    /* Make fine amount text smaller and cleaner */
+    .fine-amount {
+        font-size: 13px;
+        font-weight: 600;
+        color: #dc3545;
+        white-space: nowrap;
+    }
+    
+    /* Adjust table cell padding for better readability */
+    .data-table td,
+    .data-table th {
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+    
+    /* Make the checkmark for returned books smaller */
+    .returned-check {
+        color: #28a745;
+        font-size: 14px;
+        font-weight: bold;
+    }
+    
+    /* Status badge colors - BLACK for borrowed, RED for overdue, GREEN for returned */
+    .status-badge-borrowed {
+        background: #f0f0f0;
+        color: #333333;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        display: inline-block;
+    }
+    
+    .status-badge-overdue {
+        background: #f8d7da;
+        color: #dc3545;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        display: inline-block;
+    }
+    
+    .status-badge-returned {
+        background: #d4edda;
+        color: #28a745;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        display: inline-block;
+    }
+  </style>
 </head>
 
 <body>
@@ -361,8 +416,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
                   <td><?= date('d/m/Y', strtotime($book['borrow_date'])) ?></td>
                   <td><?= date('d/m/Y', strtotime($book['due_date'])) ?></td>
                   <td>
-                    <span class="badge <?= $book['status'] === 'borrowed' ? 'badge-warning' : ($book['status'] === 'overdue' ? 'badge-danger' : 'badge-success') ?>">
-                      <?= strtoupper($book['status']) ?>
+                    <span class="status-badge-<?= $book['status'] ?>">
+                        <?= strtoupper($book['status']) ?>
                     </span>
                   </td>
                   <td class="fine-amount">PHP <?= number_format($book['fine'], 2) ?></td>
@@ -375,7 +430,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
                         <button type="submit" name="return_book" class="btn-danger" style="padding: 5px 12px; font-size: 11px;">RETURN</button>
                       </form>
                     <?php else: ?>
-                      <span style="color: #28a745;">✓</span>
+                      <span class="returned-check">✓</span>
                     <?php endif; ?>
                   </td>
                 </tr>
