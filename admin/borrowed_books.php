@@ -11,13 +11,13 @@ $pending_count = count(array_filter($_SESSION['borrow_requests'], function ($req
   return $req['status'] === 'pending';
 }));
 
-// Mock data for borrowed books
+// Mock data for borrowed books with simplified IDs
 $borrowed_books_data = [
     [
         'id' => 1,
-        'book_id' => 'BK-4521',
+        'book_id' => '01',
         'book_title' => 'The Great Gatsby',
-        'student_id' => 'STU1001',
+        'student_id' => '101',
         'student_name' => 'Emma Watson',
         'student_class' => 'Grade 11-A',
         'borrow_date' => '2026-05-01',
@@ -28,9 +28,9 @@ $borrowed_books_data = [
     ],
     [
         'id' => 2,
-        'book_id' => 'BK-9823',
+        'book_id' => '02',
         'book_title' => 'Sapiens',
-        'student_id' => 'STU1001',
+        'student_id' => '101',
         'student_name' => 'Emma Watson',
         'student_class' => 'Grade 11-A',
         'borrow_date' => '2026-05-10',
@@ -41,9 +41,9 @@ $borrowed_books_data = [
     ],
     [
         'id' => 3,
-        'book_id' => 'BK-6632',
+        'book_id' => '03',
         'book_title' => 'Deep Work',
-        'student_id' => 'STU1002',
+        'student_id' => '102',
         'student_name' => 'James Carter',
         'student_class' => 'Grade 10-B',
         'borrow_date' => '2026-04-18',
@@ -54,9 +54,9 @@ $borrowed_books_data = [
     ],
     [
         'id' => 4,
-        'book_id' => 'BK-2290',
+        'book_id' => '04',
         'book_title' => 'Atomic Habits',
-        'student_id' => 'STU1002',
+        'student_id' => '102',
         'student_name' => 'James Carter',
         'student_class' => 'Grade 10-B',
         'borrow_date' => '2026-05-12',
@@ -67,9 +67,9 @@ $borrowed_books_data = [
     ],
     [
         'id' => 5,
-        'book_id' => 'BK-1198',
+        'book_id' => '05',
         'book_title' => 'Dune',
-        'student_id' => 'STU1003',
+        'student_id' => '103',
         'student_name' => 'Lina Zhang',
         'student_class' => 'Grade 12-C',
         'borrow_date' => '2026-03-01',
@@ -80,9 +80,9 @@ $borrowed_books_data = [
     ],
     [
         'id' => 6,
-        'book_id' => 'BK-7643',
+        'book_id' => '06',
         'book_title' => 'The Hobbit',
-        'student_id' => 'STU1004',
+        'student_id' => '104',
         'student_name' => 'Oliver Chen',
         'student_class' => 'Grade 9-D',
         'borrow_date' => '2026-04-01',
@@ -93,9 +93,9 @@ $borrowed_books_data = [
     ],
     [
         'id' => 7,
-        'book_id' => 'BK-5520',
+        'book_id' => '07',
         'book_title' => 'To Kill a Mockingbird',
-        'student_id' => 'STU1004',
+        'student_id' => '104',
         'student_name' => 'Oliver Chen',
         'student_class' => 'Grade 9-D',
         'borrow_date' => '2026-05-12',
@@ -176,6 +176,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
     .data-table th {
         padding: 10px 12px;
         font-size: 13px;
+        text-align: left;
+        vertical-align: middle;
+    }
+    
+    /* Center align specific columns */
+    .data-table td:nth-child(1),
+    .data-table th:nth-child(1) {
+        text-align: center;
+        font-weight: 600;
+    }
+    
+    .data-table td:nth-child(4),
+    .data-table th:nth-child(4) {
+        text-align: center;
+    }
+    
+    .data-table td:nth-child(7),
+    .data-table th:nth-child(7) {
+        text-align: center;
+    }
+    
+    .data-table td:nth-child(8),
+    .data-table th:nth-child(8) {
+        text-align: center;
+    }
+    
+    /* Date columns - consistent width */
+    .data-table td:nth-child(5),
+    .data-table th:nth-child(5),
+    .data-table td:nth-child(6),
+    .data-table th:nth-child(6) {
+        white-space: nowrap;
+        text-align: center;
     }
     
     .returned-check {
@@ -192,6 +225,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
         font-size: 11px;
         font-weight: 600;
         display: inline-block;
+        text-align: center;
+        min-width: 80px;
     }
     
     .status-badge-overdue {
@@ -202,6 +237,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
         font-size: 11px;
         font-weight: 600;
         display: inline-block;
+        text-align: center;
+        min-width: 80px;
     }
     
     .status-badge-returned {
@@ -212,6 +249,111 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
         font-size: 11px;
         font-weight: 600;
         display: inline-block;
+        text-align: center;
+        min-width: 80px;
+    }
+
+    /* Action button styling */
+    .return-btn {
+        padding: 5px 12px;
+        font-size: 11px;
+        background: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        min-width: 65px;
+    }
+    
+    .return-btn:hover {
+        background: #c82333;
+    }
+
+    /* Search bar styling */
+    .topbar-search {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: min(420px, 100%);
+      min-height: 42px;
+      padding: 0 14px;
+      gap: 10px;
+      color: #8b96aa;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)), #ffffff;
+      border: 1px solid rgba(201, 151, 58, 0.28);
+      border-radius: 999px;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .topbar-search::before {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      z-index: -1;
+      border-radius: inherit;
+      background: linear-gradient(135deg, rgba(201, 151, 58, 0.38), rgba(232, 194, 106, 0.08));
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .topbar-search:focus-within {
+      border-color: rgba(201, 151, 58, 0.72);
+      box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12), 0 0 0 4px rgba(201, 151, 58, 0.14);
+      transform: translateY(-1px);
+    }
+
+    .topbar-search:focus-within::before {
+      opacity: 1;
+    }
+
+    .topbar-search svg {
+      flex: 0 0 auto;
+      width: 16px;
+      height: 16px;
+      color: #c9973a;
+      stroke-width: 2.4;
+    }
+
+    .topbar-search input {
+      width: 100%;
+      min-width: 0;
+      height: 40px;
+      color: #1f2937;
+      background: transparent;
+      border: 0;
+      outline: 0;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .topbar-search input::placeholder {
+      color: #98a2b3;
+      font-weight: 400;
+    }
+
+    @media (max-width: 760px) {
+      .topbar {
+        flex-wrap: wrap;
+      }
+      .topbar-search {
+        order: 3;
+        width: 100%;
+        margin-top: 10px;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .topbar-search {
+        min-height: 40px;
+        padding: 0 12px;
+        border-radius: 14px;
+      }
+      .topbar-search input {
+        height: 38px;
+        font-size: 13px;
+      }
     }
   </style>
 </head>
@@ -231,7 +373,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
         <input type="hidden" name="status" value="<?= htmlspecialchars($selected_status) ?>">
       <?php endif; ?>
 
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="11" cy="11" r="8"/>
         <line x1="21" y1="21" x2="16.65" y2="16.65"/>
       </svg>
@@ -239,7 +381,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
       <input
         type="text"
         name="q"
-        placeholder="Search by book title, student, or ID..."
+        placeholder="Search by book title, author, or ID..."
         value="<?= htmlspecialchars($_GET['q'] ?? '') ?>"
       >
     </form>
@@ -249,7 +391,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
         <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
       </svg>
-
       <?php if ($pending_count > 0): ?>
         <span class="topbar-notif-dot"></span>
       <?php endif; ?>
@@ -367,24 +508,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
               <tbody>
                 <?php foreach ($books as $book): ?>
                 <tr>
-                  <td><?= htmlspecialchars($book['book_id']) ?></td>
-                  <td><?= htmlspecialchars($book['book_title']) ?></td>
-                  <td><?= htmlspecialchars($book['student_name']) ?></td>
-                  <td><?= htmlspecialchars($book['student_id']) ?></td>
-                  <td><?= date('d/m/Y', strtotime($book['borrow_date'])) ?></td>
-                  <td><?= date('d/m/Y', strtotime($book['due_date'])) ?></td>
-                  <td>
+                  <td style="text-align: center; font-weight: 600;"><?= htmlspecialchars($book['book_id']) ?></td>
+                  <td style="text-align: left;"><?= htmlspecialchars($book['book_title']) ?></td>
+                  <td style="text-align: left;"><?= htmlspecialchars($book['student_name']) ?></td>
+                  <td style="text-align: center;"><?= htmlspecialchars($book['student_id']) ?></td>
+                  <td style="text-align: center; white-space: nowrap;"><?= date('d/m/Y', strtotime($book['borrow_date'])) ?></td>
+                  <td style="text-align: center; white-space: nowrap;"><?= date('d/m/Y', strtotime($book['due_date'])) ?></td>
+                  <td style="text-align: center;">
                     <span class="status-badge-<?= $book['status'] ?>">
                         <?= strtoupper($book['status']) ?>
                     </span>
                   </td>
-                  <td>
+                  <td style="text-align: center;">
                     <?php if ($book['status'] !== 'returned'): ?>
                       <form method="POST" style="display: inline;">
                         <input type="hidden" name="book_id" value="<?= htmlspecialchars($book['book_id']) ?>">
                         <input type="hidden" name="student_id" value="<?= htmlspecialchars($book['student_id']) ?>">
                         <input type="hidden" name="fine_amount" value="<?= $book['fine'] ?>">
-                        <button type="submit" name="return_book" class="btn-danger" style="padding: 5px 12px; font-size: 11px;">RETURN</button>
+                        <button type="submit" name="return_book" class="return-btn">RETURN</button>
                       </form>
                     <?php else: ?>
                       <span class="returned-check">✓</span>
