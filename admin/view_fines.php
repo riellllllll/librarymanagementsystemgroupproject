@@ -12,20 +12,20 @@ $pending_count = count(array_filter($_SESSION['borrow_requests'], function ($req
 }));
 
 // ── Mock data (replace with real DB queries) ──────────────────
-// Student IDs are now 9-digit: first 4 = enrolment year
+// Student IDs start from 101
 $fines_data = [
-  '202482628' => [
-    'student_name' => 'Emma Watson',
+  '101' => [
+    'student_name' => 'Juan Dela Cruz',
     'year_level'   => '3rd Year',
     'course'       => 'BS Computer Science',
-    'email'        => 'emma.watson@example.com',
+    'email'        => 'juan.delacruz@cvsu.edu.ph',
     'fines'        => [
       ['book_id' => '01', 'book_title' => 'The Great Gatsby',      'issue_date' => '2026-04-10', 'due_date' => '2026-04-25', 'return_date' => null,         'days_overdue' => 32, 'fine_amount' => 160.00, 'status' => 'pending'],
       ['book_id' => '02', 'book_title' => 'Sapiens',               'issue_date' => '2026-05-01', 'due_date' => '2026-05-16', 'return_date' => null,         'days_overdue' => 11, 'fine_amount' =>  55.00, 'status' => 'pending'],
       ['book_id' => '03', 'book_title' => 'Clean Code',            'issue_date' => '2026-03-05', 'due_date' => '2026-03-20', 'return_date' => '2026-04-01', 'days_overdue' => 12, 'fine_amount' =>  60.00, 'status' => 'paid'],
     ],
   ],
-  '202331045' => [
+  '102' => [
     'student_name' => 'James Carter',
     'year_level'   => '2nd Year',
     'course'       => 'BS Information Technology',
@@ -35,7 +35,7 @@ $fines_data = [
       ['book_id' => '05', 'book_title' => 'Atomic Habits', 'issue_date' => '2026-05-10', 'due_date' => '2026-05-25', 'return_date' => null, 'days_overdue' =>  2, 'fine_amount' =>  10.00, 'status' => 'pending'],
     ],
   ],
-  '202219873' => [
+  '103' => [
     'student_name' => 'Lina Zhang',
     'year_level'   => '4th Year',
     'course'       => 'BS Accountancy',
@@ -44,7 +44,7 @@ $fines_data = [
       ['book_id' => '06', 'book_title' => 'Dune', 'issue_date' => '2026-03-01', 'due_date' => '2026-03-16', 'return_date' => null, 'days_overdue' => 72, 'fine_amount' => 360.00, 'status' => 'pending'],
     ],
   ],
-  '202574391' => [
+  '104' => [
     'student_name' => 'Oliver Chen',
     'year_level'   => '1st Year',
     'course'       => 'BS Business Administration',
@@ -94,8 +94,8 @@ if ($search_query !== '') {
   }
 }
 
-// ── Validate student ID: must be 9 digits, first 4 = year ─────
-// (IDs in $fines_data already follow this convention)
+// ── Validate student ID ───────────────────────────────────────
+// (IDs in $fines_data start from 101)
 
 // ── Handle fine payment (POST) ─────────────────────────────────
 $payment_message = '';
@@ -464,7 +464,7 @@ foreach ($stats_pool as $sdata) {
       <?php elseif ($search_query && !$student_data): ?>
         <div class="no-data-fines">
           No student found matching <strong>"<?= htmlspecialchars($search_query) ?>"</strong>
-          <p>Try a name (e.g. <strong>Emma</strong>), partial name (e.g. <strong>Wat</strong>), or a Student ID (e.g. <strong>202482628</strong>)</p>
+          <p>Try a name (e.g. <strong>Emma</strong>), partial name (e.g. <strong>Wat</strong>), or a Student ID (e.g. <strong>101</strong>)</p>
         </div>
 
       <?php else: ?>
