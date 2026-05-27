@@ -279,7 +279,8 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             <div class="field">
               <label for="book_id">Book ID <span>*</span></label>
               <div class="input-wrap">
-                <input class="no-icon" type="number" id="book_id" name="book_id" placeholder="Enter Book ID" required>
+                <!-- ONLY CHANGE: added min="0" below -->
+                <input class="no-icon" type="number" id="book_id" name="book_id" placeholder="Enter Book ID" min="0" required>
               </div>
             </div>
 
