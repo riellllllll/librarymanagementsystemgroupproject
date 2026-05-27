@@ -215,7 +215,7 @@ $books = array_slice($filtered, $offset, $per_page);
           <div class="book-cover-accent"></div>
         </div>
         <div class="book-info">
-          <div class="book-category"><?= htmlspecialchars($book['category']) ?></div>
+          <div class="book-category"><span class="book-id">ID #<?= str_pad($book['id'], 2, '0', STR_PAD_LEFT) ?></span> · <?= htmlspecialchars($book['category']) ?></div>
           <div class="book-title"><?= htmlspecialchars($book['title']) ?></div>
           <div class="book-author"><?= htmlspecialchars($book['author']) ?></div>
           <div class="book-meta">
