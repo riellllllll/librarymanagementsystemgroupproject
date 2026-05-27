@@ -97,6 +97,10 @@ if (!isset($_SESSION['borrowed_books']) || !is_array($_SESSION['borrowed_books']
   $_SESSION['borrowed_books'] = [];
 }
 
+if (!isset($_SESSION['return_requests']) || !is_array($_SESSION['return_requests'])) {
+  $_SESSION['return_requests'] = [];
+}
+
 foreach ($_SESSION['borrowed_books'] as $index => $borrowed_book) {
   if (isset($borrowed_book['book_id'])) {
     $_SESSION['borrowed_books'][$index]['book_id'] = format_book_id($borrowed_book['book_id']);
