@@ -15,6 +15,7 @@ if (!function_exists('format_student_number')) {
   }
 }
 
+// List of books
 $default_books = [
   ['id' => '01', 'title' => 'The Great Gatsby', 'author' => 'F. Scott Fitzgerald', 'genre' => 'Fiction', 'category' => 'Fiction', 'copies' => 3, 'available' => 2, 'color' => 'color-a'],
   ['id' => '02', 'title' => 'To Kill a Mockingbird', 'author' => 'Harper Lee', 'genre' => 'Fiction', 'category' => 'Fiction', 'copies' => 4, 'available' => 1, 'color' => 'color-b'],

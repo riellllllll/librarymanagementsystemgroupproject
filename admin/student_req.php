@@ -141,7 +141,7 @@ $requests = $_SESSION['borrow_requests'];
       <div class="card-body">
 
         <div class="card-title">Borrow Requests</div>
-        <p class="card-subtitle">Review student requests and approve available books.</p>
+        <p class="card-subtitle">Review student requests and approve available books</p>
 
         <div class="table-wrap">
 
@@ -165,7 +165,7 @@ $requests = $_SESSION['borrow_requests'];
                   <td colspan="5">
                     <div class="empty-state">
                       <h3>No borrow requests yet</h3>
-                      <p>Student borrow requests will appear here.</p>
+                      <p>Student borrow requests will appear here</p>
                     </div>
                   </td>
                 </tr>
@@ -252,7 +252,7 @@ $requests = $_SESSION['borrow_requests'];
                         </form>
 
                         <?php if ($available <= 0): ?>
-                          <small class="text-muted">No available copies.</small>
+                          <small class="text-muted">No available copies</small>
                         <?php endif; ?>
 
                       <?php else: ?>
