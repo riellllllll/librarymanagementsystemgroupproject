@@ -64,7 +64,7 @@ function hl(string $text, string $q): string {
 <body>
 
 <!-- SIDEBAR -->
-<aside class="sidebar" id="sidebar">
+<<aside class="sidebar" id="sidebar">
   <div class="sidebar-logo">
     <div class="logo-icon">
       <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -76,7 +76,7 @@ function hl(string $text, string $q): string {
       </svg>
     </div>
     <div>
-      <h2>Cv<em>SU</em></h2>
+      <h2>Cv<<em>SU</em></h2>
       <div class="sidebar-subtitle">Library System</div>
     </div>
   </div>
@@ -141,13 +141,16 @@ function hl(string $text, string $q): string {
   </nav>
 
   <div class="sidebar-footer">
-    <div class="sidebar-user">
-      <div class="user-avatar">JD</div>
+    <a href="profile.php" class="sidebar-user">
+      <div class="user-avatar">JC</div>
       <div class="user-info">
         <div class="user-name">Juan Dela Cruz</div>
         <div class="user-role">Student</div>
       </div>
-    </div>
+      <svg class="sidebar-user-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </a>
     <a href="../includes/logout.php" class="btn-logout">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
