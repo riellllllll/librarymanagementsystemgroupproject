@@ -8,6 +8,10 @@ $pending_count = count(array_filter($_SESSION['borrow_requests'], function ($req
 
 $genres = ['Fiction', 'Science', 'History', 'Technology', 'Literature', 'Mathematics'];
 
+function format_book_id($id) {
+  return str_pad((string)$id, 2, '0', STR_PAD_LEFT);
+}
+
 $book_id = (int)($_GET['id'] ?? $_POST['book_id'] ?? 0);
 
 $selected_book = null;
@@ -123,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selected_book) {
                 <input
                   class="no-icon"
                   type="text"
-                  value="<?= htmlspecialchars($selected_book['id']) ?>"
+                  value="<?= htmlspecialchars(format_book_id($selected_book['id'])) ?>"
                   readonly
                 >
               </div>

@@ -16,6 +16,10 @@ $genres = [
   'Mathematics'
 ];
 
+function format_book_id($id) {
+  return str_pad((string)$id, 2, '0', STR_PAD_LEFT);
+}
+
 $selected_genre = $_GET['genre'] ?? 'All';
 $search_query = strtolower(trim($_GET['q'] ?? ''));
 
@@ -27,8 +31,11 @@ $filtered = array_values(array_filter($_SESSION['books'], function ($book) use (
     $selected_genre === 'All' ||
     $book['genre'] === $selected_genre;
 
+  $formatted_id = format_book_id($book['id']);
+
   $book_text = strtolower(
     $book['id'] . ' ' .
+    $formatted_id . ' ' .
     $book['title'] . ' ' .
     $book['author'] . ' ' .
     $book['genre']
@@ -95,7 +102,7 @@ $books = array_slice($filtered, $offset, $per_page);
       <input
         type="text"
         name="q"
-        placeholder="Search by book title, author, or ID..."
+        placeholder="Search by book title, author, or book number..."
         value="<?= htmlspecialchars($_GET['q'] ?? '') ?>"
       >
 
@@ -231,7 +238,7 @@ $books = array_slice($filtered, $offset, $per_page);
             <div class="book-info">
 
               <div class="book-category">
-                ID #<?= htmlspecialchars($book['id']) ?>
+                ID #<?= htmlspecialchars(format_book_id($book['id'])) ?>
                 &middot;
                 <?= htmlspecialchars($book['genre']) ?>
               </div>

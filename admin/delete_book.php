@@ -10,6 +10,10 @@ $pending_count = count(array_filter($_SESSION['borrow_requests'], function ($req
   return $req['status'] === 'pending';
 }));
 
+function format_book_id($id) {
+  return str_pad((string)$id, 2, '0', STR_PAD_LEFT);
+}
+
 $book_id = (int)($_GET['id'] ?? $_POST['book_id'] ?? 0);
 
 $selected_book = null;
@@ -117,6 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selected_book) {
             This book will be moved to archive:
 
             <strong>
+              ID #<?= htmlspecialchars(format_book_id($selected_book['id'])) ?> -
               <?= htmlspecialchars($selected_book['title']) ?>
             </strong>
 
