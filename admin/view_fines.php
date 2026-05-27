@@ -18,8 +18,8 @@ $fines_data = [
         'student_class' => 'Grade 11-A',
         'email' => 'emma.watson@example.com',
         'fines' => [
-            ['book_id' => '01', 'book_title' => 'The Great Gatsby', 'issue_date' => '2026-04-10', 'due_date' => '2026-04-25', 'return_date' => null, 'days_overdue' => 30, 'fine_amount' => 150.00, 'status' => 'pending'],
-            ['book_id' => '02', 'book_title' => 'Sapiens', 'issue_date' => '2026-05-01', 'due_date' => '2026-05-16', 'return_date' => null, 'days_overdue' => 9, 'fine_amount' => 45.00, 'status' => 'pending'],
+            ['book_id' => '01', 'book_title' => 'The Great Gatsby', 'issue_date' => '2026-04-10', 'due_date' => '2026-04-25', 'return_date' => null, 'days_overdue' => 32, 'fine_amount' => 160.00, 'status' => 'pending'],
+            ['book_id' => '02', 'book_title' => 'Sapiens', 'issue_date' => '2026-05-01', 'due_date' => '2026-05-16', 'return_date' => null, 'days_overdue' => 11, 'fine_amount' => 55.00, 'status' => 'pending'],
             ['book_id' => '03', 'book_title' => 'Clean Code', 'issue_date' => '2026-03-05', 'due_date' => '2026-03-20', 'return_date' => '2026-04-01', 'days_overdue' => 12, 'fine_amount' => 60.00, 'status' => 'paid']
         ]
     ],
@@ -28,8 +28,8 @@ $fines_data = [
         'student_class' => 'Grade 10-B',
         'email' => 'james.carter@example.com',
         'fines' => [
-            ['book_id' => '04', 'book_title' => 'Deep Work', 'issue_date' => '2026-04-18', 'due_date' => '2026-05-03', 'return_date' => null, 'days_overdue' => 22, 'fine_amount' => 110.00, 'status' => 'pending'],
-            ['book_id' => '05', 'book_title' => 'Atomic Habits', 'issue_date' => '2026-05-10', 'due_date' => '2026-05-25', 'return_date' => null, 'days_overdue' => 0, 'fine_amount' => 0.00, 'status' => 'pending']
+            ['book_id' => '04', 'book_title' => 'Deep Work', 'issue_date' => '2026-04-18', 'due_date' => '2026-05-03', 'return_date' => null, 'days_overdue' => 24, 'fine_amount' => 120.00, 'status' => 'pending'],
+            ['book_id' => '05', 'book_title' => 'Atomic Habits', 'issue_date' => '2026-05-10', 'due_date' => '2026-05-25', 'return_date' => null, 'days_overdue' => 2, 'fine_amount' => 10.00, 'status' => 'pending']
         ]
     ],
     '103' => [
@@ -37,7 +37,7 @@ $fines_data = [
         'student_class' => 'Grade 12-C',
         'email' => 'lina.zhang@example.com',
         'fines' => [
-            ['book_id' => '06', 'book_title' => 'Dune', 'issue_date' => '2026-03-01', 'due_date' => '2026-03-16', 'return_date' => null, 'days_overdue' => 70, 'fine_amount' => 350.00, 'status' => 'pending']
+            ['book_id' => '06', 'book_title' => 'Dune', 'issue_date' => '2026-03-01', 'due_date' => '2026-03-16', 'return_date' => null, 'days_overdue' => 72, 'fine_amount' => 360.00, 'status' => 'pending']
         ]
     ],
     '104' => [
@@ -50,6 +50,12 @@ $fines_data = [
         ]
     ]
 ];
+
+// Default summary values (shown before searching)
+$default_total_fines = 12450.00;
+$default_pending_fines = 8750.00;
+$default_paid_fines = 3700.00;
+$default_overdue_books = 28;
 
 // Status filter options
 $status_options = [
@@ -81,13 +87,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $selected_student_id = isset($_GET['student_id']) ? $_GET['student_id'] : '';
 $student_data = isset($fines_data[$selected_student_id]) ? $fines_data[$selected_student_id] : null;
 
-// Calculate statistics
-$total_fines = 0;
-$pending_fines = 0;
-$paid_fines = 0;
-$overdue_books = 0;
+// Calculate statistics (use default values if no student selected, otherwise calculate actual)
+$total_fines = $default_total_fines;
+$pending_fines = $default_pending_fines;
+$paid_fines = $default_paid_fines;
+$overdue_books = $default_overdue_books;
 
 if ($student_data) {
+    $total_fines = 0;
+    $pending_fines = 0;
+    $paid_fines = 0;
+    $overdue_books = 0;
     foreach ($student_data['fines'] as $fine) {
         if ($fine['status'] === 'pending') {
             $pending_fines += $fine['fine_amount'];
