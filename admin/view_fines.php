@@ -121,94 +121,98 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
             box-sizing: border-box;
         }
 
-        /* Custom fines page styles */
+        /* Custom fines page styles - COMPACT VERSION */
         .stats-fines-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            margin-bottom: 30px;
+            gap: 15px;
+            margin-bottom: 20px;
         }
         
         .stat-fines-card {
             background: #f8f9fa;
-            padding: 20px;
-            border-radius: 12px;
+            padding: 12px 10px;
+            border-radius: 10px;
             text-align: center;
             border-top: 3px solid #c89b3c;
         }
         
         .stat-fines-label {
-            font-size: 11px;
+            font-size: 10px;
             text-transform: uppercase;
             color: #6c757d;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
             font-weight: 600;
         }
         
         .stat-fines-number {
-            font-size: 32px;
+            font-size: 22px;
             font-weight: 700;
             color: #1a1a2e;
         }
         
         .stat-fines-sub {
-            font-size: 11px;
+            font-size: 9px;
             color: #6c757d;
-            margin-top: 6px;
+            margin-top: 4px;
         }
         
         .student-fines-info {
             background: #1a110b;
-            padding: 16px 20px;
-            border-radius: 12px;
-            margin-bottom: 25px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 20px;
             color: white;
         }
         
         .student-fines-details {
             display: flex;
-            gap: 25px;
+            gap: 20px;
             flex-wrap: wrap;
+            font-size: 12px;
         }
         
         .section-fines-title {
-            margin-bottom: 15px;
-            padding-bottom: 10px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
             border-bottom: 1px solid #eee;
         }
         
         .section-fines-title span {
-            font-size: 18px;
+            font-size: 14px;
             font-weight: 600;
             color: #1a1a2e;
         }
         
-        /* COMPACT TABLE - NO SCROLLBAR NEEDED */
+        /* COMPACT TABLE */
         .table-fines-wrapper {
             width: 100%;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
+            overflow-x: auto;
         }
         
         .table-fines {
             width: 100%;
+            min-width: 700px;
             border-collapse: collapse;
-            font-size: 13px;
+            font-size: 11px;
         }
         
         .table-fines th {
             text-align: left;
-            padding: 10px 8px;
+            padding: 8px 6px;
             background: #f8f9fa;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 600;
             color: #495057;
             border-bottom: 1px solid #eef2f6;
         }
         
         .table-fines td {
-            padding: 10px 8px;
+            padding: 8px 6px;
             border-bottom: 1px solid #eef2f6;
             color: #1a1a2e;
+            font-size: 11px;
         }
         
         .table-fines tr:hover {
@@ -218,9 +222,9 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
         /* Status Badges */
         .status-badge {
             display: inline-block;
-            padding: 3px 8px;
-            border-radius: 20px;
-            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 9px;
             font-weight: 600;
         }
         
@@ -237,13 +241,14 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
         .fine-amount {
             font-weight: 600;
             color: #dc3545;
+            font-size: 11px;
         }
         
         /* Buttons */
         .btn-fines {
-            padding: 4px 10px;
+            padding: 3px 8px;
             border-radius: 4px;
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 600;
             text-decoration: none;
             cursor: pointer;
@@ -263,30 +268,39 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
         .total-summary-fines {
             background: #fff8f0;
             border: 1px solid #ffe4b5;
-            border-radius: 12px;
-            padding: 15px 20px;
+            border-radius: 10px;
+            padding: 10px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 10px;
+            font-size: 12px;
         }
         
         .no-data-fines {
             text-align: center;
-            padding: 50px 20px;
+            padding: 30px 20px;
             color: #6c757d;
             background: #f8f9fa;
             border-radius: 12px;
+            font-size: 12px;
         }
         
         .alert-fines {
             background: #d4edda;
             color: #155724;
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
             text-align: center;
+            font-size: 12px;
+        }
+        
+        .fines-container {
+            background: white;
+            border-radius: 16px;
+            padding: 18px;
         }
         
         @media (max-width: 1024px) {
@@ -301,12 +315,7 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
             }
             .student-fines-details {
                 flex-direction: column;
-                gap: 10px;
-            }
-            .table-fines th,
-            .table-fines td {
-                padding: 8px 5px;
-                font-size: 11px;
+                gap: 6px;
             }
         }
     </style>
@@ -371,7 +380,7 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
             </div>
         </div>
 
-        <div class="fines-container" style="background: white; border-radius: 16px; padding: 24px;">
+        <div class="fines-container">
 
             <?php if ($payment_message): ?>
                 <div class="alert-fines">✓ <?php echo htmlspecialchars($payment_message); ?></div>
@@ -460,17 +469,17 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
                              </tr
                             <?php endforeach; ?>
                         </tbody>
-                    <tr>
+                    </table>
                 </div>
 
                 <?php if ($pending_fines > 0): ?>
                 <div class="total-summary-fines">
                     <span><strong>Total Pending Fine (Unpaid)</strong></span>
-                    <span style="font-size: 24px; font-weight: 700; color: #dc3545;">PHP <?php echo number_format($pending_fines, 2); ?></span>
+                    <span style="font-size: 18px; font-weight: 700; color: #dc3545;">PHP <?php echo number_format($pending_fines, 2); ?></span>
                     <form method="POST">
                         <input type="hidden" name="student_id" value="<?php echo htmlspecialchars($selected_student_id); ?>">
                         <input type="hidden" name="total_amount" value="<?php echo $pending_fines; ?>">
-                        <button type="submit" name="pay_all" class="btn-fines btn-fines-danger" style="background: #dc3545; color: white; padding: 6px 14px; border-radius: 4px; border: none; cursor: pointer;">
+                        <button type="submit" name="pay_all" class="btn-fines btn-fines-danger" style="background: #dc3545; color: white; padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 10px;">
                             Pay All
                         </button>
                     </form>
@@ -480,12 +489,12 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
             <?php elseif ($selected_student_id && !$student_data): ?>
                 <div class="no-data-fines">
                     No student found with ID: <?php echo htmlspecialchars($selected_student_id); ?>
-                    <p style="margin-top: 10px;">Try: STU1001, STU1002, STU1003, or STU1004</p>
+                    <p style="margin-top: 8px; font-size: 11px;">Try: STU1001, STU1002, STU1003, or STU1004</p>
                 </div>
             <?php else: ?>
                 <div class="no-data-fines">
                     Enter a Student ID above to view outstanding fines
-                    <p style="margin-top: 10px;">Example: STU1001, STU1002, STU1003, STU1004</p>
+                    <p style="margin-top: 8px; font-size: 11px;">Example: STU1001, STU1002, STU1003, STU1004</p>
                 </div>
             <?php endif; ?>
 
