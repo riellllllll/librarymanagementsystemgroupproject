@@ -36,8 +36,7 @@ function books_match(array $book, string $q, string $cat, string $filter): bool 
   $q = mb_strtolower($q);
   return str_contains(mb_strtolower($book['title']),    $q)
       || str_contains(mb_strtolower($book['author']),   $q)
-      || str_contains(mb_strtolower($book['category']), $q)
-      || str_contains((string)$book['id'], $q);
+      || str_contains(mb_strtolower($book['category']), $q);
 }
 
 $results = $searched
@@ -126,7 +125,7 @@ function hl(string $text, string $q): string {
     </a>
     <a href="view_fines.php" class="nav-link ">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
       </svg>
       My Fines
     </a>
@@ -185,7 +184,7 @@ function hl(string $text, string $q): string {
     <!-- Page Header -->
     <div class="page-header">
       <h1>Search Books</h1>
-      <p>Find books by title, author, category, or Book ID</p>
+      <p>Find books by title, author, category, or year</p>
       <div class="gold-rule"><span></span><i>✦</i><span></span></div>
     </div>
 
@@ -205,7 +204,7 @@ function hl(string $text, string $q): string {
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
-            <input type="text" name="q" class="form-control" placeholder="Title, author, category, Book ID..." value="<?= htmlspecialchars($q) ?>">
+            <input type="text" name="q" class="form-control" placeholder="Title, author, category, year..." value="<?= htmlspecialchars($q) ?>">
           </div>
         </div>
 
@@ -244,7 +243,7 @@ function hl(string $text, string $q): string {
       <div class="empty-state">
         <div class="empty-icon">&#128269;</div>
         <h3>Start your search</h3>
-        <p>Enter a title, author name, category, or Book ID number above.</p>
+        <p>Enter a title, author name, category, or publication year above.</p>
       </div>
     </div>
 
@@ -270,7 +269,6 @@ function hl(string $text, string $q): string {
         <table>
           <thead>
             <tr>
-              <th>Book ID</th>
               <th>Title</th>
               <th>Author</th>
               <th>Category</th>
@@ -283,7 +281,6 @@ function hl(string $text, string $q): string {
           <tbody>
             <?php foreach ($results as $book): ?>
             <tr>
-              <td class="text-muted" style="font-weight:600;">#<?= str_pad($book['id'], 2, '0', STR_PAD_LEFT) ?></td>
               <td>
                 <div style="font-weight:600; font-size:13px;"><?= hl($book['title'],$q) ?></div>
               </td>
