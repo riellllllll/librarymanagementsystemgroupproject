@@ -55,6 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <title>Request Borrow — CvSU Library</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css">
   <link rel="stylesheet" href="../assets/student.css">
   <link rel="stylesheet" href="../assets/style.css">
 </head>
@@ -168,8 +169,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <span class="topbar-title">Request Borrow</span>
     <div class="topbar-spacer"></div>
     <?php require_once '../includes/student_notifications.php'; ?>
-   
-  
+
+
     <a href="profile.php" class="topbar-icon-btn" title="My Profile">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
@@ -214,10 +215,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <?php if (!$selected_book): ?>
           <div class="form-group">
             <label class="form-label">Select Book</label>
-            <select name="book_id" class="form-control" required>
+            <select name="book_id" id="book-select" class="form-control" required>
               <option value="">Choose a book...</option>
               <?php foreach ($all_books as $b): if ($b['available'] > 0): ?>
-                <option value="<?= $b['id'] ?>"><?= htmlspecialchars($b['title']) ?> — <?= htmlspecialchars($b['author']) ?></option>
+                <option value="<?= $b['id'] ?>"><?= htmlspecialchars($b['title']) ?> | <?= htmlspecialchars($b['author']) ?> | <?= htmlspecialchars($b['category']) ?></option>
               <?php endif; endforeach; ?>
             </select>
           </div>
@@ -261,7 +262,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var bookSelect = document.getElementById('book-select');
+    if (bookSelect) {
+      new TomSelect(bookSelect, {
+        create: false,
+        sortField: {
+          field: "text",
+          direction: "asc"
+        },
+        placeholder: "Search or choose a book...",
+        searchField: ['text'],
+        maxOptions: null,
+        dropdownClass: 'ts-dropdown',
+        optionClass: 'ts-option',
+        render: {
+          option: function(data, escape) {
+            var parts = data.text.split(' | ');
+            var title = parts[0] || '';
+            var author = parts[1] || '';
+            var category = parts[2] || '';
+            return '<div class="ts-option-inner">' +
+              '<div class="ts-option-title">' + escape(title) + '</div>' +
+              '<div class="ts-option-meta">' + escape(author) + (author && category ? ' &middot; ' : '') + escape(category) + '</div>' +
+              '</div>';
+          },
+          item: function(data, escape) {
+            var parts = data.text.split(' | ');
+            var title = parts[0] || data.text;
+            return '<div>' + escape(title) + '</div>';
+          },
+          no_results: function(data, escape) {
+            return '<div class="ts-no-results">No books found matching "' + escape(data.input) + '"</div>';
+          }
+        }
+      });
+    }
+  });
+
   function checkMobile() {
     const toggle = document.getElementById('menuToggle');
     if (window.innerWidth <= 768) {
