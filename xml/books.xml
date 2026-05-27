@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<library>
+  <books>
+    <book>
+      <id>01</id>
+      <title>The Great Gatsby</title>
+      <author>F. Scott Fitzgerald</author>
+      <genre>Fiction</genre>
+      <category>Fiction</category>
+      <year>1925</year>
+      <copies>3</copies>
+      <available>2</available>
+      <color>color-a</color>
+    </book>
+    <book>
+      <id>02</id>
+      <title>To Kill a Mockingbird</title>
+      <author>Harper Lee</author>
+      <genre>Fiction</genre>
+      <category>Fiction</category>
+      <year>1960</year>
+      <copies>4</copies>
+      <available>1</available>
+      <color>color-b</color>
+    </book>
+    <book>
+      <id>03</id>
+      <title>A Brief History of Time</title>
+      <author>Stephen Hawking</author>
+      <genre>Science</genre>
+      <category>Science</category>
+      <year>1988</year>
+      <copies>2</copies>
+      <available>2</available>
+      <color>color-c</color>
+    </book>
+    <book>
+      <id>04</id>
+      <title>Sapiens</title>
+      <author>Yuval Noah Harari</author>
+      <genre>History</genre>
+      <category>History</category>
+      <year>2011</year>
+      <copies>3</copies>
+      <available>0</available>
+      <color>color-d</color>
+    </book>
+    <book>
+      <id>05</id>
+      <title>Clean Code</title>
+      <author>Robert C. Martin</author>
+      <genre>Technology</genre>
+      <category>Technology</category>
+      <year>2008</year>
+      <copies>5</copies>
+      <available>4</available>
+      <color>color-e</color>
+    </book>
+    <book>
+      <id>06</id>
+      <title>1984</title>
+      <author>George Orwell</author>
+      <genre>Fiction</genre>
+      <category>Fiction</category>
+      <year>1949</year>
+      <copies>3</copies>
+      <available>2</available>
+      <color>color-a</color>
+    </book>
+    <book>
+      <id>07</id>
+      <title>The Selfish Gene</title>
+      <author>Richard Dawkins</author>
+      <genre>Science</genre>
+      <category>Science</category>
+      <year>1976</year>
+      <copies>2</copies>
+      <available>1</available>
+      <color>color-b</color>
+    </book>
+    <book>
+      <id>08</id>
+      <title>Calculus Made Easy</title>
+      <author>Silvanus P. Thompson</author>
+      <genre>Mathematics</genre>
+      <category>Mathematics</category>
+      <year>1914</year>
+      <copies>4</copies>
+      <available>3</available>
+      <color>color-c</color>
+    </book>
+    <book>
+      <id>09</id>
+      <title>Design Patterns</title>
+      <author>GoF</author>
+      <genre>Technology</genre>
+      <category>Technology</category>
+      <year>1994</year>
+      <copies>3</copies>
+      <available>3</available>
+      <color>color-d</color>
+    </book>
+    <book>
+      <id>10</id>
+      <title>Noli Me Tangere</title>
+      <author>Jose Rizal</author>
+      <genre>Literature</genre>
+      <category>Literature</category>
+      <year>1887</year>
+      <copies>6</copies>
+      <available>5</available>
+      <color>color-e</color>
+    </book>
+    <book>
+      <id>11</id>
+      <title>El Filibusterismo</title>
+      <author>Jose Rizal</author>
+      <genre>Literature</genre>
+      <category>Literature</category>
+      <year>1891</year>
+      <copies>5</copies>
+      <available>4</available>
+      <color>color-a</color>
+    </book>
+    <book>
+      <id>12</id>
+      <title>Guns, Germs, and Steel</title>
+      <author>Jared Diamond</author>
+      <genre>History</genre>
+      <category>History</category>
+      <year>1997</year>
+      <copies>2</copies>
+      <available>2</available>
+      <color>color-b</color>
+    </book>
+    <book>
+      <id>13</id>
+      <title>The Pragmatic Programmer</title>
+      <author>Andrew Hunt</author>
+      <genre>Technology</genre>
+      <category>Technology</category>
+      <year>1999</year>
+      <copies>3</copies>
+      <available>2</available>
+      <color>color-c</color>
+    </book>
+    <book>
+      <id>14</id>
+      <title>Pride and Prejudice</title>
+      <author>Jane Austen</author>
+      <genre>Literature</genre>
+      <category>Literature</category>
+      <year>1813</year>
+      <copies>4</copies>
+      <available>3</available>
+      <color>color-d</color>
+    </book>
+    <book>
+      <id>15</id>
+      <title>Cosmos</title>
+      <author>Carl Sagan</author>
+      <genre>Science</genre>
+      <category>Science</category>
+      <year>1980</year>
+      <copies>3</copies>
+      <available>1</available>
+      <color>color-e</color>
+    </book>
+    <book>
+      <id>16</id>
+      <title>The Art of War</title>
+      <author>Sun Tzu</author>
+      <genre>History</genre>
+      <category>History</category>
+      <year>500</year>
+      <copies>4</copies>
+      <available>4</available>
+      <color>color-a</color>
+    </book>
+  </books>
+</library>
