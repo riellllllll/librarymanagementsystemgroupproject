@@ -302,6 +302,93 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
             border-radius: 16px;
             padding: 18px;
         }
+
+        /* Search bar styling - matching view_books.php */
+        .topbar-search {
+            position: relative;
+            display: flex;
+            align-items: center;
+            width: min(420px, 100%);
+            min-height: 42px;
+            padding: 0 14px;
+            gap: 10px;
+            color: #8b96aa;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)), #ffffff;
+            border: 1px solid rgba(201, 151, 58, 0.28);
+            border-radius: 999px;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+        }
+
+        .topbar-search::before {
+            content: "";
+            position: absolute;
+            inset: -1px;
+            z-index: -1;
+            border-radius: inherit;
+            background: linear-gradient(135deg, rgba(201, 151, 58, 0.38), rgba(232, 194, 106, 0.08));
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .topbar-search:focus-within {
+            border-color: rgba(201, 151, 58, 0.72);
+            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12), 0 0 0 4px rgba(201, 151, 58, 0.14);
+            transform: translateY(-1px);
+        }
+
+        .topbar-search:focus-within::before {
+            opacity: 1;
+        }
+
+        .topbar-search svg {
+            flex: 0 0 auto;
+            width: 16px;
+            height: 16px;
+            color: #c9973a;
+            stroke-width: 2.4;
+        }
+
+        .topbar-search input {
+            width: 100%;
+            min-width: 0;
+            height: 40px;
+            color: #1f2937;
+            background: transparent;
+            border: 0;
+            outline: 0;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .topbar-search input::placeholder {
+            color: #98a2b3;
+            font-weight: 400;
+        }
+
+        @media (max-width: 760px) {
+            .topbar {
+                flex-wrap: wrap;
+            }
+            .topbar-search {
+                order: 3;
+                width: 100%;
+                margin-top: 10px;
+            }
+        }
+
+        @media (max-width: 520px) {
+            .topbar-search {
+                min-height: 40px;
+                padding: 0 12px;
+                border-radius: 14px;
+            }
+            .topbar-search input {
+                height: 38px;
+                font-size: 13px;
+            }
+        }
         
         @media (max-width: 1024px) {
             .stats-fines-grid {
@@ -332,7 +419,7 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
         <div class="topbar-spacer"></div>
         
         <form class="topbar-search" method="GET" action="view_fines.php">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="11" cy="11" r="8"/>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
@@ -451,7 +538,7 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
                                     <span class="status-badge <?php echo $fine['status'] === 'pending' ? 'status-pending' : 'status-paid'; ?>">
                                         <?php echo ucfirst($fine['status']); ?>
                                     </span>
-                                 </td
+                                </td
                                 <td>
                                     <?php if ($fine['status'] === 'pending' && $fine['fine_amount'] > 0): ?>
                                         <form method="POST" style="display: inline;">
@@ -465,7 +552,7 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
                                     <?php else: ?>
                                         <span style="color: #28a745;">✓</span>
                                     <?php endif; ?>
-                                 </td
+                                </td
                              </tr
                             <?php endforeach; ?>
                         </tbody>
