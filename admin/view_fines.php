@@ -3,6 +3,14 @@
 session_start();
 require 'library_data.php';
 
+if (!isset($_SESSION['archived_books'])) {
+  $_SESSION['archived_books'] = [];
+}
+
+$pending_count = count(array_filter($_SESSION['borrow_requests'], function ($req) {
+  return $req['status'] === 'pending';
+}));
+
 // Mock database for demonstration
 $fines_data = [
     'STU1001' => [
@@ -42,6 +50,16 @@ $fines_data = [
         ]
     ]
 ];
+
+// Status filter options
+$status_options = [
+    'all' => 'All Fines',
+    'pending' => 'Pending',
+    'paid' => 'Paid'
+];
+
+$selected_status = $_GET['status'] ?? 'all';
+$search_student = isset($_GET['student_id']) ? $_GET['student_id'] : '';
 
 // Handle fine payment
 $payment_message = '';
@@ -93,80 +111,208 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
     <title>View Fines - Admin Panel</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/student.css">
+    <link rel="stylesheet" href="../assets/style.css">
     <link rel="stylesheet" href="../assets/adminStyle.css">
-    <link rel="stylesheet" href="../assets/admin_fines.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Custom fines page styles */
+        .stats-fines-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-fines-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border-top: 3px solid #c89b3c;
+        }
+        
+        .stat-fines-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #6c757d;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .stat-fines-number {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1a1a2e;
+        }
+        
+        .stat-fines-sub {
+            font-size: 11px;
+            color: #6c757d;
+            margin-top: 6px;
+        }
+        
+        .student-fines-info {
+            background: #1a110b;
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            color: white;
+        }
+        
+        .student-fines-details {
+            display: flex;
+            gap: 25px;
+            flex-wrap: wrap;
+        }
+        
+        .section-fines-title {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .section-fines-title span {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a2e;
+        }
+        
+        /* COMPACT TABLE - NO SCROLLBAR NEEDED */
+        .table-fines-wrapper {
+            width: 100%;
+            margin-bottom: 25px;
+        }
+        
+        .table-fines {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        .table-fines th {
+            text-align: left;
+            padding: 10px 8px;
+            background: #f8f9fa;
+            font-size: 11px;
+            font-weight: 600;
+            color: #495057;
+            border-bottom: 1px solid #eef2f6;
+        }
+        
+        .table-fines td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #eef2f6;
+            color: #1a1a2e;
+        }
+        
+        .table-fines tr:hover {
+            background: #faf8f5;
+        }
+        
+        /* Status Badges */
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        
+        .status-pending {
+            background: #f8d7da;
+            color: #dc3545;
+        }
+        
+        .status-paid {
+            background: #d4edda;
+            color: #28a745;
+        }
+        
+        .fine-amount {
+            font-weight: 600;
+            color: #dc3545;
+        }
+        
+        /* Buttons */
+        .btn-fines {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            font-family: inherit;
+        }
+        
+        .btn-fines-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-fines-success:hover {
+            background: #218838;
+        }
+        
+        .total-summary-fines {
+            background: #fff8f0;
+            border: 1px solid #ffe4b5;
+            border-radius: 12px;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .no-data-fines {
+            text-align: center;
+            padding: 50px 20px;
+            color: #6c757d;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+        
+        .alert-fines {
+            background: #d4edda;
+            color: #155724;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        @media (max-width: 1024px) {
+            .stats-fines-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .stats-fines-grid {
+                grid-template-columns: 1fr;
+            }
+            .student-fines-details {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .table-fines th,
+            .table-fines td {
+                padding: 8px 5px;
+                font-size: 11px;
+            }
+        }
+    </style>
 </head>
 
 <body>
-
-<style>
-    /* FORCE GOLD BUTTON - OVERRIDE EVERYTHING */
-    .btn-fines-primary {
-        background: #c89b3c !important;
-        color: #1a1a2e !important;
-        border: none !important;
-        border-radius: 7px !important;
-        padding: 7px 16px !important;
-        font-size: 0.74rem !important;
-        font-weight: 700 !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        gap: 6px !important;
-        cursor: pointer !important;
-        text-transform: uppercase !important;
-    }
-    .btn-fines-primary:hover {
-        background: #b88a2a !important;
-        transform: translateY(-1px) !important;
-    }
-    .btn-fines-secondary {
-        background: #e9ecef !important;
-        color: #1a1a2e !important;
-        border: 1px solid #dee2e6 !important;
-        border-radius: 7px !important;
-        padding: 7px 16px !important;
-        font-size: 0.74rem !important;
-        font-weight: 700 !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        gap: 6px !important;
-        cursor: pointer !important;
-        text-decoration: none !important;
-        text-transform: uppercase !important;
-    }
-    .btn-fines-secondary:hover {
-        background: #dde0e3 !important;
-        transform: translateY(-1px) !important;
-    }
-    .btn-fines-success {
-        background: #28a745 !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 7px !important;
-        padding: 5px 12px !important;
-        font-size: 0.7rem !important;
-        font-weight: 700 !important;
-        cursor: pointer !important;
-    }
-    .btn-fines-success:hover {
-        background: #218838 !important;
-    }
-    .btn-fines-danger {
-        background: #dc3545 !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 7px !important;
-        padding: 8px 20px !important;
-        font-size: 0.74rem !important;
-        font-weight: 700 !important;
-        cursor: pointer !important;
-    }
-    .btn-fines-danger:hover {
-        background: #c82333 !important;
-    }
-</style>
 
 <?php include 'sideBar.php'; ?>
 
@@ -175,16 +321,29 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
     <header class="topbar">
         <span class="topbar-title">View Fines</span>
         <div class="topbar-spacer"></div>
-        <a href="student_req.php" class="topbar-icon-btn" title="Student Requests">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        
+        <form class="topbar-search" method="GET" action="view_fines.php">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
+            <input type="text" name="student_id" placeholder="Search by Student ID..." value="<?= htmlspecialchars($selected_student_id) ?>">
+        </form>
+
+        <a href="student_req.php" class="topbar-icon-btn" title="Student Borrow Requests">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            <?php if ($pending_count > 0): ?>
+                <span class="topbar-notif-dot"></span>
+            <?php endif; ?>
         </a>
+
         <a href="admin_profile.php" class="topbar-icon-btn" title="Admin Profile">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
             </svg>
         </a>
     </header>
@@ -193,6 +352,7 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
 
         <div class="page-header">
             <h1>View Fines</h1>
+            <p>View and manage outstanding fines per student</p>
             <div class="gold-rule">
                 <span></span>
                 <i>*</i>
@@ -200,7 +360,18 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
             </div>
         </div>
 
-        <div class="fines-container">
+        <div class="books-filter-section">
+            <div class="category-pills">
+                <?php foreach ($status_options as $value => $label): ?>
+                    <a href="?status=<?= urlencode($value) ?>&student_id=<?= urlencode($selected_student_id) ?>" 
+                       class="category-pill <?= $value === $status_filter ? 'active' : '' ?>">
+                        <?= htmlspecialchars($label) ?>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        </div>
+
+        <div class="fines-container" style="background: white; border-radius: 16px; padding: 24px;">
 
             <?php if ($payment_message): ?>
                 <div class="alert-fines">✓ <?php echo htmlspecialchars($payment_message); ?></div>
@@ -229,25 +400,6 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
                 </div>
             </div>
 
-            <div class="search-fines-section">
-                <form method="GET" action="" class="search-fines-form">
-                    <div class="input-fines-group">
-                        <label>STUDENT ID *</label>
-                        <input type="text" name="student_id" placeholder="Enter Student ID" value="<?php echo htmlspecialchars($selected_student_id); ?>" required>
-                    </div>
-                    <div class="input-fines-group">
-                        <label>FILTER BY STATUS</label>
-                        <select name="status_filter">
-                            <option value="all" <?php echo $status_filter == 'all' ? 'selected' : ''; ?>>All Fines</option>
-                            <option value="pending" <?php echo $status_filter == 'pending' ? 'selected' : ''; ?>>Pending Only</option>
-                            <option value="paid" <?php echo $status_filter == 'paid' ? 'selected' : ''; ?>>Paid Only</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn-fines btn-fines-primary">VIEW FINES</button>
-                    <a href="view_fines.php" class="btn-fines btn-fines-secondary">CLEAR</a>
-                </form>
-            </div>
-
             <?php if ($selected_student_id && $student_data): ?>
                 <div class="student-fines-info">
                     <div class="student-fines-details">
@@ -268,11 +420,9 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
                             <tr>
                                 <th>Book ID</th>
                                 <th>Book Title</th>
-                                <th>Issue Date</th>
                                 <th>Due Date</th>
-                                <th>Return Date</th>
-                                <th>Days Overdue</th>
-                                <th>Fine Amount</th>
+                                <th>Days</th>
+                                <th>Fine</th>
                                 <th>Status</th>
                                 <th>Action</th>
                             </tr>
@@ -285,16 +435,14 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
                             <tr>
                                 <td><?php echo htmlspecialchars($fine['book_id']); ?></td>
                                 <td><?php echo htmlspecialchars($fine['book_title']); ?></td>
-                                <td><?php echo date('d/m/Y', strtotime($fine['issue_date'])); ?></td>
                                 <td><?php echo date('d/m/Y', strtotime($fine['due_date'])); ?></td>
-                                <td><?php echo $fine['return_date'] ? date('d/m/Y', strtotime($fine['return_date'])) : '—'; ?></td>
                                 <td><?php echo $fine['days_overdue']; ?></td>
                                 <td class="fine-amount">PHP <?php echo number_format($fine['fine_amount'], 2); ?></td>
                                 <td>
                                     <span class="status-badge <?php echo $fine['status'] === 'pending' ? 'status-pending' : 'status-paid'; ?>">
                                         <?php echo ucfirst($fine['status']); ?>
                                     </span>
-                                </td
+                                 </td
                                 <td>
                                     <?php if ($fine['status'] === 'pending' && $fine['fine_amount'] > 0): ?>
                                         <form method="POST" style="display: inline;">
@@ -302,17 +450,17 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
                                             <input type="hidden" name="book_id" value="<?php echo htmlspecialchars($fine['book_id']); ?>">
                                             <input type="hidden" name="amount" value="<?php echo $fine['fine_amount']; ?>">
                                             <button type="submit" name="pay_fine" class="btn-fines btn-fines-success">
-                                                Pay PHP <?php echo number_format($fine['fine_amount'], 2); ?>
+                                                Pay
                                             </button>
                                         </form>
                                     <?php else: ?>
-                                        <span style="color: #155724;">Cleared</span>
+                                        <span style="color: #28a745;">✓</span>
                                     <?php endif; ?>
                                  </td
                              </tr
                             <?php endforeach; ?>
                         </tbody>
-                    </table>
+                    <tr>
                 </div>
 
                 <?php if ($pending_fines > 0): ?>
@@ -322,8 +470,8 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
                     <form method="POST">
                         <input type="hidden" name="student_id" value="<?php echo htmlspecialchars($selected_student_id); ?>">
                         <input type="hidden" name="total_amount" value="<?php echo $pending_fines; ?>">
-                        <button type="submit" name="pay_all" class="btn-fines btn-fines-danger">
-                            Pay All Pending Fines (PHP <?php echo number_format($pending_fines, 2); ?>)
+                        <button type="submit" name="pay_all" class="btn-fines btn-fines-danger" style="background: #dc3545; color: white; padding: 6px 14px; border-radius: 4px; border: none; cursor: pointer;">
+                            Pay All
                         </button>
                     </form>
                 </div>

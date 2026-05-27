@@ -11,7 +11,7 @@ $pending_count = count(array_filter($_SESSION['borrow_requests'], function ($req
   return $req['status'] === 'pending';
 }));
 
-// Mock data for borrowed books (in real implementation, this comes from database)
+// Mock data for borrowed books
 $borrowed_books_data = [
     [
         'id' => 1,
@@ -140,13 +140,11 @@ $books = $filtered;
 $total_borrowed = 0;
 $overdue_count = 0;
 $returned_count = 0;
-$total_fines = 0;
 
 foreach ($borrowed_books_data as $book) {
     if ($book['status'] !== 'returned') $total_borrowed++;
     if ($book['status'] === 'overdue') $overdue_count++;
     if ($book['status'] === 'returned') $returned_count++;
-    $total_fines += $book['fine'];
 }
 
 // Handle return book action
@@ -174,29 +172,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
   <link rel="stylesheet" href="../assets/adminStyle.css">
   
   <style>
-    /* Make fine amount text smaller and cleaner */
-    .fine-amount {
-        font-size: 13px;
-        font-weight: 600;
-        color: #dc3545;
-        white-space: nowrap;
-    }
-    
-    /* Adjust table cell padding for better readability */
     .data-table td,
     .data-table th {
         padding: 10px 12px;
         font-size: 13px;
     }
     
-    /* Make the checkmark for returned books smaller */
     .returned-check {
         color: #28a745;
         font-size: 14px;
         font-weight: bold;
     }
     
-    /* Status badge colors - BLACK for borrowed, RED for overdue, GREEN for returned */
     .status-badge-borrowed {
         background: #f0f0f0;
         color: #333333;
@@ -280,11 +267,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
 
     <div class="page-header">
       <h1>Borrowed Books</h1>
-
-      <p>
-        Track and manage all books currently borrowed by students
-      </p>
-
+      <p>Track and manage all books currently borrowed by students</p>
       <div class="gold-rule">
         <span></span>
         <i>*</i>
@@ -293,7 +276,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
     </div>
 
     <div class="books-filter-section">
-
       <div class="category-pills">
         <?php foreach ($status_options as $value => $label): ?>
           <a
@@ -308,13 +290,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
       <div class="view-books-toolbar">
         <p class="view-books-count">
           Showing <strong><?= count($books) ?></strong> of <strong><?= $total ?></strong> borrowed books
-
           <?php if ($selected_status !== 'all'): ?>
             in <span><?= htmlspecialchars($status_options[$selected_status]) ?></span>
           <?php endif; ?>
         </p>
       </div>
-
     </div>
 
     <?php if ($return_message): ?>
@@ -357,38 +337,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
         <div class="stat-value"><?= $returned_count ?></div>
         <div class="stat-label">RETURNED</div>
       </div>
-
-      <div class="stat-card">
-        <div class="stat-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="12"/>
-            <line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-        </div>
-        <div class="stat-value">PHP <?= number_format($total_fines, 2) ?></div>
-        <div class="stat-label">TOTAL FINES</div>
-      </div>
     </div>
 
     <?php if (empty($books)): ?>
-
       <div class="card">
         <div class="empty-state">
-          <div class="empty-icon">
-            &#128218;
-          </div>
-
+          <div class="empty-icon">&#128218;</div>
           <h3>No borrowed books found</h3>
-
-          <p>
-            No books match your selected status or search term.
-          </p>
+          <p>No books match your selected status or search term.</p>
         </div>
       </div>
-
     <?php else: ?>
-
       <div class="card">
         <div class="card-body">
           <div class="table-wrap">
@@ -402,7 +361,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
                   <th>Borrow Date</th>
                   <th>Due Date</th>
                   <th>Status</th>
-                  <th>Fine</th>
                   <th>Action</th>
                 </tr>
               </thead>
@@ -420,7 +378,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
                         <?= strtoupper($book['status']) ?>
                     </span>
                   </td>
-                  <td class="fine-amount">PHP <?= number_format($book['fine'], 2) ?></td>
                   <td>
                     <?php if ($book['status'] !== 'returned'): ?>
                       <form method="POST" style="display: inline;">
@@ -440,7 +397,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
           </div>
         </div>
       </div>
-
     <?php endif; ?>
 
   </main>
