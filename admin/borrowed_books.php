@@ -146,15 +146,6 @@ foreach ($borrowed_books_data as $book) {
     if ($book['status'] === 'overdue') $overdue_count++;
     if ($book['status'] === 'returned') $returned_count++;
 }
-
-// Handle return book action
-$return_message = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
-    $book_id = $_POST['book_id'];
-    $student_id = $_POST['student_id'];
-    $fine_amount = $_POST['fine_amount'];
-    $return_message = "Book ID: $book_id has been returned. Fine: PHP " . number_format($fine_amount, 2);
-}
 ?>
 
 <!DOCTYPE html>
@@ -194,11 +185,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
     
     .data-table td:nth-child(7),
     .data-table th:nth-child(7) {
-        text-align: center;
-    }
-    
-    .data-table td:nth-child(8),
-    .data-table th:nth-child(8) {
         text-align: center;
     }
     
@@ -251,22 +237,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
         display: inline-block;
         text-align: center;
         min-width: 80px;
-    }
-
-    /* Action button styling */
-    .return-btn {
-        padding: 5px 12px;
-        font-size: 11px;
-        background: #dc3545;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        min-width: 65px;
-    }
-    
-    .return-btn:hover {
-        background: #c82333;
     }
 
     /* Search bar styling */
@@ -438,12 +408,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
       </div>
     </div>
 
-    <?php if ($return_message): ?>
-      <div class="alert alert-success" style="background: #d4edda; color: #155724; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px;">
-        <?= htmlspecialchars($return_message) ?>
-      </div>
-    <?php endif; ?>
-
     <!-- Statistics Cards -->
     <div class="stats-grid" style="margin-bottom: 30px;">
       <div class="stat-card">
@@ -502,7 +466,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
                   <th>Borrow Date</th>
                   <th>Due Date</th>
                   <th>Status</th>
-                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -518,18 +481,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
                     <span class="status-badge-<?= $book['status'] ?>">
                         <?= strtoupper($book['status']) ?>
                     </span>
-                  </td>
-                  <td style="text-align: center;">
-                    <?php if ($book['status'] !== 'returned'): ?>
-                      <form method="POST" style="display: inline;">
-                        <input type="hidden" name="book_id" value="<?= htmlspecialchars($book['book_id']) ?>">
-                        <input type="hidden" name="student_id" value="<?= htmlspecialchars($book['student_id']) ?>">
-                        <input type="hidden" name="fine_amount" value="<?= $book['fine'] ?>">
-                        <button type="submit" name="return_book" class="return-btn">RETURN</button>
-                      </form>
-                    <?php else: ?>
-                      <span class="returned-check">✓</span>
-                    <?php endif; ?>
                   </td>
                 </tr>
                 <?php endforeach; ?>
