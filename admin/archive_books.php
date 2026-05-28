@@ -6,19 +6,25 @@ if (!isset($_SESSION['archived_books'])) {
   $_SESSION['archived_books'] = [];
 }
 
+if (!function_exists('format_book_id')) {
+  function format_book_id($id) {
+    return str_pad((string)(int)$id, 2, '0', STR_PAD_LEFT);
+  }
+}
+
 $pending_count = count(array_filter($_SESSION['borrow_requests'], function ($req) {
   return $req['status'] === 'pending';
 }));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $book_id = (int)($_POST['book_id'] ?? 0);
+  $book_id = format_book_id($_POST['book_id'] ?? 0);
 
   foreach ($_SESSION['archived_books'] as $index => $book) {
-    if ((int)$book['id'] === $book_id) {
+    if (format_book_id($book['id']) === $book_id) {
       $already_in_books = false;
 
       foreach ($_SESSION['books'] as $existing_book) {
-        if ((int)$existing_book['id'] === $book_id) {
+        if (format_book_id($existing_book['id']) === $book_id) {
           $already_in_books = true;
           break;
         }
@@ -144,7 +150,7 @@ $archived_books = $_SESSION['archived_books'];
                 <?php foreach ($archived_books as $book): ?>
 
                   <tr>
-                    <td><?= htmlspecialchars($book['id']) ?></td>
+                    <td><?= htmlspecialchars(format_book_id($book['id'])) ?></td>
                     <td><?= htmlspecialchars($book['title']) ?></td>
                     <td><?= htmlspecialchars($book['author']) ?></td>
                     <td><?= htmlspecialchars($book['genre']) ?></td>
