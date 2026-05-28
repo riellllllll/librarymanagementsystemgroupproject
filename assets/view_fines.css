@@ -1,6 +1,6 @@
 /* ============================================================
    view_fines.css — CvSU Library
-   Page-specific styles for My Fines
+   Page-specific styles for My Fines (Student Side)
    Extends student.css
    ============================================================ */
 
@@ -23,6 +23,11 @@
 
 .fine-hero.cleared::before {
   background: linear-gradient(90deg, var(--sage), #4aab82, var(--sage));
+}
+
+/* ── NEW: payment submitted / awaiting admin approval ── */
+.fine-hero.requested::before {
+  background: linear-gradient(90deg, #d97706, #f59e0b, #d97706);
 }
 
 .fine-hero-inner {
@@ -54,7 +59,8 @@
   margin-bottom: 8px;
 }
 
-.fine-hero-amount.cleared { color: var(--sage); }
+.fine-hero-amount.cleared   { color: var(--sage); }
+.fine-hero-amount.requested { color: #d97706; }   /* amber when awaiting approval */
 
 .fine-hero-desc {
   font-size: 0.8rem;
@@ -78,6 +84,12 @@
   border-left-color: rgba(46,125,94,0.12);
 }
 
+/* Amber side panel when payment is awaiting approval */
+.fine-hero.requested .fine-hero-side {
+  background: linear-gradient(135deg, rgba(217,119,6,0.06), rgba(217,119,6,0.02));
+  border-left-color: rgba(217,119,6,0.18);
+}
+
 .fine-mini-stat { display: flex; flex-direction: column; gap: 2px; }
 
 .fine-mini-stat .ms-val {
@@ -96,14 +108,13 @@
 
 /* ── Scrollable Fine Table ── */
 .table-wrap {
-  max-height: 420px;        /* ~5–6 rows before scroll kicks in */
+  max-height: 420px;
   overflow-y: auto;
   overflow-x: auto;
   border-radius: 10px;
   border: 1px solid var(--border);
 }
 
-/* Stick the header so column labels stay visible while scrolling */
 .table-wrap thead th {
   position: sticky;
   top: 0;
@@ -112,37 +123,50 @@
   box-shadow: 0 1px 0 var(--border);
 }
 
-/* Custom scrollbar — rust accent to match the page palette */
 .table-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
-.table-wrap::-webkit-scrollbar-track {
-  background: var(--border);
-  border-radius: 10px;
-}
-.table-wrap::-webkit-scrollbar-thumb {
-  background: rgba(192,57,43,0.35);
-  border-radius: 10px;
-}
-.table-wrap::-webkit-scrollbar-thumb:hover {
-  background: var(--rust);
-}
+.table-wrap::-webkit-scrollbar-track  { background: var(--border); border-radius: 10px; }
+.table-wrap::-webkit-scrollbar-thumb  { background: rgba(192,57,43,0.35); border-radius: 10px; }
+.table-wrap::-webkit-scrollbar-thumb:hover { background: var(--rust); }
 
-/* ── Fine Table Row accent ── */
-.fine-row-unpaid td:first-child {
-  border-left: 3px solid var(--rust);
-}
-
-.fine-row-paid td:first-child {
-  border-left: 3px solid var(--sage);
-}
+/* ── Fine Table Row accents ── */
+.fine-row-unpaid td:first-child    { border-left: 3px solid var(--rust); }
+.fine-row-paid td:first-child      { border-left: 3px solid var(--sage); }
+.fine-row-requested td:first-child { border-left: 3px solid #d97706; }   /* NEW */
 
 /* ── Fine Amount Cell ── */
-.fine-cell-amount {
+.fine-cell-amount           { font-weight: 700; font-size: 0.9rem; }
+.fine-cell-amount.unpaid    { color: var(--rust); }
+.fine-cell-amount.paid      { color: var(--sage); }
+.fine-cell-amount.requested { color: #d97706; }   /* NEW */
+
+/* ── Status badges (student table) ── */
+.fine-status-badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 0.68rem;
   font-weight: 700;
-  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
-.fine-cell-amount.unpaid { color: var(--rust); }
-.fine-cell-amount.paid   { color: var(--sage); }
+.fine-status-badge.unpaid    { background: #fde8ea; color: #c0392b; }
+.fine-status-badge.paid      { background: #d4f4dd; color: #1e7e34; }
+.fine-status-badge.requested { background: #fff8e1; color: #b45309; }   /* NEW */
+
+/* ── Awaiting approval notice (inline below action button) ── */
+.fine-awaiting-notice {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.7rem;
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid rgba(217, 119, 6, 0.25);
+  border-radius: 6px;
+  padding: 4px 9px;
+  white-space: nowrap;
+}
 
 /* ── Payment Modal specific ── */
 .pay-amount-display {
@@ -194,19 +218,24 @@
   user-select: none;
 }
 
-.pay-method-tile:hover { border-color: var(--gold); background: #fdf8ee; }
+.pay-method-tile:hover         { border-color: var(--gold); background: #fdf8ee; }
+.pay-method-tile.selected      { border-color: var(--gold); background: #fdf8ee; color: var(--gold-dk); font-weight: 500; }
+.pay-method-tile .pm-icon      { font-size: 1.4rem; flex-shrink: 0; }
 
-.pay-method-tile.selected {
-  border-color: var(--gold);
-  background: #fdf8ee;
-  color: var(--gold-dk);
-  font-weight: 500;
+/* ── Submit confirmation note inside modal ── */
+.pay-submit-note {
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.5;
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: #f8f9fb;
+  border-radius: 8px;
+  border: 1px solid var(--border);
 }
 
-.pay-method-tile .pm-icon {
-  font-size: 1.4rem;
-  flex-shrink: 0;
-}
+.pay-submit-note strong { color: var(--ink); }
 
 /* ── All Clear Banner ── */
 .all-clear-banner {
@@ -220,29 +249,39 @@
   margin-bottom: 20px;
 }
 
-.all-clear-banner .acb-icon { font-size: 2rem; flex-shrink: 0; }
+.all-clear-banner .acb-icon  { font-size: 2rem; flex-shrink: 0; }
+.all-clear-banner .acb-text h4 { font-size: 0.92rem; font-weight: 600; color: var(--sage); margin-bottom: 2px; }
+.all-clear-banner .acb-text p  { font-size: 0.78rem; color: var(--muted); }
 
-.all-clear-banner .acb-text h4 {
+/* ── NEW: Payment Submitted Banner (awaiting admin approval) ── */
+.payment-submitted-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(135deg, rgba(217,119,6,0.08), rgba(217,119,6,0.03));
+  border: 1px solid rgba(217,119,6,0.22);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+.payment-submitted-banner .psb-icon { font-size: 2rem; flex-shrink: 0; }
+.payment-submitted-banner .psb-text h4 {
   font-size: 0.92rem;
   font-weight: 600;
-  color: var(--sage);
+  color: #92400e;
   margin-bottom: 2px;
 }
-
-.all-clear-banner .acb-text p {
+.payment-submitted-banner .psb-text p {
   font-size: 0.78rem;
-  color: var(--muted);
+  color: #b45309;
 }
 
-/* ── Urgency pulse on unpaid fine row ── */
-@keyframes row-pulse {
-  0%, 100% { background: transparent; }
-  50%       { background: rgba(192,57,43,0.04); }
-}
+/* ── Row hover ── */
+.fine-row-unpaid:hover    { background: rgba(192,57,43,0.04) !important; }
+.fine-row-requested:hover { background: rgba(217,119,6,0.04) !important; }
 
-.fine-row-unpaid:hover { background: rgba(192,57,43,0.04) !important; }
-
-/* ── Payment Confirmation Panel animation ── */
+/* ── Animations ── */
 @keyframes modalIn {
   from { opacity: 0; transform: scale(0.95) translateY(10px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
@@ -258,6 +297,7 @@
     flex-direction: row;
     justify-content: space-around;
   }
-  .fine-hero-amount { font-size: 2rem; }
-  .pay-methods { grid-template-columns: 1fr; }
+  .fine-hero.requested .fine-hero-side { border-top-color: rgba(217,119,6,0.18); }
+  .fine-hero-amount   { font-size: 2rem; }
+  .pay-methods        { grid-template-columns: 1fr; }
 }
