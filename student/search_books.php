@@ -3,24 +3,9 @@
 session_start();
 $active_page = 'search';
 
-$all_books = [
-  ['id'=>1, 'title'=>'The Great Gatsby',         'author'=>'F. Scott Fitzgerald','category'=>'Fiction',     'year'=>1925,'copies'=>3,'available'=>2,'color'=>'color-a'],
-  ['id'=>2, 'title'=>'To Kill a Mockingbird',    'author'=>'Harper Lee',          'category'=>'Fiction',     'year'=>1960,'copies'=>4,'available'=>1,'color'=>'color-b'],
-  ['id'=>3, 'title'=>'A Brief History of Time',  'author'=>'Stephen Hawking',     'category'=>'Science',     'year'=>1988,'copies'=>2,'available'=>2,'color'=>'color-c'],
-  ['id'=>4, 'title'=>'Sapiens',                  'author'=>'Yuval Noah Harari',   'category'=>'History',     'year'=>2011,'copies'=>3,'available'=>0,'color'=>'color-d'],
-  ['id'=>5, 'title'=>'Clean Code',               'author'=>'Robert C. Martin',    'category'=>'Technology',  'year'=>2008,'copies'=>5,'available'=>4,'color'=>'color-e'],
-  ['id'=>6, 'title'=>'1984',                     'author'=>'George Orwell',       'category'=>'Fiction',     'year'=>1949,'copies'=>3,'available'=>2,'color'=>'color-a'],
-  ['id'=>7, 'title'=>'The Selfish Gene',         'author'=>'Richard Dawkins',     'category'=>'Science',     'year'=>1976,'copies'=>2,'available'=>1,'color'=>'color-b'],
-  ['id'=>8, 'title'=>'Calculus Made Easy',       'author'=>'Silvanus P. Thompson','category'=>'Mathematics', 'year'=>1914,'copies'=>4,'available'=>3,'color'=>'color-c'],
-  ['id'=>9, 'title'=>'Design Patterns',          'author'=>'GoF',                 'category'=>'Technology',  'year'=>1994,'copies'=>3,'available'=>3,'color'=>'color-d'],
-  ['id'=>10,'title'=>'Noli Me Tangere',          'author'=>'Jose Rizal',          'category'=>'Literature',  'year'=>1887,'copies'=>6,'available'=>5,'color'=>'color-e'],
-  ['id'=>11,'title'=>'El Filibusterismo',        'author'=>'Jose Rizal',          'category'=>'Literature',  'year'=>1891,'copies'=>5,'available'=>4,'color'=>'color-a'],
-  ['id'=>12,'title'=>'Guns, Germs, and Steel',   'author'=>'Jared Diamond',       'category'=>'History',     'year'=>1997,'copies'=>2,'available'=>2,'color'=>'color-b'],
-  ['id'=>13,'title'=>'The Pragmatic Programmer', 'author'=>'Andrew Hunt',         'category'=>'Technology',  'year'=>1999,'copies'=>3,'available'=>2,'color'=>'color-c'],
-  ['id'=>14,'title'=>'Pride and Prejudice',      'author'=>'Jane Austen',         'category'=>'Literature',  'year'=>1813,'copies'=>4,'available'=>3,'color'=>'color-d'],
-  ['id'=>15,'title'=>'Cosmos',                   'author'=>'Carl Sagan',          'category'=>'Science',     'year'=>1980,'copies'=>3,'available'=>1,'color'=>'color-e'],
-  ['id'=>16,'title'=>'The Art of War',           'author'=>'Sun Tzu',             'category'=>'History',     'year'=>500, 'copies'=>4,'available'=>4,'color'=>'color-a'],
-];
+require_once '../includes/books_dom.php';
+
+$all_books = load_books_from_xml();
 
 $categories = ['All','Fiction','Science','History','Technology','Literature','Mathematics'];
 
