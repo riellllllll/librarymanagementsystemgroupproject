@@ -27,6 +27,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: manage_students.php');
         exit;
     }
+    if (isset($_POST['action']) && $_POST['action'] === 'edit_student') {
+        $_SESSION['toast'] = ['type' => 'success', 'message' => 'Student account updated successfully!'];
+        header('Location: manage_students.php');
+        exit;
+    }
     if (isset($_POST['action']) && $_POST['action'] === 'remove_student') {
         $_SESSION['toast'] = ['type' => 'success', 'message' => 'Student account removed successfully!'];
         header('Location: manage_students.php');
@@ -373,10 +378,10 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
                   <?php endif; ?>
                 </td>
                 <td class="ms-actions-cell">
-                  <button class="ms-action-btn ms-action-view" title="View Details">
+                  <button class="ms-action-btn ms-action-view" title="View Details" onclick="openViewModal(<?php echo $student['id']; ?>)">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                   </button>
-                  <button class="ms-action-btn ms-action-edit" title="Edit Student">
+                  <button class="ms-action-btn ms-action-edit" title="Edit Student" onclick="openEditModal(<?php echo $student['id']; ?>)">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   </button>
                   <button class="ms-action-btn ms-action-remove" title="Remove Student" onclick="openRemoveModal(<?php echo $student['id']; ?>, '<?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?>', '<?php echo htmlspecialchars($student['student_id']); ?>')">
@@ -545,6 +550,166 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
   </div>
 </div>
 
+
+<!-- ════════════════════════════════════════════
+     VIEW STUDENT MODAL
+     ════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="viewModal">
+  <div class="modal ms-modal">
+    <div class="modal-top"></div>
+    <button class="modal-close" onclick="closeViewModal()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="modal-body">
+      <div class="ms-view-header">
+        <div class="ms-view-avatar" id="viewAvatar"></div>
+        <div class="ms-view-title-wrap">
+          <h2 class="modal-title" id="viewName"></h2>
+          <p class="modal-desc" id="viewStudentId"></p>
+        </div>
+      </div>
+
+      <div class="ms-view-details">
+        <div class="ms-view-row">
+          <span class="ms-view-label">Email</span>
+          <span class="ms-view-value" id="viewEmail"></span>
+        </div>
+        <div class="ms-view-row">
+          <span class="ms-view-label">Course</span>
+          <span class="ms-view-value" id="viewCourse"></span>
+        </div>
+        <div class="ms-view-row">
+          <span class="ms-view-label">Year Level</span>
+          <span class="ms-view-value" id="viewYear"></span>
+        </div>
+        <div class="ms-view-row">
+          <span class="ms-view-label">Status</span>
+          <span class="ms-view-value" id="viewStatus"></span>
+        </div>
+        <div class="ms-view-row">
+          <span class="ms-view-label">Books Borrowed</span>
+          <span class="ms-view-value" id="viewBorrowed"></span>
+        </div>
+        <div class="ms-view-row">
+          <span class="ms-view-label">Total Fines</span>
+          <span class="ms-view-value" id="viewFines"></span>
+        </div>
+      </div>
+
+      <div class="ms-modal-actions">
+        <button type="button" class="btn-outline" onclick="closeViewModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     EDIT STUDENT MODAL
+     ════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="editModal">
+  <div class="modal ms-modal">
+    <div class="modal-top"></div>
+    <button class="modal-close" onclick="closeEditModal()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="modal-body">
+      <h2 class="modal-title">Edit Student</h2>
+      <p class="modal-desc">Update the student information below.</p>
+
+      <form method="POST" action="manage_students.php" id="editStudentForm">
+        <input type="hidden" name="action" value="edit_student">
+        <input type="hidden" name="edit_id" id="editId">
+
+        <div class="field-grid">
+          <div class="field">
+            <label>First Name <span>*</span></label>
+            <div class="input-wrap">
+              <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+              <input type="text" name="edit_first_name" id="editFirstName" required>
+            </div>
+          </div>
+          <div class="field">
+            <label>Last Name <span>*</span></label>
+            <div class="input-wrap">
+              <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+              <input type="text" name="edit_last_name" id="editLastName" required>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Student ID <span>*</span></label>
+          <div class="input-wrap">
+            <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+            <input type="text" name="edit_student_id" id="editStudentIdInput" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Email Address <span>*</span></label>
+          <div class="input-wrap">
+            <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
+            <input type="email" name="edit_email" id="editEmail" required>
+          </div>
+        </div>
+
+        <div class="field-grid">
+          <div class="field">
+            <label>Course <span>*</span></label>
+            <div class="input-wrap">
+              <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>
+              <select name="edit_course" id="editCourse" required>
+                <option value="BSIT">BSIT</option>
+                <option value="BSCS">BSCS</option>
+                <option value="BSBA">BSBA</option>
+                <option value="BSED">BSED</option>
+                <option value="BSN">BSN</option>
+                <option value="BSPSY">BSPSY</option>
+                <option value="BSA">BSA</option>
+                <option value="BSCE">BSCE</option>
+              </select>
+              <span class="select-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Year Level <span>*</span></label>
+            <div class="input-wrap">
+              <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+              <select name="edit_year" id="editYear" required>
+                <option value="1st Year">1st Year</option>
+                <option value="2nd Year">2nd Year</option>
+                <option value="3rd Year">3rd Year</option>
+                <option value="4th Year">4th Year</option>
+              </select>
+              <span class="select-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Status <span>*</span></label>
+          <div class="input-wrap">
+            <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>
+            <select name="edit_status" id="editStatus" required>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <span class="select-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+          </div>
+        </div>
+
+        <div class="ms-modal-actions">
+          <button type="button" class="btn-outline" onclick="closeEditModal()">Cancel</button>
+          <button type="submit" class="btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -585,6 +750,8 @@ document.getElementById('removeModal').addEventListener('click', function(e) {
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
     closeAddModal();
+    closeViewModal();
+    closeEditModal();
     closeRemoveModal();
   }
 });
@@ -597,6 +764,63 @@ document.getElementById('searchStudents').addEventListener('input', function() {
     const text = row.textContent.toLowerCase();
     row.style.display = text.includes(term) ? '' : 'none';
   });
+});
+
+// ── Modal: View Student ──
+const studentsData = <?php echo json_encode($students); ?>;
+
+function openViewModal(id) {
+  const student = studentsData.find(s => s.id == id);
+  if (!student) return;
+
+  document.getElementById('viewAvatar').textContent = (student.first_name[0] + student.last_name[0]).toUpperCase();
+  document.getElementById('viewName').textContent = student.first_name + ' ' + student.last_name;
+  document.getElementById('viewStudentId').textContent = 'Student ID: ' + student.student_id;
+  document.getElementById('viewEmail').textContent = student.email;
+  document.getElementById('viewCourse').textContent = student.course;
+  document.getElementById('viewYear').textContent = student.year;
+  document.getElementById('viewStatus').innerHTML = student.status === 'active'
+    ? '<span class="badge badge-sage">Active</span>'
+    : '<span class="badge badge-rust">Inactive</span>';
+  document.getElementById('viewBorrowed').textContent = student.borrowed;
+  document.getElementById('viewFines').textContent = student.fines > 0 ? 'PHP ' + student.fines : '—';
+
+  document.getElementById('viewModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeViewModal() {
+  document.getElementById('viewModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ── Modal: Edit Student ──
+function openEditModal(id) {
+  const student = studentsData.find(s => s.id == id);
+  if (!student) return;
+
+  document.getElementById('editId').value = student.id;
+  document.getElementById('editFirstName').value = student.first_name;
+  document.getElementById('editLastName').value = student.last_name;
+  document.getElementById('editStudentIdInput').value = student.student_id;
+  document.getElementById('editEmail').value = student.email;
+  document.getElementById('editCourse').value = student.course;
+  document.getElementById('editYear').value = student.year;
+  document.getElementById('editStatus').value = student.status;
+
+  document.getElementById('editModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeEditModal() {
+  document.getElementById('editModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ── Close modals on backdrop click ──
+document.getElementById('viewModal').addEventListener('click', function(e) {
+  if (e.target === this) closeViewModal();
+});
+document.getElementById('editModal').addEventListener('click', function(e) {
+  if (e.target === this) closeEditModal();
 });
 
 // ── Toast ──
