@@ -16,10 +16,6 @@ $genres = [
   'Mathematics'
 ];
 
-function format_book_id($id) {
-  return str_pad((string)$id, 2, '0', STR_PAD_LEFT);
-}
-
 $selected_genre = $_GET['genre'] ?? 'All';
 $search_query = strtolower(trim($_GET['q'] ?? ''));
 
