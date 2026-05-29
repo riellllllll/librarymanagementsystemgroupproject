@@ -41,7 +41,7 @@ $default_borrow_requests = [
 ];
 
 if (!isset($_SESSION['books']) || !is_array($_SESSION['books'])) {
-  $_SESSION['books'] = $default_books;
+  $_SESSION['books'] = is_array($all_books) ? $all_books : [];
 }
 
 foreach ($_SESSION['books'] as $index => $book) {
