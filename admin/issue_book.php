@@ -1,12 +1,25 @@
 <?php
-require 'library_data.php';
+// ============================================================
+// admin/issue_book.php — DB-powered (UI unchanged)
+// ============================================================
+session_start();
+require_once __DIR__ . '/library_data.php';
+require_once __DIR__ . '/../classes/BorrowRecord.php';
+require_once __DIR__ . '/../classes/Book.php';
+
+// Session guard
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
+    header('Location: ../login/login.php');
+    exit;
+}
 
 $message = '';
-$error = '';
+$error   = '';
 
-if (!isset($_SESSION['borrowed_books']) || !is_array($_SESSION['borrowed_books'])) {
-  $_SESSION['borrowed_books'] = [];
-}
+$db     = new Database();
+$conn   = $db->getConnection();
+$borrow = new BorrowRecord($conn);
+$borrow->updateOverdueStatuses();
 
 function redirect_with_message($type, $text) {
   header("Location: issue_book.php?$type=" . urlencode($text));
@@ -14,136 +27,113 @@ function redirect_with_message($type, $text) {
 }
 
 function format_book_date($date) {
-  if (empty($date)) {
-    return '-';
-  }
-
+  if (empty($date)) return '-';
   $time = strtotime($date);
   return $time ? date('M d, Y', $time) : $date;
 }
 
+// ── Issue Book (POST) ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['issue_book'])) {
-  $book_id = trim($_POST['book_id'] ?? '');
-  $student_id = trim($_POST['student_id'] ?? '');
+  $book_id    = trim($_POST['book_id']    ?? '');
+  $student_id = trim($_POST['student_id'] ?? '');   // student NUMBER (e.g. 101)
   $issue_date = trim($_POST['issue_date'] ?? '');
-  $due_date = trim($_POST['due_date'] ?? '');
+  $due_date   = trim($_POST['due_date']   ?? '');
 
   if ($book_id === '' || $student_id === '' || $issue_date === '' || $due_date === '') {
     $error = "All fields are required.";
   } elseif ($due_date < $issue_date) {
     $error = "Due date cannot be earlier than issue date.";
   } else {
-    $book_index = find_book_index($book_id);
-
-    if ($book_index === null) {
-      $error = "Book ID was not found.";
-    } elseif ((int)($_SESSION['books'][$book_index]['available'] ?? 0) <= 0) {
-      $error = "This book has no available copies.";
+    // Look up student DB id from student_number
+    $student = $borrow->findStudent($student_id);
+    if (!$student) {
+      $error = "Student ID was not found.";
     } else {
-      $_SESSION['books'][$book_index]['available']--;
-
-      $_SESSION['borrowed_books'][] = [
-        'id' => uniqid('BRW-'),
-        'request_id' => null,
-        'student' => 'Manual Issue',
-        'student_id' => $student_id,
-        'book_id' => (int)$book_id,
-        'book_title' => $_SESSION['books'][$book_index]['title'] ?? 'Unknown Book',
-        'issue_date' => $issue_date,
-        'due_date' => $due_date,
-        'return_date' => '',
-        'date' => date('M d, Y', strtotime($issue_date)),
-        'status' => 'borrowed'
-      ];
-
-      redirect_with_message('msg', 'Book issued successfully.');
+      $result = $borrow->issue(
+        (int)$student['id'], (int)$book_id, $issue_date, $due_date,
+        (int)$_SESSION['user_id']
+      );
+      if ($result === true) {
+        redirect_with_message('msg', 'Book issued successfully.');
+      } else {
+        $error = is_string($result) ? $result : 'Failed to issue book.';
+      }
     }
   }
 }
 
+// ── Mark returned (GET return_id) ──
 if (isset($_GET['return_id'])) {
-  foreach ($_SESSION['borrowed_books'] as &$book) {
-    if (($book['id'] ?? '') === $_GET['return_id']) {
-      if (($book['status'] ?? '') === 'borrowed') {
-        $book['status'] = 'returned';
-        $book['return_date'] = date('Y-m-d');
-
-        $book_index = find_book_index($book['book_id'] ?? 0);
-
-        if ($book_index !== null) {
-          $_SESSION['books'][$book_index]['available']++;
-        }
-      }
-
-      redirect_with_message('msg', 'Book marked as returned.');
-    }
+  $rid = (int)$_GET['return_id'];
+  $result = $borrow->confirmReturn($rid);
+  if (is_array($result)) {
+    redirect_with_message('msg', 'Book marked as returned.');
+  } else {
+    redirect_with_message('err', is_string($result) ? $result : 'Record not found.');
   }
-
-  unset($book);
-  redirect_with_message('err', 'Record not found.');
 }
 
+// ── Delete record (GET delete_id) ──
 if (isset($_GET['delete_id'])) {
-  foreach ($_SESSION['borrowed_books'] as $index => $book) {
-    if (($book['id'] ?? '') === $_GET['delete_id']) {
-      if (($book['status'] ?? '') === 'borrowed') {
-        $book_index = find_book_index($book['book_id'] ?? 0);
-
-        if ($book_index !== null) {
-          $_SESSION['books'][$book_index]['available']++;
-        }
-      }
-
-      unset($_SESSION['borrowed_books'][$index]);
-      $_SESSION['borrowed_books'] = array_values($_SESSION['borrowed_books']);
-
+  $rid = (int)$_GET['delete_id'];
+  // If record was still active, restore the copy first
+  $rec = $borrow->getById($rid);
+  if ($rec) {
+    if (in_array($rec['status'], ['active','overdue','pending_return'])) {
+      $conn->query("UPDATE books SET copies_available = copies_available + 1 WHERE id = " . (int)$rec['book_id']);
+    }
+    $del = $conn->prepare("DELETE FROM borrow_records WHERE id = ?");
+    $del->bind_param('i', $rid);
+    if ($del->execute()) {
+      $del->close();
       redirect_with_message('msg', 'Record deleted successfully.');
     }
+    $del->close();
   }
-
   redirect_with_message('err', 'Record not found.');
 }
 
-if (isset($_GET['msg'])) {
-  $message = $_GET['msg'];
+if (isset($_GET['msg'])) $message = $_GET['msg'];
+if (isset($_GET['err'])) $error   = $_GET['err'];
+
+// ── Load all records & map to UI shape ──
+$rows = $borrow->getAll();
+$borrowedBooks = [];
+foreach ($rows as $r) {
+  $borrowedBooks[] = [
+    'id'          => (int)$r['id'],
+    'request_id'  => null,
+    'student'     => $r['student_name'],
+    'student_id'  => $r['student_number'],
+    'book_id'     => (int)$r['book_id'],
+    'book_title'  => $r['book_title'],
+    'issue_date'  => $r['borrow_date'],
+    'due_date'    => $r['due_date'],
+    'return_date' => $r['return_date'] ?? '',
+    'date'        => date('M d, Y', strtotime($r['borrow_date'])),
+    // UI uses 'borrowed' / 'returned'. DB has active/overdue/pending_return/returned.
+    'status'      => $r['status'] === 'returned' ? 'returned' : 'borrowed',
+  ];
 }
 
-if (isset($_GET['err'])) {
-  $error = $_GET['err'];
-}
-
-$borrowedBooks = $_SESSION['borrowed_books'];
-
+// Sort: active first, then by date desc
 usort($borrowedBooks, function ($a, $b) {
   $statusA = $a['status'] ?? '';
   $statusB = $b['status'] ?? '';
-
   if ($statusA === $statusB) {
-    return strtotime($b['issue_date'] ?? $b['date'] ?? 'now') - strtotime($a['issue_date'] ?? $a['date'] ?? 'now');
+    return strtotime($b['issue_date'] ?? 'now') - strtotime($a['issue_date'] ?? 'now');
   }
-
   return $statusA === 'borrowed' ? -1 : 1;
 });
 
-$totalIssued = count($borrowedBooks);
-
-$activeIssued = count(array_filter($borrowedBooks, function ($book) {
-  return ($book['status'] ?? '') === 'borrowed';
-}));
-
-$overdue = count(array_filter($borrowedBooks, function ($book) {
-  return ($book['status'] ?? '') === 'borrowed'
-    && !empty($book['due_date'])
-    && $book['due_date'] < date('Y-m-d');
-}));
-
-$returned = count(array_filter($borrowedBooks, function ($book) {
-  return ($book['status'] ?? '') === 'returned'
-    && ($book['return_date'] ?? '') === date('Y-m-d');
-}));
+// ── Stats ──
+$totalIssued  = count($borrowedBooks);
+$activeIssued = count(array_filter($borrowedBooks, fn($b) => ($b['status'] ?? '') === 'borrowed'));
+$overdue      = count(array_filter($rows,          fn($r) => $r['status'] === 'overdue'));
+$returned     = count(array_filter($rows,          fn($r) => $r['status'] === 'returned' && ($r['return_date'] ?? '') === date('Y-m-d')));
 
 $pending_count = pending_request_count();
-$currentPage = basename($_SERVER['PHP_SELF']);
+$currentPage   = basename($_SERVER['PHP_SELF']);
 ?>
 
 <!DOCTYPE html>

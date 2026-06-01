@@ -1,63 +1,103 @@
 <?php
 // ============================================================
-// view_fines.php — CvSU Library Student Fines
+// view_fines.php — CvSU Library Student Fines (DB-powered)
 // ============================================================
 session_start();
+require_once __DIR__ . '/../includes/student_auth.php';
+require_once __DIR__ . '/../classes/Fine.php';
 
-// ── Guard: redirect to login if not authenticated ────────────
-// TODO: uncomment when DB + auth is ready
-// if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'student') {
-//     header('Location: ../login.php');
-//     exit;
-// }
+$fineObj = new Fine($conn);
 
-// ── Session values ───────────────────────────────────────────
+// ── Handle POST: submit payment for admin approval ──
+$flash_success = '';
+$flash_error   = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
+    if ($action === 'submit_payment') {
+        $fid    = (int)($_POST['fine_id'] ?? 0);
+        $method = trim($_POST['method'] ?? 'counter');
+        $book   = trim($_POST['book_title'] ?? '');
+        $amount = (float)($_POST['amount'] ?? 0);
+        $result = $fineObj->requestPayment($student_id, $fid ?: null, $method);
+        if ($result === true) {
+            $_SESSION['payment_receipt'] = [
+                'book'    => $book ?: 'Selected Fine',
+                'amount'  => $amount,
+                'method'  => $method,
+                'is_all'  => false,
+                'ref'     => 'LIB-' . date('Ymd') . '-' . str_pad((string)mt_rand(0, 99999), 5, '0', STR_PAD_LEFT),
+                'when'    => date('M j, Y g:i A'),
+            ];
+        } else {
+            $_SESSION['flash_error'] = is_string($result) ? $result : 'Failed to submit payment.';
+        }
+        header('Location: view_fines.php');
+        exit;
+    }
+    if ($action === 'submit_payment_all') {
+        $method = trim($_POST['method'] ?? 'counter');
+        $amount = (float)($_POST['amount'] ?? 0);
+        $result = $fineObj->requestPayment($student_id, null, $method);
+        if ($result === true) {
+            $_SESSION['payment_receipt'] = [
+                'book'    => 'All Outstanding Fines',
+                'amount'  => $amount,
+                'method'  => $method,
+                'is_all'  => true,
+                'ref'     => 'LIB-' . date('Ymd') . '-' . str_pad((string)mt_rand(0, 99999), 5, '0', STR_PAD_LEFT),
+                'when'    => date('M j, Y g:i A'),
+            ];
+        } else {
+            $_SESSION['flash_error'] = is_string($result) ? $result : 'Failed to submit payments.';
+        }
+        header('Location: view_fines.php');
+        exit;
+    }
+}
+
+$flash_success   = $_SESSION['flash_success']   ?? '';
+$flash_error     = $_SESSION['flash_error']     ?? '';
+$payment_receipt = $_SESSION['payment_receipt'] ?? null;
+unset($_SESSION['flash_success'], $_SESSION['flash_error'], $_SESSION['payment_receipt']);
+
 $has_fines = (bool)($_SESSION['has_fines'] ?? false);
 
-// ── TODO: Replace with real DB query using OOP ───────────────
-// require_once '../includes/Database.php';
-// require_once '../includes/Fine.php';      // class Fine
-//
-// $db    = new Database();
-// $fine  = new Fine($db->getConnection());
-// $fines = $fine->getByStudent($_SESSION['student_id']);
-//
-// $total_unpaid = $fine->getTotalUnpaid($_SESSION['student_id']);
-// $total_paid   = $fine->getTotalPaid($_SESSION['student_id']);
-// $total_ever   = $total_unpaid + $total_paid;
-// $unpaid_count = count(array_filter($fines, fn($f) => $f['status'] === 'unpaid'));
+// ── Load from DB & map to UI shape ──
+$db_fines = $fineObj->getByStudent($student_id);
+$fines = [];
+foreach ($db_fines as $f) {
+    $days_late = 0;
+    if (!empty($f['due_date'])) {
+        $end = $f['return_date'] ?? date('Y-m-d');
+        $days_late = max(0, (int)((strtotime($end) - strtotime($f['due_date'])) / 86400));
+    }
+    // UI status: 'unpaid' | 'pending' (awaiting admin) | 'paid'
+    $uistatus = match($f['paid_status']) {
+        'paid'              => 'paid',
+        'payment_requested' => 'pending',
+        default             => 'unpaid',
+    };
+    $fines[] = [
+        'id'          => (int)$f['id'],
+        'book_title'  => $f['book_title'],
+        'author'      => $f['author'] ?? '',
+        'due_date'    => $f['due_date'],
+        'return_date' => $f['return_date'],
+        'days_late'   => $days_late,
+        'amount'      => (float)$f['amount'],
+        'status'      => $uistatus,
+    ];
+}
 
-// ── Placeholder data (remove when DB is connected) ───────────
-$fines = [
-    [
-        'id'          => 1,
-        'book_title'  => 'To Kill a Mockingbird',
-        'author'      => 'Harper Lee',
-        'due_date'    => '2026-05-18',
-        'return_date' => null,
-        'days_late'   => 5,
-        'amount'      => 20,
-        'status'      => 'unpaid',
-    ],
-    [
-        'id'          => 2,
-        'book_title'  => 'Animal Farm',
-        'author'      => 'George Orwell',
-        'due_date'    => '2026-02-20',
-        'return_date' => '2026-02-24',
-        'days_late'   => 2,
-        'amount'      => 10,
-        'status'      => 'paid',
-    ],
-];
-
-// ── Compute totals from placeholder array (PHP, not hardcoded HTML) ──
-$unpaid_fines = array_filter($fines, fn($f) => $f['status'] === 'unpaid');
-$paid_fines   = array_filter($fines, fn($f) => $f['status'] === 'paid');
-$total_unpaid = array_sum(array_column(array_values($unpaid_fines), 'amount'));
-$total_paid   = array_sum(array_column(array_values($paid_fines),   'amount'));
-$total_ever   = $total_unpaid + $total_paid;
-$unpaid_count = count($unpaid_fines);
+// ── Compute totals ──
+$unpaid_fines  = array_filter($fines, fn($f) => $f['status'] === 'unpaid');
+$pending_fines = array_filter($fines, fn($f) => $f['status'] === 'pending');
+$paid_fines    = array_filter($fines, fn($f) => $f['status'] === 'paid');
+$total_unpaid  = array_sum(array_column(array_values($unpaid_fines),  'amount'));
+$total_pending = array_sum(array_column(array_values($pending_fines), 'amount'));
+$total_paid    = array_sum(array_column(array_values($paid_fines),    'amount'));
+$total_ever    = $total_unpaid + $total_pending + $total_paid;
+$unpaid_count  = count($unpaid_fines);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -72,104 +112,6 @@ $unpaid_count = count($unpaid_fines);
 </head>
 <body>
 
-<!-- ============================================================
-     SIDEBAR
-     ============================================================ -->
-<aside class="sidebar" id="sidebar">
-  <div class="sidebar-logo">
-    <div class="logo-icon">
-      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="6"  y="8"  width="8"  height="32" rx="1.5" fill="#c9973a"/>
-        <rect x="16" y="10" width="6"  height="30" rx="1.5" fill="#e8c26a"/>
-        <rect x="24" y="6"  width="10" height="36" rx="1.5" fill="#c9973a"/>
-        <rect x="36" y="9"  width="6"  height="31" rx="1.5" fill="#a07830"/>
-        <rect x="5"  y="38" width="38" height="2.5" rx="1.25" fill="#7a6030"/>
-      </svg>
-    </div>
-    <div>
-      <h2>Cv<em>SU</em></h2>
-      <div class="sidebar-subtitle">Library System</div>
-    </div>
-  </div>
-
-  <nav class="sidebar-nav">
-    <div class="nav-section-label">Main</div>
-    <a href="dashboard.php" class="nav-link">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
-      </svg>
-      Dashboard
-    </a>
-
-    <div class="nav-section-label">Books</div>
-    <a href="view_books.php" class="nav-link">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-      </svg>
-      Browse Books
-    </a>
-    <a href="search_books.php" class="nav-link">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      </svg>
-      Search Books
-    </a>
-    <a href="request_borrow.php" class="nav-link">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M12 5v14M5 12l7-7 7 7"/>
-      </svg>
-      Request Borrow
-    </a>
-
-    <div class="nav-section-label">My Library</div>
-  
-    <a href="borrow_history.php" class="nav-link">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 0 .5-4"/>
-        <polyline points="3 3 3.05 11 11 10.94"/>
-      </svg>
-      Borrow History
-    </a>
-    <a href="return_book.php" class="nav-link">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-1"/>
-      </svg>
-      Return a Book
-    </a>
-    <a href="view_fines.php" class="nav-link active">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-      </svg>
-      My Fines
-    </a>
-
-    <div class="nav-section-label">Account</div>
-    <a href="profile.php" class="nav-link">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-      </svg>
-      My Profile
-    </a>
-  </nav>
-
-  <div class="sidebar-footer">
-    <div class="sidebar-user">
-      <div class="user-avatar">JD</div>
-      <div class="user-info">
-        <div class="user-name">Juan Dela Cruz</div>
-        <div class="user-role">Student</div>
-      </div>
-    </div>
-    <a href="../includes/logout.php" class="btn-logout">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-        <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-      </svg>
-      Log Out
-    </a>
-  </div>
-</aside>
 
 
 <!-- ============================================================
@@ -209,6 +151,12 @@ require_once '../includes/sidebar.php';
       <div class="gold-rule"><span></span><i>✦</i><span></span></div>
       <p>Overview of all library fines on your account.</p>
     </div>
+
+    <?php if ($flash_error): ?>
+      <div class="alert alert-rust" style="margin-bottom:1rem;">
+        <?= htmlspecialchars($flash_error) ?>
+      </div>
+    <?php endif; ?>
 
     <!-- ── Fine Hero Card (all values PHP-rendered) ── -->
     <div class="fine-hero">
@@ -260,8 +208,13 @@ require_once '../includes/sidebar.php';
             <span class="ms-lbl">Paid</span>
           </div>
           <div class="fine-mini-stat">
-            <span class="ms-val">₱30</span>
+            <span class="ms-val"><?php
+              $current_total = $total_unpaid + $total_pending;
+              echo '₱' . number_format($current_total);
+            ?></span>
             <span class="ms-lbl">Total</span>
+          </div>
+          <div class="fine-mini-stat">
             <span class="ms-val">₱<?= number_format($total_ever) ?></span>
             <span class="ms-lbl">Total Ever</span>
           </div>
@@ -339,6 +292,8 @@ require_once '../includes/sidebar.php';
                     <td>
                       <?php if ($f['status'] === 'unpaid'): ?>
                         <span class="badge badge-rust">Unpaid</span>
+                      <?php elseif ($f['status'] === 'pending'): ?>
+                        <span class="badge badge-gold">Awaiting Approval</span>
                       <?php else: ?>
                         <span class="badge badge-sage">Paid</span>
                       <?php endif; ?>
@@ -346,11 +301,15 @@ require_once '../includes/sidebar.php';
 
                     <td>
                       <?php if ($f['status'] === 'unpaid'): ?>
-                        <button class="btn-danger"
+                        <button class="btn-danger pay-fine-btn"
                                 style="padding:6px 14px;font-size:0.76rem;"
-                                onclick="openPayModal(<?= (int)$f['id'] ?>, '<?= htmlspecialchars($f['book_title'], ENT_QUOTES) ?>', <?= (int)$f['amount'] ?>)">
+                                data-fine-id="<?= (int)$f['id'] ?>"
+                                data-book-title="<?= htmlspecialchars($f['book_title'], ENT_QUOTES) ?>"
+                                data-amount="<?= (int)$f['amount'] ?>">
                           Pay
                         </button>
+                      <?php elseif ($f['status'] === 'pending'): ?>
+                        <span style="font-size:0.74rem;color:var(--gold);font-weight:500;">Pending admin</span>
                       <?php else: ?>
                         <span style="font-size:0.75rem;color:var(--muted);">—</span>
                       <?php endif; ?>
@@ -542,6 +501,17 @@ require_once '../includes/sidebar.php';
     document.getElementById('payModal').classList.add('open');
   }
 
+  /* ── Wire up the per-row Pay buttons using data attributes
+     (safer than inline onclick — handles apostrophes & special chars) ── */
+  document.querySelectorAll('.pay-fine-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id     = parseInt(btn.dataset.fineId, 10);
+      const title  = btn.dataset.bookTitle || '';
+      const amount = parseInt(btn.dataset.amount, 10) || 0;
+      openPayModal(id, title, amount);
+    });
+  });
+
   /* ── Close modal ── */
   ['payModalClose', 'payModalCancelBtn'].forEach(id => {
     document.getElementById(id).addEventListener('click', () =>
@@ -552,51 +522,34 @@ require_once '../includes/sidebar.php';
     if (e.target === this) this.classList.remove('open');
   });
 
-  /* ── Proceed to Pay ── */
+  /* ── Proceed to Pay (REAL: posts to server) ── */
   document.getElementById('payNowBtn').addEventListener('click', () => {
-    const method = document.querySelector('.pay-method-tile.selected')?.dataset.method;
-    const amount = document.getElementById('payModalAmount').textContent;
+    const method = document.querySelector('.pay-method-tile.selected')?.dataset.method || 'counter';
     const isAll  = payTarget === 'all';
-    const book   = isAll ? 'All Outstanding Fines' : payBookName;
 
-    document.getElementById('payModal').classList.remove('open');
+    // Build a real form and submit to the server
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = 'view_fines.php';
 
-    const ref = method === 'counter'
-      ? 'Pay at counter'
-      : 'LIB-2026-' + Math.floor(10000 + Math.random() * 90000);
-
-    const methodLabels = {
-      counter : '💵 Cash',
-      gcash   : '📱 GCash',
-      maya    : '💳 Maya',
-      bank    : '🏦 Bank Transfer',
-    };
-    const notices = {
-      counter : 'Please proceed to the library counter during office hours (Mon–Fri, 8:00 AM – 5:00 PM) to pay in cash. Bring your library card.',
-      gcash   : 'Present your reference number to a librarian for confirmation. Your status will update within 1 business day.',
-      maya    : 'Present your reference number to a librarian for confirmation. Your status will update within 1 business day.',
-      bank    : 'Transfer to: BDO – CvSU Library Account No. 0012-3456-7890. Use your Student ID as reference. Show proof of transfer to a librarian.',
-    };
-    const statuses = {
-      counter : 'Pending Payment',
-      gcash   : 'Pending Confirmation',
-      maya    : 'Pending Confirmation',
-      bank    : 'Pending Verification',
+    const addInput = (name, value) => {
+      const i = document.createElement('input');
+      i.type = 'hidden';
+      i.name = name;
+      i.value = value;
+      form.appendChild(i);
     };
 
-    document.getElementById('pcpBook').textContent   = book;
-    document.getElementById('pcpAmount').textContent = amount;
-    document.getElementById('pcpMethod').textContent = methodLabels[method] || method;
-    document.getElementById('pcpRef').textContent    = ref;
-    document.getElementById('pcpDate').textContent   = new Date().toLocaleString('en-PH', { dateStyle:'medium', timeStyle:'short' });
-    document.getElementById('pcpStatus').textContent = statuses[method] || 'Pending';
-    document.getElementById('pcpNotice').textContent = notices[method] || '';
-    document.getElementById('pcpDesc').textContent   = isAll
-      ? 'All outstanding fines have been submitted for processing.'
-      : `Fine for "${book}" has been submitted for processing.`;
+    if (isAll) {
+      addInput('action', 'submit_payment_all');
+    } else {
+      addInput('action',  'submit_payment');
+      addInput('fine_id', payTarget);
+    }
+    addInput('method', method);
 
-    const panel = document.getElementById('payConfirmPanel');
-    panel.style.display = 'flex';
+    document.body.appendChild(form);
+    form.submit();
   });
 
   function closePayConfirm() {
@@ -615,6 +568,44 @@ require_once '../includes/sidebar.php';
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 3500);
   }
+
+  /* ── Show receipt panel after a successful payment submission ── */
+  (function showReceiptOnLoad() {
+    const receipt = <?= json_encode($payment_receipt) ?>;
+    if (!receipt) return;
+
+    const methodLabels = {
+      counter: '💵 Cash',
+      gcash:   '📱 GCash',
+      maya:    '💳 Maya',
+      bank:    '🏦 Bank Transfer'
+    };
+    const statusByMethod = {
+      counter: 'Pending Payment',
+      gcash:   'Pending Confirmation',
+      maya:    'Pending Confirmation',
+      bank:    'Pending Verification'
+    };
+    const noticeByMethod = {
+      counter: 'Please proceed to the library counter during office hours (Mon–Fri, 8:00 AM – 5:00 PM) to pay in cash. Bring your library card.',
+      gcash:   'Present your reference number to a librarian for confirmation. Your status will update within 1 business day.',
+      maya:    'Present your reference number to a librarian for confirmation. Your status will update within 1 business day.',
+      bank:    'Transfer to: BDO – CvSU Library Account No. 0012-3456-7890. Use your Student ID as reference. Show proof of transfer to a librarian.'
+    };
+
+    document.getElementById('pcpBook').textContent   = receipt.book;
+    document.getElementById('pcpAmount').textContent = '₱' + Number(receipt.amount || 0).toLocaleString();
+    document.getElementById('pcpMethod').textContent = methodLabels[receipt.method] || receipt.method;
+    document.getElementById('pcpRef').textContent    = receipt.ref;
+    document.getElementById('pcpDate').textContent   = receipt.when;
+    document.getElementById('pcpStatus').textContent = statusByMethod[receipt.method] || 'Pending';
+    document.getElementById('pcpNotice').textContent = noticeByMethod[receipt.method] || '';
+    document.getElementById('pcpDesc').textContent   = receipt.is_all
+      ? 'All outstanding fines have been submitted for processing.'
+      : 'Fine for "' + receipt.book + '" has been submitted for processing.';
+
+    document.getElementById('payConfirmPanel').style.display = 'flex';
+  })();
 </script>
 </body>
 </html>

@@ -1,10 +1,18 @@
 <?php
+// ============================================================
+// admin/edit_book.php — DB-powered (UI unchanged)
+// ============================================================
 session_start();
-require 'library_data.php';
+require_once __DIR__ . '/library_data.php';
+require_once __DIR__ . '/../classes/Book.php';
 
-$pending_count = count(array_filter($_SESSION['borrow_requests'], function ($req) {
-  return $req['status'] === 'pending';
-}));
+// Session guard
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
+    header('Location: ../login/login.php');
+    exit;
+}
+
+$pending_count = pending_request_count();
 
 $genres = ['Fiction', 'Science', 'History', 'Technology', 'Literature', 'Mathematics'];
 
@@ -12,34 +20,39 @@ function format_book_id($id) {
   return str_pad((string)$id, 2, '0', STR_PAD_LEFT);
 }
 
+$db   = new Database();
+$book = new Book($db->getConnection());
+
 $book_id = (int)($_GET['id'] ?? $_POST['book_id'] ?? 0);
+$db_book = $book_id ? $book->getById($book_id) : false;
 
+// Map DB row → UI shape ('genre' instead of 'category', 'copies' instead of 'total_copies')
 $selected_book = null;
-
-foreach ($_SESSION['books'] as $book) {
-  if ((int)$book['id'] === $book_id) {
-    $selected_book = $book;
-    break;
-  }
+if ($db_book) {
+  $selected_book = [
+    'id'        => (int)$db_book['id'],
+    'title'     => $db_book['title'],
+    'author'    => $db_book['author'],
+    'genre'     => $db_book['category'],
+    'copies'    => (int)$db_book['total_copies'],
+    'available' => (int)$db_book['copies_available'],
+  ];
 }
 
+// ── Handle POST (Update) ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selected_book) {
-  foreach ($_SESSION['books'] as $index => $book) {
-    if ((int)$book['id'] === $book_id) {
-      $_SESSION['books'][$index]['title'] = trim($_POST['title'] ?? '');
-      $_SESSION['books'][$index]['author'] = trim($_POST['author'] ?? '');
-      $_SESSION['books'][$index]['genre'] = trim($_POST['genre'] ?? '');
-      $_SESSION['books'][$index]['copies'] = (int)($_POST['copies'] ?? 1);
+  $result = $book->update($book_id, [
+    'title'       => trim($_POST['title']  ?? ''),
+    'author'      => trim($_POST['author'] ?? ''),
+    'category'    => trim($_POST['genre']  ?? ''),
+    'copies'      => (int)($_POST['copies'] ?? 1),
+  ]);
 
-      $_SESSION['books'][$index]['available'] = min(
-        $_SESSION['books'][$index]['available'],
-        $_SESSION['books'][$index]['copies']
-      );
-
-      header('Location: view_books.php?updated=1');
-      exit;
-    }
+  if ($result === true) {
+    header('Location: view_books.php?updated=1');
+    exit;
   }
+  $error = is_string($result) ? $result : 'Failed to update book.';
 }
 ?>
 
@@ -113,6 +126,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selected_book) {
     <div class="card">
 
       <div class="card-body">
+
+        <?php if (!empty($error)): ?>
+          <div class="alert alert-rust" style="margin-bottom:16px;">
+            <?= htmlspecialchars($error) ?>
+          </div>
+        <?php endif; ?>
 
         <?php if ($selected_book): ?>
 
