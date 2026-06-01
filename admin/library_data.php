@@ -112,22 +112,13 @@ function pending_fines_total(): string
     return number_format((float)($r->fetch_assoc()['total'] ?? 0), 2);
 }
 
-foreach ($_SESSION['borrowed_books'] as $index => $borrowed_book) {
-  if (isset($borrowed_book['book_id'])) {
-    $_SESSION['borrowed_books'][$index]['book_id'] = format_book_id($borrowed_book['book_id']);
-  }
-
-  if (($borrowed_book['student_id'] ?? '') === '2026-0001') {
-    $_SESSION['borrowed_books'][$index]['student_id'] = '101';
-  }
-
-  if (($borrowed_book['student_id'] ?? '') === '2026-0002') {
-    $_SESSION['borrowed_books'][$index]['student_id'] = '102';
-  }
-}
-
-if (!isset($_SESSION['pending_fines_total'])) {
-  $_SESSION['pending_fines_total'] = 20;
+/** Count of students with unpaid fines */
+function students_with_fines(): int
+{
+    $r = get_db()->query(
+        "SELECT COUNT(DISTINCT user_id) AS c FROM fines WHERE paid_status = 'unpaid'"
+    );
+    return (int)($r->fetch_assoc()['c'] ?? 0);
 }
 
 // ════════════════════════════════════════════════════════════

@@ -24,24 +24,25 @@ $genres = [
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $next_id = 1;
+  $db   = new Database();
+  $book = new Book($db->getConnection());
 
-  foreach ($_SESSION['books'] as $book) {
-    $next_id = max($next_id, (int)$book['id'] + 1);
+  $result = $book->add([
+    'title'       => trim($_POST['title']  ?? ''),
+    'author'      => trim($_POST['author'] ?? ''),
+    'isbn'        => '',
+    'category'    => trim($_POST['genre']  ?? ''),
+    'description' => '',
+    'copies'      => (int)($_POST['copies'] ?? 1),
+    'added_by'    => (int)$_SESSION['user_id'],
+  ]);
+
+  if ($result === true) {
+    header('Location: view_books.php?added=1');
+    exit;
   }
-
-  $_SESSION['books'][] = [
-    'id' => $next_id,
-    'title' => trim($_POST['title'] ?? ''),
-    'author' => trim($_POST['author'] ?? ''),
-    'genre' => trim($_POST['genre'] ?? ''),
-    'copies' => (int)($_POST['copies'] ?? 1),
-    'available' => (int)($_POST['copies'] ?? 1),
-    'color' => 'color-a'
-  ];
-
-  header('Location: view_books.php?added=1');
-  exit;
+  // If we get here, $result is an error string or false — fall through and show form again
+  $error = is_string($result) ? $result : 'Failed to add book.';
 }
 ?>
 

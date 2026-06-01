@@ -27,16 +27,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($phone && !preg_match('/^\+?[\d\s\-]{7,15}$/', $phone)) {
             $_SESSION['flash_error'] = 'Please enter a valid contact number.';
         } else {
-            // TODO: Save to database
-            // require_once '../includes/db_connect.php';
-            // $stmt = $pdo->prepare("UPDATE students SET phone=?, course=?, year_level=? WHERE id=?");
-            // $stmt->execute([$phone, $course, $year, $_SESSION['student_id']]);
-
-            // Update session so changes reflect immediately
-            $_SESSION['student_phone']  = $phone;
-            $_SESSION['student_course'] = $course;
-            $_SESSION['student_year']   = $year;
-            $_SESSION['flash_success']  = 'Profile updated successfully!';
+            // Load current row so we don't blank locked fields (course, year_level, email)
+            $cur = $usr->getStudentById($student_id);
+            $ok = $usr->updateProfile($student_id, [
+                'email'      => $cur['email']      ?? '',
+                'phone'      => $phone,
+                'course'     => $cur['course']     ?? '',
+                'year_level' => $cur['year_level'] ?? '',
+            ]);
+            $_SESSION[$ok ? 'flash_success' : 'flash_error'] =
+                $ok ? 'Profile updated successfully!' : 'Failed to update profile.';
         }
         header('Location: profile.php');
         exit;
@@ -123,6 +123,35 @@ $has_fines = $stats['unpaid_fines'] > 0;
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/student.css">
   <link rel="stylesheet" href="../assets/profile.css">
+  <style>
+    /* Eye toggle button inside password input */
+    .input-wrap { position: relative; }
+    .pw-eye-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      padding: 4px;
+      cursor: pointer;
+      color: var(--muted, #8a8a8a);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s;
+    }
+    .pw-eye-btn:hover { color: var(--gold, #b88a3e); }
+    .input-wrap input[type="password"],
+    .input-wrap input[type="text"] { padding-right: 38px; }
+
+    /* Rust/red chip for inactive status */
+    .chip-rust {
+      background: #fdecec !important;
+      color: #a32d2d !important;
+      border-color: #f2c4c4 !important;
+    }
+  </style>
 </head>
 <body>
 
@@ -191,8 +220,12 @@ $has_fines = $stats['unpaid_fines'] > 0;
             <?php
               $is_active = strcasecmp($student['status'], 'Active') === 0;
               $chip_class = $is_active ? 'chip-sage' : 'chip-rust';
+              // Inline fallback so the red still shows even if .chip-rust isn't defined in CSS
+              $chip_style = $is_active
+                ? ''
+                : 'style="background:#fdecec;color:#a32d2d;border-color:#f2c4c4;"';
             ?>
-            <span class="profile-chip <?= $chip_class ?>">
+            <span class="profile-chip <?= $chip_class ?>" <?= $chip_style ?>>
               <?php if ($is_active): ?>
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                   <polyline points="20 6 9 17 4 12"/>
@@ -399,6 +432,9 @@ $has_fines = $stats['unpaid_fines'] > 0;
                 <div class="input-wrap">
                   <span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
                   <input type="password" name="current_pw" id="currentPw" placeholder="Enter current password">
+                  <button type="button" class="pw-eye-btn" onclick="togglePwField('currentPw', this)" aria-label="Show password">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
                 </div>
               </div>
 
@@ -407,6 +443,9 @@ $has_fines = $stats['unpaid_fines'] > 0;
                 <div class="input-wrap">
                   <span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
                   <input type="password" name="new_pw" id="newPw" placeholder="Enter new password" oninput="checkStrength(this.value)">
+                  <button type="button" class="pw-eye-btn" onclick="togglePwField('newPw', this)" aria-label="Show password">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
                 </div>
                 <div class="password-strength"><div class="password-strength-bar" id="strengthBar"></div></div>
                 <div class="password-strength-label" id="strengthLabel"></div>
@@ -417,6 +456,9 @@ $has_fines = $stats['unpaid_fines'] > 0;
                 <div class="input-wrap">
                   <span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
                   <input type="password" name="confirm_pw" id="confirmPw" placeholder="Confirm new password">
+                  <button type="button" class="pw-eye-btn" onclick="togglePwField('confirmPw', this)" aria-label="Show password">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
                 </div>
               </div>
 
@@ -448,11 +490,11 @@ $has_fines = $stats['unpaid_fines'] > 0;
               </div>
               <div class="info-cell" style="padding:0;border:none;">
                 <div class="ic-label">Account Status</div>
-                <div class="ic-val"><span class="badge badge-sage"><?= htmlspecialchars($student['status']) ?></span></div>
-              </div>
-              <div class="info-cell" style="padding:0;border:none;">
-                <div class="ic-label">Registered On</div>
-                <div class="ic-val"><?= date('F j, Y', strtotime($student['member_since'])) ?></div>
+                <div class="ic-val">
+                  <span class="badge <?= strcasecmp($student['status'], 'Active') === 0 ? 'badge-sage' : 'badge-rust' ?>">
+                    <?= htmlspecialchars($student['status']) ?>
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -587,6 +629,21 @@ $has_fines = $stats['unpaid_fines'] > 0;
   <?php elseif ($error_msg): ?>
     window.addEventListener('DOMContentLoaded', () => showToast(<?= json_encode($error_msg) ?>, 'error'));
   <?php endif; ?>
+
+  // ── Toggle password visibility ──
+  function togglePwField(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    if (input.type === 'password') {
+      input.type = 'text';
+      btn.setAttribute('aria-label', 'Hide password');
+      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+    } else {
+      input.type = 'password';
+      btn.setAttribute('aria-label', 'Show password');
+      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+    }
+  }
 </script>
 </body>
 </html>
