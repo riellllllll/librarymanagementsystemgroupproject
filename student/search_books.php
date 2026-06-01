@@ -6,24 +6,24 @@ require_once __DIR__ . '/../classes/Book.php';
 
 $active_page = 'search';
 
-$all_books = [
-  ['id'=>1, 'title'=>'The Great Gatsby',         'author'=>'F. Scott Fitzgerald','category'=>'Fiction',     'isbn'=>'978-0743273565','year'=>1925,'copies'=>3,'available'=>2,'color'=>'color-a'],
-  ['id'=>2, 'title'=>'To Kill a Mockingbird',    'author'=>'Harper Lee',          'category'=>'Fiction',     'isbn'=>'978-0061935466','year'=>1960,'copies'=>4,'available'=>1,'color'=>'color-b'],
-  ['id'=>3, 'title'=>'A Brief History of Time',  'author'=>'Stephen Hawking',     'category'=>'Science',     'isbn'=>'978-0553380163','year'=>1988,'copies'=>2,'available'=>2,'color'=>'color-c'],
-  ['id'=>4, 'title'=>'Sapiens',                  'author'=>'Yuval Noah Harari',   'category'=>'History',     'isbn'=>'978-0062316097','year'=>2011,'copies'=>3,'available'=>0,'color'=>'color-d'],
-  ['id'=>5, 'title'=>'Clean Code',               'author'=>'Robert C. Martin',    'category'=>'Technology',  'isbn'=>'978-0132350884','year'=>2008,'copies'=>5,'available'=>4,'color'=>'color-e'],
-  ['id'=>6, 'title'=>'1984',                     'author'=>'George Orwell',       'category'=>'Fiction',     'isbn'=>'978-0451524935','year'=>1949,'copies'=>3,'available'=>2,'color'=>'color-a'],
-  ['id'=>7, 'title'=>'The Selfish Gene',         'author'=>'Richard Dawkins',     'category'=>'Science',     'isbn'=>'978-0198788607','year'=>1976,'copies'=>2,'available'=>1,'color'=>'color-b'],
-  ['id'=>8, 'title'=>'Calculus Made Easy',       'author'=>'Silvanus P. Thompson','category'=>'Mathematics', 'isbn'=>'978-0312185480','year'=>1914,'copies'=>4,'available'=>3,'color'=>'color-c'],
-  ['id'=>9, 'title'=>'Design Patterns',          'author'=>'GoF',                 'category'=>'Technology',  'isbn'=>'978-0201633610','year'=>1994,'copies'=>3,'available'=>3,'color'=>'color-d'],
-  ['id'=>10,'title'=>'Noli Me Tangere',          'author'=>'Jose Rizal',          'category'=>'Literature',  'isbn'=>'978-9712714764','year'=>1887,'copies'=>6,'available'=>5,'color'=>'color-e'],
-  ['id'=>11,'title'=>'El Filibusterismo',        'author'=>'Jose Rizal',          'category'=>'Literature',  'isbn'=>'978-9712714771','year'=>1891,'copies'=>5,'available'=>4,'color'=>'color-a'],
-  ['id'=>12,'title'=>'Guns, Germs, and Steel',   'author'=>'Jared Diamond',       'category'=>'History',     'isbn'=>'978-0393317558','year'=>1997,'copies'=>2,'available'=>2,'color'=>'color-b'],
-  ['id'=>13,'title'=>'The Pragmatic Programmer', 'author'=>'Andrew Hunt',         'category'=>'Technology',  'isbn'=>'978-0135957059','year'=>1999,'copies'=>3,'available'=>2,'color'=>'color-c'],
-  ['id'=>14,'title'=>'Pride and Prejudice',      'author'=>'Jane Austen',         'category'=>'Literature',  'isbn'=>'978-0141439518','year'=>1813,'copies'=>4,'available'=>3,'color'=>'color-d'],
-  ['id'=>15,'title'=>'Cosmos',                   'author'=>'Carl Sagan',          'category'=>'Science',     'isbn'=>'978-0345539434','year'=>1980,'copies'=>3,'available'=>1,'color'=>'color-e'],
-  ['id'=>16,'title'=>'The Art of War',           'author'=>'Sun Tzu',             'category'=>'History',     'isbn'=>'978-1599869773','year'=>500, 'copies'=>4,'available'=>4,'color'=>'color-a'],
-];
+$bookObj = new Book($conn);
+
+// Load from DB
+$db_books = $bookObj->getAll();
+$colors   = ['color-a','color-b','color-c','color-d','color-e'];
+$all_books = [];
+foreach ($db_books as $i => $b) {
+    $all_books[] = [
+        'id'        => (int)$b['id'],
+        'title'     => $b['title'],
+        'author'    => $b['author'],
+        'category'  => $b['category'],
+        'year'      => 0,  // year not in DB, kept for UI compatibility
+        'copies'    => (int)$b['total_copies'],
+        'available' => (int)$b['copies_available'],
+        'color'     => $colors[$i % count($colors)],
+    ];
+}
 
 $categories = ['All','Fiction','Science','History','Technology','Literature','Mathematics'];
 

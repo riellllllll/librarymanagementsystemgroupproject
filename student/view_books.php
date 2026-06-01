@@ -11,28 +11,25 @@ $selected_category = $_GET['category'] ?? 'All';
 $per_page = 12;
 $current_page_num = max(1, (int)($_GET['page'] ?? 1));
 
-$all_books = [
-  ['id'=>1,'title'=>'The Great Gatsby','author'=>'F. Scott Fitzgerald','category'=>'Fiction','copies'=>3,'available'=>2,'color'=>'color-a'],
-  ['id'=>2,'title'=>'To Kill a Mockingbird','author'=>'Harper Lee','category'=>'Fiction','copies'=>4,'available'=>1,'color'=>'color-b'],
-  ['id'=>3,'title'=>'A Brief History of Time','author'=>'Stephen Hawking','category'=>'Science','copies'=>2,'available'=>2,'color'=>'color-c'],
-  ['id'=>4,'title'=>'Sapiens','author'=>'Yuval Noah Harari','category'=>'History','copies'=>3,'available'=>0,'color'=>'color-d'],
-  ['id'=>5,'title'=>'Clean Code','author'=>'Robert C. Martin','category'=>'Technology','copies'=>5,'available'=>4,'color'=>'color-e'],
-  ['id'=>6,'title'=>'1984','author'=>'George Orwell','category'=>'Fiction','copies'=>3,'available'=>2,'color'=>'color-a'],
-  ['id'=>7,'title'=>'The Selfish Gene','author'=>'Richard Dawkins','category'=>'Science','copies'=>2,'available'=>1,'color'=>'color-b'],
-  ['id'=>8,'title'=>'Calculus Made Easy','author'=>'Silvanus P. Thompson','category'=>'Mathematics','copies'=>4,'available'=>3,'color'=>'color-c'],
-  ['id'=>9,'title'=>'Design Patterns','author'=>'GoF','category'=>'Technology','copies'=>3,'available'=>3,'color'=>'color-d'],
-  ['id'=>10,'title'=>'Noli Me Tangere','author'=>'Jose Rizal','category'=>'Literature','copies'=>6,'available'=>5,'color'=>'color-e'],
-  ['id'=>11,'title'=>'El Filibusterismo','author'=>'Jose Rizal','category'=>'Literature','copies'=>5,'available'=>4,'color'=>'color-a'],
-  ['id'=>12,'title'=>'Guns, Germs, and Steel','author'=>'Jared Diamond','category'=>'History','copies'=>2,'available'=>2,'color'=>'color-b'],
-  ['id'=>13,'title'=>'The Pragmatic Programmer','author'=>'Andrew Hunt','category'=>'Technology','copies'=>3,'available'=>2,'color'=>'color-c'],
-  ['id'=>14,'title'=>'Pride and Prejudice','author'=>'Jane Austen','category'=>'Literature','copies'=>4,'available'=>3,'color'=>'color-d'],
-  ['id'=>15,'title'=>'Cosmos','author'=>'Carl Sagan','category'=>'Science','copies'=>3,'available'=>1,'color'=>'color-e'],
-  ['id'=>16,'title'=>'The Art of War','author'=>'Sun Tzu','category'=>'History','copies'=>4,'available'=>4,'color'=>'color-a'],
-];
+$bookObj = new Book($conn);
 
-$filtered = $selected_category === 'All'
-  ? $all_books
-  : array_values(array_filter($all_books, fn($b) => $b['category'] === $selected_category));
+// Get books from DB, map to UI shape (category, available, color)
+$db_books = $bookObj->getAll('', $selected_category);
+$colors   = ['color-a','color-b','color-c','color-d','color-e'];
+$all_books = [];
+foreach ($db_books as $i => $b) {
+    $all_books[] = [
+        'id'        => (int)$b['id'],
+        'title'     => $b['title'],
+        'author'    => $b['author'],
+        'category'  => $b['category'],
+        'copies'    => (int)$b['total_copies'],
+        'available' => (int)$b['copies_available'],
+        'color'     => $colors[$i % count($colors)],
+    ];
+}
+
+$filtered = $all_books;
 
 $total = count($filtered);
 $total_pages = max(1, (int)ceil($total / $per_page));

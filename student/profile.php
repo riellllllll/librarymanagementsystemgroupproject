@@ -22,23 +22,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'update_profile') {
-        $phone  = trim($_POST['phone']  ?? '');
-        $course = trim($_POST['course'] ?? '');
-        $year   = trim($_POST['year']   ?? '');
+        $phone = trim($_POST['phone'] ?? '');
 
         if ($phone && !preg_match('/^\+?[\d\s\-]{7,15}$/', $phone)) {
             $_SESSION['flash_error'] = 'Please enter a valid contact number.';
         } else {
-            // Load current email so we don't blank it
-            $cur = $usr->getStudentById($student_id);
-            $ok = $usr->updateProfile($student_id, [
-                'email'      => $cur['email'] ?? '',
-                'phone'      => $phone,
-                'course'     => $course,
-                'year_level' => $year,
-            ]);
-            $_SESSION[$ok ? 'flash_success' : 'flash_error'] =
-                $ok ? 'Profile updated successfully!' : 'Failed to update profile.';
+            // TODO: Save to database
+            // require_once '../includes/db_connect.php';
+            // $stmt = $pdo->prepare("UPDATE students SET phone=?, course=?, year_level=? WHERE id=?");
+            // $stmt->execute([$phone, $course, $year, $_SESSION['student_id']]);
+
+            // Update session so changes reflect immediately
+            $_SESSION['student_phone']  = $phone;
+            $_SESSION['student_course'] = $course;
+            $_SESSION['student_year']   = $year;
+            $_SESSION['flash_success']  = 'Profile updated successfully!';
         }
         header('Location: profile.php');
         exit;
@@ -70,15 +68,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $me = $usr->getStudentById($student_id);
 
 $student = [
-    'id'          => $_SESSION['student_id']      ?? '2022-01234',
-    'email'       => $_SESSION['student_email']   ?? 'juan.delacruz@cvsu.edu.ph',
-    'phone'       => $_SESSION['student_phone']   ?? '+63 912 345 6789',
-    'course'      => $_SESSION['student_course']  ?? 'BS Computer Science',
-    'year'        => $_SESSION['student_year']    ?? '3rd Year',
-    'department'  => 'College of Engineering and Information Technology',
-    'lib_card'    => 'LIB-22-001234',
-    'status'      => 'Active',
-    'member_since'=> '2022-01-15',
+    'id'           => $me['student_number'] ?? '',
+    'email'        => $me['email']          ?? '',
+    'phone'        => $me['phone']          ?? '',
+    'course'       => $me['course']         ?? '',
+    'year'         => $me['year_level']     ?? '',
+    'department'   => 'College of Engineering and Information Technology',
+    'lib_card'     => 'LIB-' . str_pad((string)$student_id, 6, '0', STR_PAD_LEFT),
+    'status'       => ucfirst($me['status'] ?? 'Active'),
+    'member_since' => !empty($me['created_at']) ? date('Y-m-d', strtotime($me['created_at'])) : '',
 ];
 
 // Name parts
@@ -177,14 +175,8 @@ $has_fines = $stats['unpaid_fines'] > 0;
     <div class="profile-hero">
       <div class="profile-banner"></div>
       <div class="profile-hero-body">
-        <div class="profile-avatar-xl" title="Change photo">
+        <div class="profile-avatar-xl">
           <?= htmlspecialchars($initials) ?>
-          <div class="avatar-edit-overlay">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-              <circle cx="12" cy="13" r="4"/>
-            </svg>
-          </div>
         </div>
         <div class="profile-hero-info">
           <h2><?= htmlspecialchars($full_name) ?></h2>
@@ -196,10 +188,20 @@ $has_fines = $stats['unpaid_fines'] > 0;
               </svg>
               Student
             </span>
-            <span class="profile-chip chip-sage">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
+            <?php
+              $is_active = strcasecmp($student['status'], 'Active') === 0;
+              $chip_class = $is_active ? 'chip-sage' : 'chip-rust';
+            ?>
+            <span class="profile-chip <?= $chip_class ?>">
+              <?php if ($is_active): ?>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              <?php else: ?>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              <?php endif; ?>
               <?= htmlspecialchars($student['status']) ?>
             </span>
             <span class="profile-chip">
@@ -292,12 +294,6 @@ $has_fines = $stats['unpaid_fines'] > 0;
                   <div class="ic-label">Year Level</div>
                   <div class="ic-val"><?= htmlspecialchars($student['year']) ?></div>
                 </div>
-                <div class="info-cell right-col">
-                  </div>
-                <div class="info-cell full-width no-border">
-                  <div class="ic-label">Department / College</div>
-                  <div class="ic-val"><?= htmlspecialchars($student['department']) ?></div>
-                </div>
               </div>
             </div>
 
@@ -349,36 +345,26 @@ $has_fines = $stats['unpaid_fines'] > 0;
 
               <div class="field-grid">
                 <div class="field">
-                  <label>Course / Program</label>
+                  <label>Course / Program <small style="color:var(--muted);font-weight:400;">(locked)</small></label>
                   <div class="input-wrap">
-                    <span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></span>
-                    <select name="course" class="no-icon" style="padding-left:42px;">
-                      <?php
-                      $courses = ['BS Computer Science','BS Information Technology','BS Information Systems','Other'];
-                      foreach ($courses as $c):
-                      ?>
-                        <option <?= $c === $student['course'] ? 'selected' : '' ?>><?= htmlspecialchars($c) ?></option>
-                      <?php endforeach; ?>
-                    </select>
-                    <span class="select-arrow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></span>
+                    <span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                    <input type="text" class="no-icon" style="padding-left:42px;background:#f7f6f1;color:var(--muted);cursor:not-allowed;"
+                           value="<?= htmlspecialchars($student['course']) ?>" readonly disabled>
                   </div>
                 </div>
                 <div class="field">
-                  <label>Year Level</label>
+                  <label>Year Level <small style="color:var(--muted);font-weight:400;">(locked)</small></label>
                   <div class="input-wrap">
-                    <span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
-                    <select name="year" class="no-icon" style="padding-left:42px;">
-                      <?php
-                      $years = ['1st Year','2nd Year','3rd Year','4th Year','5th Year'];
-                      foreach ($years as $y):
-                      ?>
-                        <option <?= $y === $student['year'] ? 'selected' : '' ?>><?= htmlspecialchars($y) ?></option>
-                      <?php endforeach; ?>
-                    </select>
-                    <span class="select-arrow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></span>
+                    <span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                    <input type="text" class="no-icon" style="padding-left:42px;background:#f7f6f1;color:var(--muted);cursor:not-allowed;"
+                           value="<?= htmlspecialchars($student['year']) ?>" readonly disabled>
                   </div>
                 </div>
               </div>
+
+              <p style="font-size:0.74rem;color:var(--muted);margin:-4px 0 8px;">
+                ⓘ Course and Year Level can only be changed by the library administrator.
+              </p>
 
               <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px;">
                 <button type="button" class="btn-outline" onclick="cancelEdit()">Cancel</button>
@@ -463,6 +449,10 @@ $has_fines = $stats['unpaid_fines'] > 0;
               <div class="info-cell" style="padding:0;border:none;">
                 <div class="ic-label">Account Status</div>
                 <div class="ic-val"><span class="badge badge-sage"><?= htmlspecialchars($student['status']) ?></span></div>
+              </div>
+              <div class="info-cell" style="padding:0;border:none;">
+                <div class="ic-label">Registered On</div>
+                <div class="ic-val"><?= date('F j, Y', strtotime($student['member_since'])) ?></div>
               </div>
             </div>
           </div>

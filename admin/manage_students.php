@@ -42,9 +42,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if ($_POST['action'] === 'edit_student') {
         $id   = (int)($_POST['edit_id'] ?? 0);
         $data = [
-            'student_number' => trim($_POST['edit_student_id'] ?? ''),
-            'first_name'     => trim($_POST['edit_first_name'] ?? ''),
-            'last_name'      => trim($_POST['edit_last_name']  ?? ''),
+            'student_number' => trim($_POST['edit_student_id']  ?? ''),
+            'first_name'     => trim($_POST['edit_first_name']  ?? ''),
+            'last_name'      => trim($_POST['edit_last_name']   ?? ''),
+            'middle_name'    => trim($_POST['edit_middle_name'] ?? ''),
             'email'          => strtolower(trim($_POST['edit_email'] ?? '')),
             'course'         => $_POST['edit_course']     ?? '',
             'year_level'     => $_POST['edit_year']       ?? '',
@@ -79,6 +80,7 @@ foreach ($db_students as $s) {
         'student_id' => $s['student_number'],          // UI calls it 'student_id'
         'first_name' => $s['first_name'],
         'last_name'  => $s['last_name'],
+        'middle_name'=> $s['middle_name'] ?? '',
         'email'      => $s['email'],
         'course'     => $s['course']     ?? '',
         'year'       => $s['year_level'] ?? '',         // UI calls it 'year'
@@ -373,14 +375,14 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
               <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>
               <select name="course" required>
                 <option value="" disabled selected>Select course</option>
-                <option value="BSIT">BSIT</option>
-                <option value="BSCS">BSCS</option>
-                <option value="BSBA">BSBA</option>
-                <option value="BSED">BSED</option>
-                <option value="BSN">BSN</option>
-                <option value="BSPSY">BSPSY</option>
-                <option value="BSA">BSA</option>
-                <option value="BSCE">BSCE</option>
+                <option value="BS Computer Science">BS Computer Science</option>
+                <option value="BS Information Technology">BS Information Technology</option>
+                <option value="BS Education">BS Education</option>
+                <option value="BS Nursing">BS Nursing</option>
+                <option value="BS Engineering">BS Engineering</option>
+                <option value="BS Business Administration">BS Business Administration</option>
+                <option value="BS Accountancy">BS Accountancy</option>
+                <option value="AB Communication">AB Communication</option>
               </select>
               <span class="select-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
             </div>
@@ -547,6 +549,14 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
         </div>
 
         <div class="field">
+          <label>Middle Name <small style="color:var(--muted);font-weight:400;">(optional)</small></label>
+          <div class="input-wrap">
+            <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+            <input type="text" name="edit_middle_name" id="editMiddleName" placeholder="Middle name">
+          </div>
+        </div>
+
+        <div class="field">
           <label>Student ID <span>*</span></label>
           <div class="input-wrap">
             <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
@@ -568,14 +578,14 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
             <div class="input-wrap">
               <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>
               <select name="edit_course" id="editCourse" required>
-                <option value="BSIT">BSIT</option>
-                <option value="BSCS">BSCS</option>
-                <option value="BSBA">BSBA</option>
-                <option value="BSED">BSED</option>
-                <option value="BSN">BSN</option>
-                <option value="BSPSY">BSPSY</option>
-                <option value="BSA">BSA</option>
-                <option value="BSCE">BSCE</option>
+                <option value="BS Computer Science">BS Computer Science</option>
+                <option value="BS Information Technology">BS Information Technology</option>
+                <option value="BS Education">BS Education</option>
+                <option value="BS Nursing">BS Nursing</option>
+                <option value="BS Engineering">BS Engineering</option>
+                <option value="BS Business Administration">BS Business Administration</option>
+                <option value="BS Accountancy">BS Accountancy</option>
+                <option value="AB Communication">AB Communication</option>
               </select>
               <span class="select-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
             </div>
@@ -710,6 +720,7 @@ function openEditModal(id) {
   document.getElementById('editId').value = student.id;
   document.getElementById('editFirstName').value = student.first_name;
   document.getElementById('editLastName').value = student.last_name;
+  document.getElementById('editMiddleName').value = student.middle_name || '';
   document.getElementById('editStudentIdInput').value = student.student_id;
   document.getElementById('editEmail').value = student.email;
   document.getElementById('editCourse').value = student.course;

@@ -113,18 +113,18 @@ $_SESSION['admin_email'] = $admin_row['email'] ?? '';
 
 // Build the $admin array — exactly the same shape the UI expects
 $admin = [
-  'name' => $_SESSION['admin_name'] ?? 'Admin Librarian',
-  'initials' => $_SESSION['admin_initials'] ?? 'AD',
-  'admin_id' => $_SESSION['admin_id'] ?? 'ADM-2026-001',
-  'employee_no' => $_SESSION['admin_employee_no'] ?? 'EMP-00045',
-  'email' => $_SESSION['admin_email'] ?? 'admin.library@cvsu.edu.ph',
-  'contact' => $_SESSION['admin_contact'] ?? '+63 912 345 6789',
-  'role' => $_SESSION['admin_role'] ?? 'Administrator',
-  'department' => $_SESSION['admin_department'] ?? 'Library Services',
-  'campus' => $_SESSION['admin_campus'] ?? 'CvSU Imus Campus',
-  'status' => $_SESSION['admin_status'] ?? 'Active',
-  'joined' => $_SESSION['admin_joined'] ?? 'January 10, 2024',
-  'last_login' => $_SESSION['admin_last_login'] ?? 'May 21, 2026',
+  'name'        => $_a_name,
+  'initials'    => $_a_initials,
+  'admin_id'    => 'ADM-' . str_pad((string)(200 + ($admin_row['id'] ?? 1)), 4, '0', STR_PAD_LEFT),
+  'employee_no' => $admin_row['username'] ?? 'admin',
+  'email'       => $admin_row['email'] ?? '',
+  'contact'     => $_SESSION['admin_contact']    ?? ($admin_row['phone'] ?? ''),
+  'role'        => 'Administrator',
+  'department'  => $_SESSION['admin_department'] ?? 'Library Services',
+  'campus'      => $_SESSION['admin_campus']     ?? 'CvSU Imus Campus',
+  'status'      => 'Active',
+  'joined'      => !empty($admin_row['created_at']) ? date('F j, Y', strtotime($admin_row['created_at'])) : '—',
+  'last_login'  => date('F j, Y'),
 ];
 ?>
 
@@ -215,14 +215,9 @@ $admin = [
         <div class="admin-profile-info">
           <h2><?= htmlspecialchars($admin['name']) ?></h2>
 
-          <div class="admin-id">
-            Admin ID: <?= htmlspecialchars($admin['admin_id']) ?>
-          </div>
-
           <div class="admin-chips">
             <span class="admin-chip chip-gold"><?= htmlspecialchars($admin['role']) ?></span>
             <span class="admin-chip chip-sage"><?= htmlspecialchars($admin['status']) ?></span>
-            <span class="admin-chip"><?= htmlspecialchars($admin['department']) ?></span>
           </div>
         </div>
 
@@ -293,6 +288,11 @@ $admin = [
                 </div>
 
                 <div class="info-cell">
+                  <div class="info-label">Contact Number</div>
+                  <div class="info-value"><?= htmlspecialchars($admin['contact']) ?></div>
+                </div>
+
+                <div class="info-cell">
                   <div class="info-label">Department</div>
                   <div class="info-value"><?= htmlspecialchars($admin['department']) ?></div>
                 </div>
@@ -349,31 +349,6 @@ $admin = [
               </div>
 
               <div class="field-grid">
-                <div class="field">
-                  <label>Department</label>
-                  <div class="input-wrap">
-                    <select class="no-icon" name="department">
-                      <?php
-                      $departments = [
-                        'Library Services',
-                        'Circulation Desk',
-                        'Reference Services',
-                        'Technical Services'
-                      ];
-
-                      foreach ($departments as $department):
-                      ?>
-                        <option
-                          value="<?= htmlspecialchars($department) ?>"
-                          <?= $department === $admin['department'] ? 'selected' : '' ?>
-                        >
-                          <?= htmlspecialchars($department) ?>
-                        </option>
-                      <?php endforeach; ?>
-                    </select>
-                  </div>
-                </div>
-
                 <div class="field">
                   <label>Campus</label>
                   <div class="input-wrap">

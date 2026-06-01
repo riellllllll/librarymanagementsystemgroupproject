@@ -145,7 +145,7 @@ class User
     public function getAllStudents(): array
     {
         $result = $this->conn->query(
-            "SELECT u.id, u.student_number, u.full_name, u.first_name, u.last_name,
+            "SELECT u.id, u.student_number, u.full_name, u.first_name, u.last_name, u.middle_name,
                     u.email, u.course, u.year_level, u.status, u.created_at,
                     (SELECT COUNT(*) FROM borrow_records
                      WHERE user_id = u.id AND status IN ('active','overdue','pending_return'))
@@ -234,19 +234,25 @@ class User
         }
         $check->close();
 
-        $full_name = trim($data['first_name'] . ' ' . $data['last_name']);
+        $middle = $data['middle_name'] ?? '';
+        $full_name = trim(
+            $data['first_name'] . ' ' .
+            ($middle !== '' ? $middle . ' ' : '') .
+            $data['last_name']
+        );
 
         $stmt = $this->conn->prepare(
             "UPDATE users SET
-                student_number = ?, first_name = ?, last_name = ?, full_name = ?,
+                student_number = ?, first_name = ?, last_name = ?, middle_name = ?, full_name = ?,
                 email = ?, course = ?, year_level = ?, status = ?
              WHERE id = ? AND role = 'student'"
         );
         $stmt->bind_param(
-            'ssssssssi',
+            'sssssssssi',
             $data['student_number'],
             $data['first_name'],
             $data['last_name'],
+            $middle,
             $full_name,
             $data['email'],
             $data['course'],

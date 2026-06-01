@@ -1,5 +1,8 @@
 <?php
-// view_fines.php - Library Fine Management System
+// ============================================================
+// admin/view_fines.php — Admin: Outstanding Fines per Student
+// DB-powered (UI unchanged)
+// ============================================================
 session_start();
 require_once __DIR__ . '/library_data.php';
 
@@ -14,446 +17,310 @@ $pending_count = pending_request_count();
 $db   = new Database();
 $conn = $db->getConnection();
 
-// Mock database for demonstration with simplified IDs
-$fines_data = [
-    '101' => [
-        'student_name' => 'Emma Watson',
-        'student_class' => 'Grade 11-A',
-        'email' => 'emma.watson@example.com',
-        'fines' => [
-            ['book_id' => '01', 'book_title' => 'The Great Gatsby', 'issue_date' => '2026-04-10', 'due_date' => '2026-04-25', 'return_date' => null, 'days_overdue' => 32, 'fine_amount' => 160.00, 'status' => 'pending'],
-            ['book_id' => '02', 'book_title' => 'Sapiens', 'issue_date' => '2026-05-01', 'due_date' => '2026-05-16', 'return_date' => null, 'days_overdue' => 11, 'fine_amount' => 55.00, 'status' => 'pending'],
-            ['book_id' => '03', 'book_title' => 'Clean Code', 'issue_date' => '2026-03-05', 'due_date' => '2026-03-20', 'return_date' => '2026-04-01', 'days_overdue' => 12, 'fine_amount' => 60.00, 'status' => 'paid']
-        ]
-    ],
-    '102' => [
-        'student_name' => 'James Carter',
-        'student_class' => 'Grade 10-B',
-        'email' => 'james.carter@example.com',
-        'fines' => [
-            ['book_id' => '04', 'book_title' => 'Deep Work', 'issue_date' => '2026-04-18', 'due_date' => '2026-05-03', 'return_date' => null, 'days_overdue' => 24, 'fine_amount' => 120.00, 'status' => 'pending'],
-            ['book_id' => '05', 'book_title' => 'Atomic Habits', 'issue_date' => '2026-05-10', 'due_date' => '2026-05-25', 'return_date' => null, 'days_overdue' => 2, 'fine_amount' => 10.00, 'status' => 'pending']
-        ]
-    ],
-    '103' => [
-        'student_name' => 'Lina Zhang',
-        'student_class' => 'Grade 12-C',
-        'email' => 'lina.zhang@example.com',
-        'fines' => [
-            ['book_id' => '06', 'book_title' => 'Dune', 'issue_date' => '2026-03-01', 'due_date' => '2026-03-16', 'return_date' => null, 'days_overdue' => 72, 'fine_amount' => 360.00, 'status' => 'pending']
-        ]
-    ],
-    '104' => [
-        'student_name' => 'Oliver Chen',
-        'student_class' => 'Grade 9-D',
-        'email' => 'oliver.chen@example.com',
-        'fines' => [
-            ['book_id' => '07', 'book_title' => 'The Hobbit', 'issue_date' => '2026-04-01', 'due_date' => '2026-04-16', 'return_date' => '2026-04-22', 'days_overdue' => 6, 'fine_amount' => 30.00, 'status' => 'paid'],
-            ['book_id' => '08', 'book_title' => 'To Kill a Mockingbird', 'issue_date' => '2026-05-12', 'due_date' => '2026-05-27', 'return_date' => null, 'days_overdue' => 0, 'fine_amount' => 0.00, 'status' => 'pending']
-        ]
-    ]
-];
+// ── Helper: load all fine data grouped by student_number ──
+function load_fines_data(mysqli $conn): array {
+    // For each borrow we want ONE representative fine row:
+    //   - if there's an unpaid or payment_requested fine → use that (most recent)
+    //   - otherwise the latest paid fine
+    // We still need fine_id for Approve/Pay buttons, so we pick the chosen fine's id.
+    $sql = "
+        SELECT u.id AS uid, u.student_number, u.full_name, u.course, u.year_level, u.email,
+               agg.id AS fine_id, agg.amount, agg.paid_status, agg.payment_method, agg.payment_submitted_at,
+               br.id AS borrow_id, br.borrow_date, br.due_date, br.return_date,
+               b.id AS book_id, b.title AS book_title,
+               GREATEST(0, DATEDIFF(COALESCE(br.return_date, CURDATE()), br.due_date)) AS days_overdue
+        FROM borrow_records br
+        JOIN books b ON b.id = br.book_id
+        JOIN users u ON u.id = br.user_id
+        -- inner derived table: pick the chosen fine per borrow
+        JOIN (
+            SELECT f.borrow_id,
+                   SUBSTRING_INDEX(GROUP_CONCAT(f.id ORDER BY
+                       FIELD(f.paid_status,'unpaid','payment_requested','paid') ASC,
+                       f.created_at DESC), ',', 1) AS chosen_id
+            FROM fines f
+            GROUP BY f.borrow_id
+        ) pick ON pick.borrow_id = br.id
+        JOIN fines agg ON agg.id = pick.chosen_id
+        ORDER BY u.full_name ASC, agg.created_at DESC
+    ";
+    $res = $conn->query($sql);
+    $data = [];
+    if (!$res) {
+        error_log('[view_fines] load_fines_data SQL error: ' . $conn->error);
+        return $data;
+    }
+    while ($r = $res->fetch_assoc()) {
+        $sno = $r['student_number'];
+        if (!isset($data[$sno])) {
+            $data[$sno] = [
+                'student_name' => $r['full_name'],
+                'year_level'   => $r['year_level'] ?? '',
+                'course'       => $r['course']     ?? '',
+                'email'        => $r['email']      ?? '',
+                'fines'        => [],
+            ];
+        }
+        // Map DB paid_status → original UI statuses
+        $ui_status = match($r['paid_status']) {
+            'paid'              => 'paid',
+            'payment_requested' => 'payment_requested',
+            default             => 'pending',          // 'unpaid' → 'pending'
+        };
+        $data[$sno]['fines'][] = [
+            'fine_id'              => (int)$r['fine_id'],
+            'book_id'              => str_pad((string)$r['book_id'], 2, '0', STR_PAD_LEFT),
+            'book_title'           => $r['book_title'],
+            'issue_date'           => $r['borrow_date'],
+            'due_date'             => $r['due_date'],
+            'return_date'          => $r['return_date'],
+            'days_overdue'         => (int)$r['days_overdue'],
+            'fine_amount'          => (float)$r['amount'],
+            'status'               => $ui_status,
+            'payment_method'       => $r['payment_method'],
+            'payment_submitted_at' => $r['payment_submitted_at'],
+        ];
+    }
+    return $data;
+}
 
-// Default summary values (shown before searching)
-$default_total_fines = 12450.00;
-$default_pending_fines = 8750.00;
-$default_paid_fines = 3700.00;
-$default_overdue_books = 28;
+// ── Helper: find a fine_id by (student_number + padded book_id) ──
+function _find_fine_id(array &$fines_data, string $sno, string $book_id): int {
+    if (!isset($fines_data[$sno])) return 0;
+    foreach ($fines_data[$sno]['fines'] as $f) {
+        if ($f['book_id'] === $book_id) return (int)$f['fine_id'];
+    }
+    return 0;
+}
 
-// Status filter options
+// ── Load fines from DB ──
+$fines_data = load_fines_data($conn);
+
+// ── Status filter tabs ──
 $status_options = [
-    'all' => 'All Fines',
-    'pending' => 'Pending',
-    'paid' => 'Paid'
+  'all'               => 'All Fines',
+  'pending'           => 'Pending',
+  'payment_requested' => 'Awaiting Approval',
+  'paid'              => 'Paid',
 ];
 
 $status_filter       = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
 $selected_student_id = isset($_GET['student_id'])    ? trim($_GET['student_id']) : '';
 
-// Handle fine payment
-$payment_message = '';
+// ── Smart search ──
+$search_query   = isset($_GET['student_id']) ? trim($_GET['student_id']) : '';
+$student_data   = null;
+$search_matches = [];
+
+if ($search_query !== '') {
+  if (isset($fines_data[$search_query])) {
+    $selected_student_id = $search_query;
+    $student_data        = $fines_data[$search_query];
+  } else {
+    foreach ($fines_data as $sid => $sdata) {
+      $nameMatch = stripos($sdata['student_name'], $search_query) !== false;
+      $idMatch   = stripos($sid, $search_query) !== false;
+      if ($nameMatch || $idMatch) $search_matches[] = $sid;
+    }
+    if (count($search_matches) === 1) {
+      $selected_student_id = $search_matches[0];
+      $student_data        = $fines_data[$selected_student_id];
+      $search_matches      = [];
+    }
+  }
+}
+
+// ── Handle payment actions (POST) ──
+$payment_message      = $_SESSION['fine_flash']      ?? '';
+$payment_message_type = $_SESSION['fine_flash_type'] ?? 'success';
+unset($_SESSION['fine_flash'], $_SESSION['fine_flash_type']);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['pay_fine'])) {
-        $student_id = $_POST['student_id'];
-        $book_id = $_POST['book_id'];
-        $amount = $_POST['amount'];
-        $payment_message = "Payment of PHP $amount received for Book ID: $book_id";
-    }
-    if (isset($_POST['pay_all'])) {
-        $student_id = $_POST['student_id'];
-        $total_amount = $_POST['total_amount'];
-        $payment_message = "Payment of PHP $total_amount received for all pending fines";
-    }
-}
+  $post_student_id = isset($_POST['student_id']) ? trim($_POST['student_id']) : '';
+  $direct_fine_id  = isset($_POST['fine_id']) ? (int)$_POST['fine_id'] : 0;
 
-// Get student ID from query parameter
-$selected_student_id = isset($_GET['student_id']) ? $_GET['student_id'] : '';
-$student_data = isset($fines_data[$selected_student_id]) ? $fines_data[$selected_student_id] : null;
+  if ($post_student_id && isset($fines_data[$post_student_id])) {
 
-// Calculate statistics (use default values if no student selected, otherwise calculate actual)
-$total_fines = $default_total_fines;
-$pending_fines = $default_pending_fines;
-$paid_fines = $default_paid_fines;
-$overdue_books = $default_overdue_books;
-
-if ($student_data) {
-    $total_fines = 0;
-    $pending_fines = 0;
-    $paid_fines = 0;
-    $overdue_books = 0;
-    foreach ($student_data['fines'] as $fine) {
-        if ($fine['status'] === 'pending') {
-            $pending_fines += $fine['fine_amount'];
-            if ($fine['days_overdue'] > 0) $overdue_books++;
+    // ── Admin: approve a student-submitted payment ──
+    if (isset($_POST['approve_payment'])) {
+      $pay_book_id = $_POST['book_id'] ?? '';
+      $fid = $direct_fine_id ?: _find_fine_id($fines_data, $post_student_id, $pay_book_id);
+      if ($fid) {
+        $upd = $conn->prepare(
+          "UPDATE fines SET paid_status = 'paid', paid_date = CURDATE() WHERE id = ? AND paid_status = 'payment_requested'"
+        );
+        $upd->bind_param('i', $fid);
+        $upd->execute();
+        $affected = $upd->affected_rows;
+        $upd->close();
+        if ($affected > 0) {
+          $_SESSION['fine_flash']      = "Payment of ₱" . number_format((float)($_POST['amount'] ?? 0), 2) . " approved for \"" . htmlspecialchars($_POST['book_title'] ?? '') . "\" — marked as Paid.";
+          $_SESSION['fine_flash_type'] = 'success';
         } else {
-            $paid_fines += $fine['fine_amount'];
+          $_SESSION['fine_flash']      = "Could not approve — payment already processed.";
+          $_SESSION['fine_flash_type'] = 'warning';
         }
-        $total_fines += $fine['fine_amount'];
+      } else {
+        $_SESSION['fine_flash']      = "Could not find the fine. Please refresh and try again.";
+        $_SESSION['fine_flash_type'] = 'warning';
+      }
+      // Redirect back to the page admin came from (keeps their filter / student)
+      $sf = $_POST['status_filter'] ?? 'payment_requested';
+      $from_queue = !empty($_POST['from_queue']);
+      if ($from_queue) {
+        header('Location: view_fines.php?status_filter=payment_requested');
+      } else {
+        $sid_q = urlencode($post_student_id);
+        header("Location: view_fines.php?status_filter={$sf}&student_id={$sid_q}");
+      }
+      exit;
     }
+
+    // ── Admin: reject a student-submitted payment ──
+    if (isset($_POST['reject_payment'])) {
+      $pay_book_id = $_POST['book_id'] ?? '';
+      $fid = $direct_fine_id ?: _find_fine_id($fines_data, $post_student_id, $pay_book_id);
+      if ($fid) {
+        $upd = $conn->prepare(
+          "UPDATE fines SET paid_status = 'unpaid', payment_method = NULL, payment_submitted_at = NULL WHERE id = ? AND paid_status = 'payment_requested'"
+        );
+        $upd->bind_param('i', $fid);
+        $upd->execute();
+        $affected = $upd->affected_rows;
+        $upd->close();
+        $_SESSION['fine_flash']      = $affected > 0
+          ? "Payment request rejected for \"" . htmlspecialchars($_POST['book_title'] ?? '') . "\" — fine reset to Pending."
+          : "Could not reject — payment already processed.";
+        $_SESSION['fine_flash_type'] = 'warning';
+      }
+      $sf = $_POST['status_filter'] ?? 'payment_requested';
+      $from_queue = !empty($_POST['from_queue']);
+      if ($from_queue) {
+        header('Location: view_fines.php?status_filter=payment_requested');
+      } else {
+        $sid_q = urlencode($post_student_id);
+        header("Location: view_fines.php?status_filter={$sf}&student_id={$sid_q}");
+      }
+      exit;
+    }
+
+    // ── Admin: manually mark a single fine as paid ──
+    if (isset($_POST['pay_fine'])) {
+      $pay_book_id = $_POST['book_id'] ?? '';
+      $fid = $direct_fine_id ?: _find_fine_id($fines_data, $post_student_id, $pay_book_id);
+      if ($fid) {
+        $upd = $conn->prepare(
+          "UPDATE fines SET paid_status = 'paid', paid_date = CURDATE(), payment_method = 'Cash (Admin)' WHERE id = ? AND paid_status = 'unpaid'"
+        );
+        $upd->bind_param('i', $fid);
+        $upd->execute();
+        $affected = $upd->affected_rows;
+        $upd->close();
+        if ($affected > 0) {
+          $_SESSION['fine_flash']      = "Payment of ₱" . number_format((float)($_POST['amount'] ?? 0), 2) . " recorded for \"" . htmlspecialchars($_POST['book_title'] ?? '') . "\" — marked as Paid.";
+          $_SESSION['fine_flash_type'] = 'success';
+        } else {
+          $_SESSION['fine_flash']      = "Could not pay — fine already processed.";
+          $_SESSION['fine_flash_type'] = 'warning';
+        }
+      }
+      $sf = $_POST['status_filter'] ?? 'all';
+      $sid_q = urlencode($post_student_id);
+      header("Location: view_fines.php?status_filter={$sf}&student_id={$sid_q}");
+      exit;
+    }
+
+    // ── Admin: pay all pending fines at once ──
+    if (isset($_POST['pay_all'])) {
+      // Find this student's DB id
+      $uid_stmt = $conn->prepare("SELECT id FROM users WHERE student_number = ? AND role = 'student' LIMIT 1");
+      $uid_stmt->bind_param('s', $post_student_id);
+      $uid_stmt->execute();
+      $uid_row = $uid_stmt->get_result()->fetch_assoc();
+      $uid_stmt->close();
+      if ($uid_row) {
+        $uid = (int)$uid_row['id'];
+        $upd = $conn->prepare(
+          "UPDATE fines SET paid_status = 'paid', paid_date = CURDATE(), payment_method = 'Cash (Admin)' WHERE user_id = ? AND paid_status = 'unpaid'"
+        );
+        $upd->bind_param('i', $uid);
+        $upd->execute();
+        $upd->close();
+      }
+      $total_amount         = number_format((float)$_POST['total_amount'], 2);
+      $payment_message      = "Payment of ₱{$total_amount} recorded — all pending fines cleared.";
+      $payment_message_type = 'success';
+    }
+
+    // Reload fresh data after any mutation
+    $fines_data = load_fines_data($conn);
+
+    // Only switch to student detail view if the action came from that view,
+    // NOT from the global queue banner (which should stay on the overview).
+    if (empty($_POST['from_queue'])) {
+      $selected_student_id = $post_student_id;
+      $student_data        = $fines_data[$post_student_id] ?? null;
+      $search_query        = $post_student_id;
+    }
+  }
 }
 
-$status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
-?>
+// ── Collect global payment requests (for queue banner) ──
+$payment_requests = [];
+foreach ($fines_data as $sid => $sdata) {
+  foreach ($sdata['fines'] as $fine) {
+    if ($fine['status'] === 'payment_requested') {
+      $payment_requests[] = array_merge($fine, [
+        'student_id'   => $sid,
+        'student_name' => $sdata['student_name'],
+        'course'       => $sdata['course'],
+      ]);
+    }
+  }
+}
 
+// ── Calculate stats (after mutations) ──
+$total_fines     = 0;
+$pending_fines   = 0;
+$paid_fines      = 0;
+$overdue_books   = 0;
+$requested_fines = 0;
+
+$stats_pool = [];
+if ($student_data) {
+  $stats_pool = [$selected_student_id => $student_data];
+} elseif (!empty($search_matches)) {
+  foreach ($search_matches as $sid) $stats_pool[$sid] = $fines_data[$sid];
+} else {
+  $stats_pool = $fines_data;
+}
+
+foreach ($stats_pool as $sdata) {
+  foreach ($sdata['fines'] as $fine) {
+    $total_fines += $fine['fine_amount'];
+    if ($fine['status'] === 'pending') {
+      $pending_fines += $fine['fine_amount'];
+      if ($fine['days_overdue'] > 0) $overdue_books++;
+    } elseif ($fine['status'] === 'payment_requested') {
+      $requested_fines += $fine['fine_amount'];
+      if ($fine['days_overdue'] > 0) $overdue_books++;
+    } else {
+      $paid_fines += $fine['fine_amount'];
+    }
+  }
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>View Fines - Admin Panel</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../assets/student.css">
-    <link rel="stylesheet" href="../assets/style.css">
-    <link rel="stylesheet" href="../assets/adminStyle.css">
-    
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        /* Custom fines page styles - COMPACT VERSION */
-        .stats-fines-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .stat-fines-card {
-            background: #f8f9fa;
-            padding: 12px 10px;
-            border-radius: 10px;
-            text-align: center;
-            border-top: 3px solid #c89b3c;
-        }
-        
-        .stat-fines-label {
-            font-size: 10px;
-            text-transform: uppercase;
-            color: #6c757d;
-            margin-bottom: 6px;
-            font-weight: 600;
-        }
-        
-        .stat-fines-number {
-            font-size: 22px;
-            font-weight: 700;
-            color: #1a1a2e;
-        }
-        
-        .stat-fines-sub {
-            font-size: 9px;
-            color: #6c757d;
-            margin-top: 4px;
-        }
-        
-        .student-fines-info {
-            background: #1a110b;
-            padding: 12px 16px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            color: white;
-        }
-        
-        .student-fines-details {
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-            font-size: 12px;
-        }
-        
-        .section-fines-title {
-            margin-bottom: 12px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .section-fines-title span {
-            font-size: 14px;
-            font-weight: 600;
-            color: #1a1a2e;
-        }
-        
-        /* COMPACT TABLE WITH ALIGNMENT */
-        .table-fines-wrapper {
-            width: 100%;
-            margin-bottom: 20px;
-            overflow-x: auto;
-        }
-        
-        .table-fines {
-            width: 100%;
-            min-width: 700px;
-            border-collapse: collapse;
-            font-size: 11px;
-        }
-        
-        .table-fines th {
-            padding: 8px 6px;
-            background: #f8f9fa;
-            font-size: 10px;
-            font-weight: 600;
-            color: #495057;
-            border-bottom: 1px solid #eef2f6;
-        }
-        
-        .table-fines td {
-            padding: 8px 6px;
-            border-bottom: 1px solid #eef2f6;
-            color: #1a1a2e;
-            font-size: 11px;
-        }
-        
-        /* Column alignments */
-        .table-fines th:nth-child(1),
-        .table-fines td:nth-child(1) {
-            text-align: center;
-        }
-        
-        .table-fines th:nth-child(2),
-        .table-fines td:nth-child(2) {
-            text-align: left;
-        }
-        
-        .table-fines th:nth-child(3),
-        .table-fines td:nth-child(3) {
-            text-align: center;
-        }
-        
-        .table-fines th:nth-child(4),
-        .table-fines td:nth-child(4) {
-            text-align: center;
-        }
-        
-        .table-fines th:nth-child(5),
-        .table-fines td:nth-child(5) {
-            text-align: center;
-        }
-        
-        .table-fines th:nth-child(6),
-        .table-fines td:nth-child(6) {
-            text-align: center;
-        }
-        
-        .table-fines th:nth-child(7),
-        .table-fines td:nth-child(7) {
-            text-align: center;
-        }
-        
-        .table-fines tr:hover {
-            background: #faf8f5;
-        }
-        
-        /* Status Badges */
-        .status-badge {
-            display: inline-block;
-            padding: 2px 6px;
-            border-radius: 12px;
-            font-size: 9px;
-            font-weight: 600;
-        }
-        
-        .status-pending {
-            background: #f8d7da;
-            color: #dc3545;
-        }
-        
-        .status-paid {
-            background: #d4edda;
-            color: #28a745;
-        }
-        
-        .fine-amount {
-            font-weight: 600;
-            color: #dc3545;
-            font-size: 11px;
-        }
-        
-        /* Buttons */
-        .btn-fines {
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 9px;
-            font-weight: 600;
-            text-decoration: none;
-            cursor: pointer;
-            border: none;
-            font-family: inherit;
-        }
-        
-        .btn-fines-success {
-            background: #28a745;
-            color: white;
-        }
-        
-        .btn-fines-success:hover {
-            background: #218838;
-        }
-        
-        .total-summary-fines {
-            background: #fff8f0;
-            border: 1px solid #ffe4b5;
-            border-radius: 10px;
-            padding: 10px 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-            font-size: 12px;
-        }
-        
-        .no-data-fines {
-            text-align: center;
-            padding: 30px 20px;
-            color: #6c757d;
-            background: #f8f9fa;
-            border-radius: 12px;
-            font-size: 12px;
-        }
-        
-        .alert-fines {
-            background: #d4edda;
-            color: #155724;
-            padding: 8px 12px;
-            border-radius: 6px;
-            margin-bottom: 15px;
-            text-align: center;
-            font-size: 12px;
-        }
-        
-        .fines-container {
-            background: white;
-            border-radius: 16px;
-            padding: 18px;
-        }
-
-        /* Search bar styling */
-        .topbar-search {
-            position: relative;
-            display: flex;
-            align-items: center;
-            width: min(420px, 100%);
-            min-height: 42px;
-            padding: 0 14px;
-            gap: 10px;
-            color: #8b96aa;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)), #ffffff;
-            border: 1px solid rgba(201, 151, 58, 0.28);
-            border-radius: 999px;
-            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
-            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-        }
-
-        .topbar-search::before {
-            content: "";
-            position: absolute;
-            inset: -1px;
-            z-index: -1;
-            border-radius: inherit;
-            background: linear-gradient(135deg, rgba(201, 151, 58, 0.38), rgba(232, 194, 106, 0.08));
-            opacity: 0;
-            transition: opacity 0.2s ease;
-        }
-
-        .topbar-search:focus-within {
-            border-color: rgba(201, 151, 58, 0.72);
-            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12), 0 0 0 4px rgba(201, 151, 58, 0.14);
-            transform: translateY(-1px);
-        }
-
-        .topbar-search:focus-within::before {
-            opacity: 1;
-        }
-
-        .topbar-search svg {
-            flex: 0 0 auto;
-            width: 16px;
-            height: 16px;
-            color: #c9973a;
-            stroke-width: 2.4;
-        }
-
-        .topbar-search input {
-            width: 100%;
-            min-width: 0;
-            height: 40px;
-            color: #1f2937;
-            background: transparent;
-            border: 0;
-            outline: 0;
-            font-family: inherit;
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        .topbar-search input::placeholder {
-            color: #98a2b3;
-            font-weight: 400;
-        }
-
-        @media (max-width: 760px) {
-            .topbar {
-                flex-wrap: wrap;
-            }
-            .topbar-search {
-                order: 3;
-                width: 100%;
-                margin-top: 10px;
-            }
-        }
-
-        @media (max-width: 520px) {
-            .topbar-search {
-                min-height: 40px;
-                padding: 0 12px;
-                border-radius: 14px;
-              }
-            .topbar-search input {
-                height: 38px;
-                font-size: 13px;
-            }
-        }
-        
-        @media (max-width: 1024px) {
-            .stats-fines-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .stats-fines-grid {
-                grid-template-columns: 1fr;
-            }
-            .student-fines-details {
-                flex-direction: column;
-                gap: 6px;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>View Fines — Admin Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/student.css">
+  <link rel="stylesheet" href="../assets/adminStyle.css">
+  <link rel="stylesheet" href="../assets/adminFines.css">
 </head>
 <body>
 
@@ -461,27 +328,20 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
 
 <div class="main-wrapper">
 
-    <header class="topbar">
-        <span class="topbar-title">View Fines</span>
-        <div class="topbar-spacer"></div>
-        
-        <form class="topbar-search" method="GET" action="view_fines.php">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"/>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input type="text" name="student_id" placeholder="Search by Student ID..." value="<?= htmlspecialchars($selected_student_id) ?>">
-        </form>
+  <header class="topbar">
+    <span class="topbar-title">View Fines</span>
+    <div class="topbar-spacer"></div>
 
-        <a href="student_req.php" class="topbar-icon-btn" title="Student Borrow Requests">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-            </svg>
-            <?php if ($pending_count > 0): ?>
-                <span class="topbar-notif-dot"></span>
-            <?php endif; ?>
-        </a>
+    <!-- Notifications bell — now counts payment requests too -->
+    <a href="student_req.php" class="topbar-icon-btn" title="Student Borrow Requests">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+      <?php if ($pending_count > 0 || count($payment_requests) > 0): ?>
+        <span class="topbar-notif-dot"></span>
+      <?php endif; ?>
+    </a>
 
     <a href="admin_profile.php" class="topbar-icon-btn" title="Admin Profile">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -491,7 +351,7 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
     </a>
   </header>
 
-    <main class="page-content">
+  <main class="page-content">
 
     <div class="page-header">
       <h1>View Fines</h1>
@@ -499,135 +359,465 @@ $status_filter = isset($_GET['status_filter']) ? $_GET['status_filter'] : 'all';
       <div class="gold-rule"><span></span><i>✦</i><span></span></div>
     </div>
 
-        <div class="books-filter-section">
-            <div class="category-pills">
-                <?php foreach ($status_options as $value => $label): ?>
-                    <a href="?status=<?= urlencode($value) ?>&student_id=<?= urlencode($selected_student_id) ?>" 
-                       class="category-pill <?= $value === $status_filter ? 'active' : '' ?>">
-                        <?= htmlspecialchars($label) ?>
-                    </a>
-                <?php endforeach; ?>
-            </div>
+    <!-- Status filter tabs -->
+    <div class="fines-filter-tabs">
+      <a href="?status_filter=all&student_id=<?= urlencode($selected_student_id) ?>"
+         class="fines-tab <?= $status_filter === 'all' ? 'active-all' : '' ?>">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        All Fines
+      </a>
+      <a href="?status_filter=pending&student_id=<?= urlencode($selected_student_id) ?>"
+         class="fines-tab <?= $status_filter === 'pending' ? 'active-pending' : '' ?>">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Pending
+      </a>
+      <a href="?status_filter=payment_requested&student_id=<?= urlencode($selected_student_id) ?>"
+         class="fines-tab <?= $status_filter === 'payment_requested' ? 'active-requested' : '' ?>">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Awaiting Approval
+      </a>
+      <a href="?status_filter=paid&student_id=<?= urlencode($selected_student_id) ?>"
+         class="fines-tab <?= $status_filter === 'paid' ? 'active-paid' : '' ?>">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="20 6 9 17 4 12"/></svg>
+        Paid
+      </a>
+    </div>
+
+    <div class="fines-container">
+
+      <?php if ($payment_message): ?>
+        <div class="alert-fines alert-fines-<?= $payment_message_type ?>">
+          <?= $payment_message_type === 'success' ? '✓' : '⚠' ?> <?= htmlspecialchars($payment_message) ?>
+        </div>
+      <?php endif; ?>
+
+      <!-- ── Payment Requests Queue (global — shows when not in a student detail) ── -->
+      <?php if (!$student_data && !empty($payment_requests) && $status_filter !== 'pending' && $status_filter !== 'paid'): ?>
+      <div class="payment-requests-queue">
+        <div class="prq-header">
+          <div>
+            <div class="prq-title">Payment Requests Awaiting Approval</div>
+            <div class="prq-sub">Students have submitted payment — review and approve or reject below.</div>
+          </div>
+        </div>
+        <div class="table-fines-wrapper" style="margin-bottom:0;">
+          <table class="table-fines">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Book Title</th>
+                <th>Amount</th>
+                <th>Method</th>
+                <th>Submitted</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($payment_requests as $req): ?>
+              <tr>
+                <td style="text-align:left;padding-left:14px;">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div class="student-fines-avatar" style="width:28px;height:28px;font-size:11px;flex:0 0 28px;">
+                      <?= strtoupper(substr($req['student_name'], 0, 1)) ?>
+                    </div>
+                    <div>
+                      <div style="font-weight:600;font-size:12px;"><?= htmlspecialchars($req['student_name']) ?></div>
+                      <div style="font-size:10px;color:#6b7a99;">ID: <?= htmlspecialchars($req['student_id']) ?></div>
+                    </div>
+                  </div>
+                </td>
+                <td style="text-align:left;padding-left:14px;"><?= htmlspecialchars($req['book_title']) ?></td>
+                <td class="fine-amount">₱<?= number_format($req['fine_amount'], 2) ?></td>
+                <td>
+                  <span class="payment-method-chip">
+                    <?= htmlspecialchars($req['payment_method'] ?? '—') ?>
+                  </span>
+                </td>
+                <td style="font-size:11px;color:#6b7a99;white-space:nowrap;">
+                  <?= $req['payment_submitted_at'] ? date('M j, g:i A', strtotime($req['payment_submitted_at'])) : '—' ?>
+                </td>
+                <td>
+                  <div style="display:flex;gap:6px;justify-content:center;">
+                    <form method="POST" style="display:inline;">
+                      <input type="hidden" name="student_id"  value="<?= htmlspecialchars($req['student_id']) ?>">
+                      <input type="hidden" name="fine_id"     value="<?= (int)$req['fine_id'] ?>">
+                      <input type="hidden" name="book_id"     value="<?= htmlspecialchars($req['book_id']) ?>">
+                      <input type="hidden" name="book_title"  value="<?= htmlspecialchars($req['book_title']) ?>">
+                      <input type="hidden" name="amount"      value="<?= $req['fine_amount'] ?>">
+                      <input type="hidden" name="from_queue"  value="1">
+                      <button type="submit" name="approve_payment" class="btn-approve">Approve</button>
+                    </form>
+                    <form method="POST" style="display:inline;">
+                      <input type="hidden" name="student_id"  value="<?= htmlspecialchars($req['student_id']) ?>">
+                      <input type="hidden" name="fine_id"     value="<?= (int)$req['fine_id'] ?>">
+                      <input type="hidden" name="book_id"     value="<?= htmlspecialchars($req['book_id']) ?>">
+                      <input type="hidden" name="book_title"  value="<?= htmlspecialchars($req['book_title']) ?>">
+                      <input type="hidden" name="from_queue"  value="1">
+                      <button type="submit" name="reject_payment" class="btn-reject">Reject</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <?php endif; ?>
+
+      <!-- ── Search bar ─────────────────────────────────────────── -->
+      <form class="fines-search-bar" method="GET" action="view_fines.php">
+        <input type="hidden" name="status_filter" value="<?= htmlspecialchars($status_filter) ?>">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input
+          type="text"
+          name="student_id"
+          placeholder="Search by name or Student ID…"
+          value="<?= $student_data ? '' : htmlspecialchars($search_query) ?>"
+          autocomplete="off"
+          maxlength="50"
+        >
+        <?php if ($search_query && !$student_data): ?>
+          <a href="view_fines.php?status_filter=<?= urlencode($status_filter) ?>" class="fines-search-clear" title="Clear search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </a>
+        <?php endif; ?>
+      </form>
+
+      <!-- Stats row -->
+      <div class="stats-fines-grid">
+        <div class="stat-fines-card">
+          <div class="stat-fines-label">Total Fines</div>
+          <div class="stat-fines-number">₱<?= number_format($total_fines, 2) ?></div>
+          <div class="stat-fines-sub">Accrued overall</div>
+        </div>
+        <div class="stat-fines-card stat-fines-pending">
+          <div class="stat-fines-label">Pending Fines</div>
+          <div class="stat-fines-number">₱<?= number_format($pending_fines, 2) ?></div>
+          <div class="stat-fines-sub">Unpaid</div>
+        </div>
+        <div class="stat-fines-card stat-fines-requested">
+          <div class="stat-fines-label">Awaiting Approval</div>
+          <div class="stat-fines-number">₱<?= number_format($requested_fines, 2) ?></div>
+          <div class="stat-fines-sub">Student-submitted</div>
+        </div>
+        <div class="stat-fines-card stat-fines-paid">
+          <div class="stat-fines-label">Paid Fines</div>
+          <div class="stat-fines-number">₱<?= number_format($paid_fines, 2) ?></div>
+          <div class="stat-fines-sub">Total cleared</div>
+        </div>
+        <div class="stat-fines-card">
+          <div class="stat-fines-label">Overdue Books</div>
+          <div class="stat-fines-number"><?= $overdue_books ?></div>
+          <div class="stat-fines-sub">Contributing to fines</div>
+        </div>
+      </div>
+
+      <?php if ($selected_student_id && $student_data): ?>
+
+        <!-- Back button -->
+        <div style="margin-bottom:12px;">
+          <a href="view_fines.php?status_filter=<?= urlencode($status_filter) ?>"
+             style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#6b7a99;text-decoration:none;padding:6px 12px;border:1px solid #e2e8f0;border-radius:6px;background:#f8f9fb;transition:all .18s ease;"
+             onmouseover="this.style.background='#eef0f5';this.style.color='#1a2340';"
+             onmouseout="this.style.background='#f8f9fb';this.style.color='#6b7a99';">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><polyline points="15 18 9 12 15 6"/></svg>
+            Back to All Students
+          </a>
         </div>
 
-        <div class="fines-container">
-
-            <?php if ($payment_message): ?>
-                <div class="alert-fines">✓ <?php echo htmlspecialchars($payment_message); ?></div>
-            <?php endif; ?>
-
-            <div class="stats-fines-grid">
-                <div class="stat-fines-card">
-                    <div class="stat-fines-label">TOTAL FINES</div>
-                    <div class="stat-fines-number">PHP <?php echo number_format($total_fines, 2); ?></div>
-                    <div class="stat-fines-sub">Accrued overall</div>
-                </div>
-                <div class="stat-fines-card">
-                    <div class="stat-fines-label">PENDING FINES</div>
-                    <div class="stat-fines-number">PHP <?php echo number_format($pending_fines, 2); ?></div>
-                    <div class="stat-fines-sub">Unpaid</div>
-                </div>
-                <div class="stat-fines-card">
-                    <div class="stat-fines-label">PAID FINES</div>
-                    <div class="stat-fines-number">PHP <?php echo number_format($paid_fines, 2); ?></div>
-                    <div class="stat-fines-sub">Total cleared</div>
-                </div>
-                <div class="stat-fines-card">
-                    <div class="stat-fines-label">OVERDUE BOOKS</div>
-                    <div class="stat-fines-number"><?php echo $overdue_books; ?></div>
-                    <div class="stat-fines-sub">Contributing to fines</div>
-                </div>
+        <!-- Student info banner -->
+        <div class="student-fines-info">
+          <div class="student-fines-header">
+            <div class="student-fines-name-block">
+              <div class="student-fines-avatar">
+                <?= strtoupper(substr($student_data['student_name'], 0, 1)) ?>
+              </div>
+              <div>
+                <div class="student-fines-name"><?= htmlspecialchars($student_data['student_name']) ?></div>
+                <div class="student-fines-sub"><?= htmlspecialchars($student_data['course']) ?></div>
+              </div>
             </div>
-
-            <?php if ($selected_student_id && $student_data): ?>
-                <div class="student-fines-info">
-                    <div class="student-fines-details">
-                        <span><strong>Student:</strong> <?php echo htmlspecialchars($student_data['student_name']); ?></span>
-                        <span><strong>ID:</strong> <?php echo htmlspecialchars($selected_student_id); ?></span>
-                        <span><strong>Class:</strong> <?php echo htmlspecialchars($student_data['student_class']); ?></span>
-                        <span><strong>Email:</strong> <?php echo htmlspecialchars($student_data['email']); ?></span>
-                    </div>
-                </div>
+          </div>
+          <div class="student-fines-details">
+            <span class="student-fines-chip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+              <strong>ID:</strong> <?= htmlspecialchars($selected_student_id) ?>
+            </span>
+            <span class="student-fines-chip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+              <strong>Year:</strong> <?= htmlspecialchars($student_data['year_level']) ?>
+            </span>
+            <span class="student-fines-chip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              <strong>Email:</strong> <?= htmlspecialchars($student_data['email']) ?>
+            </span>
+            <span class="student-fines-chip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <strong>Enrolled:</strong> <?= htmlspecialchars(substr($selected_student_id, 0, 4)) ?>
+            </span>
+          </div>
+        </div>
 
         <div class="section-fines-title">
           <span>Pending &amp; Outstanding Fines</span>
         </div>
 
-                <div class="table-fines-wrapper">
-                    <table class="table-fines">
-                        <thead>
-                            <tr>
-                                <th>Book ID</th>
-                                <th>Book Title</th>
-                                <th>Due Date</th>
-                                <th>Days</th>
-                                <th>Fine</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($student_data['fines'] as $fine):
-                                if ($status_filter === 'pending' && $fine['status'] !== 'pending') continue;
-                                if ($status_filter === 'paid' && $fine['status'] !== 'paid') continue;
-                            ?>
-                            <tr>
-                                <td style="text-align: center;"><?php echo htmlspecialchars($fine['book_id']); ?></td>
-                                <td style="text-align: left;"><?php echo htmlspecialchars($fine['book_title']); ?></td>
-                                <td style="text-align: center;"><?php echo date('d/m/Y', strtotime($fine['due_date'])); ?></td>
-                                <td style="text-align: center;"><?php echo $fine['days_overdue']; ?></td>
-                                <td class="fine-amount" style="text-align: center;">PHP <?php echo number_format($fine['fine_amount'], 2); ?></td>
-                                <td style="text-align: center;">
-                                    <span class="status-badge <?php echo $fine['status'] === 'pending' ? 'status-pending' : 'status-paid'; ?>">
-                                        <?php echo ucfirst($fine['status']); ?>
-                                    </span>
-                                </td
-                                <td style="text-align: center;">
-                                    <?php if ($fine['status'] === 'pending' && $fine['fine_amount'] > 0): ?>
-                                        <form method="POST" style="display: inline;">
-                                            <input type="hidden" name="student_id" value="<?php echo htmlspecialchars($selected_student_id); ?>">
-                                            <input type="hidden" name="book_id" value="<?php echo htmlspecialchars($fine['book_id']); ?>">
-                                            <input type="hidden" name="amount" value="<?php echo $fine['fine_amount']; ?>">
-                                            <button type="submit" name="pay_fine" class="btn-fines btn-fines-success" style="padding: 5px 12px; font-size: 11px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                                                Pay
-                                            </button>
-                                        </form>
-                                    <?php else: ?>
-                                        <span style="color: #28a745;">✓</span>
-                                    <?php endif; ?>
-                                </td
-                             </tr
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-
-                <?php if ($pending_fines > 0): ?>
-                <div class="total-summary-fines">
-                    <span><strong>Total Pending Fine (Unpaid)</strong></span>
-                    <span style="font-size: 18px; font-weight: 700; color: #dc3545;">PHP <?php echo number_format($pending_fines, 2); ?></span>
-                    <form method="POST">
-                        <input type="hidden" name="student_id" value="<?php echo htmlspecialchars($selected_student_id); ?>">
-                        <input type="hidden" name="total_amount" value="<?php echo $pending_fines; ?>">
-                        <button type="submit" name="pay_all" style="background: #dc3545; color: white; padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 10px;">
-                            Pay All
-                        </button>
+        <!-- Fines table -->
+        <div class="table-fines-wrapper">
+          <table class="table-fines">
+            <thead>
+              <tr>
+                <th>Book ID</th>
+                <th>Book Title</th>
+                <th>Due Date</th>
+                <th>Days Overdue</th>
+                <th>Fine Amount</th>
+                <th>Method</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($student_data['fines'] as $fine):
+                if ($status_filter === 'pending'           && $fine['status'] !== 'pending')           continue;
+                if ($status_filter === 'payment_requested' && $fine['status'] !== 'payment_requested') continue;
+                if ($status_filter === 'paid'              && $fine['status'] !== 'paid')              continue;
+              ?>
+              <tr>
+                <td><?= htmlspecialchars($fine['book_id']) ?></td>
+                <td><?= htmlspecialchars($fine['book_title']) ?></td>
+                <td><?= date('M j, Y', strtotime($fine['due_date'])) ?></td>
+                <td><?= $fine['days_overdue'] > 0 ? $fine['days_overdue'] . ' day' . ($fine['days_overdue'] !== 1 ? 's' : '') : '—' ?></td>
+                <td class="fine-amount">₱<?= number_format($fine['fine_amount'], 2) ?></td>
+                <td style="font-size:11px;">
+                  <?php if ($fine['payment_method']): ?>
+                    <span class="payment-method-chip"><?= htmlspecialchars($fine['payment_method']) ?></span>
+                  <?php else: ?>
+                    <span style="color:#bbb;">—</span>
+                  <?php endif; ?>
+                </td>
+                <td>
+                  <?php
+                    $badgeClass = match($fine['status']) {
+                      'pending'           => 'status-pending',
+                      'payment_requested' => 'status-requested',
+                      'paid'              => 'status-paid',
+                      default             => ''
+                    };
+                    $badgeLabel = match($fine['status']) {
+                      'pending'           => 'Pending',
+                      'payment_requested' => 'For Approval',
+                      'paid'              => 'Paid',
+                      default             => ucfirst($fine['status'])
+                    };
+                  ?>
+                  <span class="status-badge <?= $badgeClass ?>"><?= $badgeLabel ?></span>
+                </td>
+                <td>
+                  <?php if ($fine['status'] === 'payment_requested'): ?>
+                    <!-- Approve / Reject for student-submitted payment -->
+                    <div style="display:flex;gap:5px;justify-content:center;">
+                      <form method="POST" style="display:inline;">
+                        <input type="hidden" name="student_id" value="<?= htmlspecialchars($selected_student_id) ?>">
+                        <input type="hidden" name="fine_id"    value="<?= (int)$fine['fine_id'] ?>">
+                        <input type="hidden" name="book_id"    value="<?= htmlspecialchars($fine['book_id']) ?>">
+                        <input type="hidden" name="book_title" value="<?= htmlspecialchars($fine['book_title']) ?>">
+                        <input type="hidden" name="amount"     value="<?= $fine['fine_amount'] ?>">
+                        <input type="hidden" name="status_filter" value="<?= htmlspecialchars($status_filter) ?>">
+                        <button type="submit" name="approve_payment" class="btn-approve">Approve</button>
+                      </form>
+                      <form method="POST" style="display:inline;">
+                        <input type="hidden" name="student_id" value="<?= htmlspecialchars($selected_student_id) ?>">
+                        <input type="hidden" name="fine_id"    value="<?= (int)$fine['fine_id'] ?>">
+                        <input type="hidden" name="book_id"    value="<?= htmlspecialchars($fine['book_id']) ?>">
+                        <input type="hidden" name="book_title" value="<?= htmlspecialchars($fine['book_title']) ?>">
+                        <input type="hidden" name="status_filter" value="<?= htmlspecialchars($status_filter) ?>">
+                        <button type="submit" name="reject_payment" class="btn-reject">Reject</button>
+                      </form>
+                    </div>
+                  <?php elseif ($fine['status'] === 'pending' && $fine['fine_amount'] > 0): ?>
+                    <!-- Admin manually marks as paid -->
+                    <form method="POST" style="display:inline;">
+                      <input type="hidden" name="student_id"    value="<?= htmlspecialchars($selected_student_id) ?>">
+                      <input type="hidden" name="fine_id"       value="<?= (int)$fine['fine_id'] ?>">
+                      <input type="hidden" name="book_id"       value="<?= htmlspecialchars($fine['book_id']) ?>">
+                      <input type="hidden" name="book_title"    value="<?= htmlspecialchars($fine['book_title']) ?>">
+                      <input type="hidden" name="amount"        value="<?= $fine['fine_amount'] ?>">
+                      <input type="hidden" name="status_filter" value="<?= htmlspecialchars($status_filter) ?>">
+                      <button type="submit" name="pay_fine" class="btn-fines btn-fines-success">Pay</button>
                     </form>
-                </div>
-                <?php endif; ?>
+                  <?php else: ?>
+                    <span class="btn-fines-paid-check">✓</span>
+                  <?php endif; ?>
+                </td>
+              </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
 
-            <?php elseif ($selected_student_id && !$student_data): ?>
-                <div class="no-data-fines">
-                    No student found with ID: <?php echo htmlspecialchars($selected_student_id); ?>
-                    <p style="margin-top: 8px; font-size: 11px;">Try: 101, 102, 103, or 104</p>
-                </div>
-            <?php else: ?>
-                <div class="no-data-fines">
-                    Enter a Student ID above to view outstanding fines
-                    <p style="margin-top: 8px; font-size: 11px;">Example: 101, 102, 103, 104</p>
-                </div>
-            <?php endif; ?>
+        <!-- Pay-all summary bar (only for pending fines) -->
+        <?php if ($pending_fines > 0): ?>
+        <div class="total-summary-fines">
+          <span class="summary-label">Total Pending Fine (Unpaid)</span>
+          <span class="summary-amount">₱<?= number_format($pending_fines, 2) ?></span>
+          <form method="POST">
+            <input type="hidden" name="student_id"    value="<?= htmlspecialchars($selected_student_id) ?>">
+            <input type="hidden" name="total_amount"  value="<?= $pending_fines ?>">
+            <input type="hidden" name="status_filter" value="<?= htmlspecialchars($status_filter) ?>">
+            <button type="submit" name="pay_all" class="btn-pay-all">Pay All</button>
+          </form>
+        </div>
+        <?php endif; ?>
 
+      <?php elseif ($search_query && !empty($search_matches)): ?>
+
+        <!-- ── Filtered results ─────────────────────────────────── -->
+        <div class="section-fines-title">
+          <span>
+            Results for <em style="color:#c89b3c;">"<?= htmlspecialchars($search_query) ?>"</em>
+            — <?= count($search_matches) ?> student<?= count($search_matches) !== 1 ? 's' : '' ?> found
+          </span>
+        </div>
+
+        <div class="table-fines-wrapper">
+          <table class="table-fines">
+            <thead>
+              <tr>
+                <th>Student ID</th>
+                <th>Student Name</th>
+                <th>Course</th>
+                <th>Year</th>
+                <th>Pending Fines</th>
+                <th>Awaiting</th>
+                <th>Paid Fines</th>
+                <th>Overdue Books</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($search_matches as $sid):
+                $sdata = $fines_data[$sid];
+                $s_pending = 0; $s_requested = 0; $s_paid = 0; $s_overdue = 0;
+                foreach ($sdata['fines'] as $fine) {
+                  if ($fine['status'] === 'pending')           { $s_pending   += $fine['fine_amount']; if ($fine['days_overdue'] > 0) $s_overdue++; }
+                  elseif ($fine['status'] === 'payment_requested') { $s_requested += $fine['fine_amount']; }
+                  else                                          { $s_paid      += $fine['fine_amount']; }
+                }
+                if ($status_filter === 'pending'           && $s_pending    == 0) continue;
+                if ($status_filter === 'payment_requested' && $s_requested  == 0) continue;
+                if ($status_filter === 'paid'              && $s_paid       == 0) continue;
+              ?>
+              <tr>
+                <td><code style="font-size:11px;background:#f3f4f6;padding:2px 6px;border-radius:4px;"><?= htmlspecialchars($sid) ?></code></td>
+                <td style="text-align:left;padding-left:14px;">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div class="student-fines-avatar" style="width:28px;height:28px;font-size:11px;flex:0 0 28px;">
+                      <?= strtoupper(substr($sdata['student_name'], 0, 1)) ?>
+                    </div>
+                    <span style="font-weight:600;font-size:12px;"><?= htmlspecialchars($sdata['student_name']) ?></span>
+                  </div>
+                </td>
+                <td style="text-align:left;padding-left:14px;font-size:11px;color:#6b7a99;"><?= htmlspecialchars($sdata['course']) ?></td>
+                <td><?= htmlspecialchars($sdata['year_level']) ?></td>
+                <td class="fine-amount"><?= $s_pending > 0 ? '₱' . number_format($s_pending, 2) : '<span style="color:#28a745;font-weight:600;">—</span>' ?></td>
+                <td><?= $s_requested > 0 ? '<span style="color:#b45309;font-weight:700;font-size:12px;">₱' . number_format($s_requested, 2) . '</span>' : '—' ?></td>
+                <td style="color:#28a745;font-weight:700;font-size:12px;"><?= $s_paid > 0 ? '₱' . number_format($s_paid, 2) : '—' ?></td>
+                <td>
+                  <?php if ($s_overdue > 0): ?>
+                    <span class="status-badge status-pending"><?= $s_overdue ?> book<?= $s_overdue !== 1 ? 's' : '' ?></span>
+                  <?php else: ?>
+                    <span class="status-badge status-paid">None</span>
+                  <?php endif; ?>
+                </td>
+                <td>
+                  <a href="?status_filter=<?= urlencode($status_filter) ?>&student_id=<?= urlencode($sid) ?>"
+                     class="btn-fines btn-fines-success" style="text-decoration:none;padding:5px 10px;">
+                    View
+                  </a>
+                </td>
+              </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+
+      <?php elseif ($search_query && !$student_data): ?>
+        <div class="no-data-fines">
+          No student found matching <strong>"<?= htmlspecialchars($search_query) ?>"</strong>
+          <p>Try a name (e.g. <strong>Emma</strong>), partial name (e.g. <strong>Wat</strong>), or a Student ID (e.g. <strong>101</strong>)</p>
+        </div>
+
+      <?php else: ?>
+
+        <!-- ── All-students fines overview ─────────────────────── -->
+        <div class="section-fines-title">
+          <span>All Students with Fines</span>
+        </div>
+
+        <div class="table-fines-wrapper">
+          <table class="table-fines">
+            <thead>
+              <tr>
+                <th>Student ID</th>
+                <th>Student Name</th>
+                <th>Course</th>
+                <th>Year</th>
+                <th>Pending Fines</th>
+                <th>Awaiting</th>
+                <th>Paid Fines</th>
+                <th>Overdue Books</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($fines_data as $sid => $sdata):
+                $s_pending = 0; $s_requested = 0; $s_paid = 0; $s_overdue = 0;
+                foreach ($sdata['fines'] as $fine) {
+                  if ($fine['status'] === 'pending')                { $s_pending   += $fine['fine_amount']; if ($fine['days_overdue'] > 0) $s_overdue++; }
+                  elseif ($fine['status'] === 'payment_requested')  { $s_requested += $fine['fine_amount']; }
+                  else                                              { $s_paid      += $fine['fine_amount']; }
+                }
+                if ($status_filter === 'pending'           && $s_pending   == 0) continue;
+                if ($status_filter === 'payment_requested' && $s_requested == 0) continue;
+                if ($status_filter === 'paid'              && $s_paid      == 0) continue;
+              ?>
+              <tr>
+                <td><code style="font-size:11px;background:#f3f4f6;padding:2px 6px;border-radius:4px;"><?= htmlspecialchars($sid) ?></code></td>
+                <td style="text-align:left;padding-left:14px;">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div class="student-fines-avatar" style="width:28px;height:28px;font-size:11px;flex:0 0 28px;">
+                      <?= strtoupper(substr($sdata['student_name'], 0, 1)) ?>
+                    </div>
+                    <span style="font-weight:600;font-size:12px;"><?= htmlspecialchars($sdata['student_name']) ?></span>
+                  </div>
+                </td>
+                <td style="text-align:left;padding-left:14px;font-size:11px;color:#6b7a99;"><?= htmlspecialchars($sdata['course']) ?></td>
+                <td><?= htmlspecialchars($sdata['year_level']) ?></td>
+                <td class="fine-amount"><?= $s_pending > 0 ? '₱' . number_format($s_pending, 2) : '<span style="color:#28a745;font-weight:600;">—</span>' ?></td>
+                <td><?= $s_requested > 0 ? '<span class="awaiting-amount">₱' . number_format($s_requested, 2) . '</span>' : '—' ?></td>
+                <td style="color:#28a745;font-weight:700;font-size:12px;"><?= $s_paid > 0 ? '₱' . number_format($s_paid, 2) : '—' ?></td>
+                <td>
+                  <?php if ($s_overdue > 0): ?>
+                    <span class="status-badge status-pending"><?= $s_overdue ?> book<?= $s_overdue !== 1 ? 's' : '' ?></span>
+                  <?php else: ?>
+                    <span class="status-badge status-paid">None</span>
+                  <?php endif; ?>
+                </td>
+                <td>
+                  <a href="?status_filter=<?= urlencode($status_filter) ?>&student_id=<?= urlencode($sid) ?>"
+                     class="btn-fines btn-fines-success" style="text-decoration:none;padding:5px 10px;">
+                    View
+                  </a>
+                </td>
+              </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
         </div>
 
       <?php endif; ?>

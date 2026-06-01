@@ -90,76 +90,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['login_type'] ?? '') === 'a
 }
 
 // ── Handle Registration ───────────────────────────────────────
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['login_type'] ?? '') === 'register') {
-    $active_tab = 'register';
+// TODO: uncomment when DB is ready
+// if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['login_type'] ?? '') === 'register') {
+//     $db   = new Database();
+//     $user = new User($db->getConnection());
+//     $data = [
+//         'first_name'     => trim($_POST['first_name']),
+//         'last_name'      => trim($_POST['last_name']),
+//         'middle_name'    => trim($_POST['middle_name'] ?? ''),
+//         'dob'            => $_POST['dob'],
+//         'gender'         => $_POST['gender'],
+//         'student_number' => trim($_POST['student_number']),
+//         'course'         => $_POST['course'],
+//         'year_level'     => $_POST['year_level'],
+//         'email'          => strtolower(trim($_POST['email'])),
+//         'phone'          => trim($_POST['phone'] ?? ''),
+//         'password'       => password_hash($_POST['password'], PASSWORD_DEFAULT),
+//     ];
+//     if ($user->register($data)) {
+//         $reg_success = true;
+//     } else {
+//         $reg_error = 'Registration failed. Student number or email may already be in use.';
+//     }
+// }
 
-    // ── Server-side terms check (can't be bypassed by disabling JS) ──
-    if (empty($_POST['terms'])) {
-        $reg_error = 'You must agree to the Terms of Service to register.';
-    } else {
-        // ── Server-side field validation ──────────────────────────────
-        $first_name     = trim($_POST['first_name']     ?? '');
-        $last_name      = trim($_POST['last_name']      ?? '');
-        $dob            = trim($_POST['dob']             ?? '');
-        $gender         = trim($_POST['gender']          ?? '');
-        $student_number = trim($_POST['student_number']  ?? '');
-        $course         = trim($_POST['course']          ?? '');
-        $year_level     = trim($_POST['year_level']      ?? '');
-        $email          = strtolower(trim($_POST['email'] ?? ''));
-        $password       = $_POST['password']             ?? '';
-        $confirm_pw     = $_POST['confirm_password']     ?? '';
-
-        if (empty($first_name)) {
-            $reg_error = 'First name is required.';
-        } elseif (empty($last_name)) {
-            $reg_error = 'Last name is required.';
-        } elseif (empty($dob)) {
-            $reg_error = 'Date of birth is required.';
-        } elseif (empty($gender)) {
-            $reg_error = 'Please select your gender.';
-        } elseif (!preg_match('/^\d{3,12}$/', $student_number)) {
-            $reg_error = 'Student number must be digits only (3–12 digits).';
-        } elseif (empty($course)) {
-            $reg_error = 'Please select your course.';
-        } elseif (empty($year_level)) {
-            $reg_error = 'Please select your year level.';
-        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $reg_error = 'Enter a valid email address.';
-        } elseif (strlen($password) < 8) {
-            $reg_error = 'Password must be at least 8 characters.';
-        } elseif ($password !== $confirm_pw) {
-            $reg_error = 'Passwords do not match.';
-        } else {
-            $db   = new Database();
-            $conn = $db->getConnection();
-
-            if (!$conn) {
-                $reg_error = 'Database connection failed. Please contact the administrator.';
-            } else {
-                $user = new User($conn);
-                $data = [
-                    'first_name'     => $first_name,
-                    'last_name'      => $last_name,
-                    'middle_name'    => trim($_POST['middle_name'] ?? ''),
-                    'dob'            => $dob,
-                    'gender'         => $gender,
-                    'student_number' => $student_number,
-                    'course'         => $course,
-                    'year_level'     => $year_level,
-                    'email'          => $email,
-                    'phone'          => trim($_POST['phone'] ?? ''),
-                    'password'       => password_hash($password, PASSWORD_DEFAULT),
-                ];
-
-                if ($user->register($data)) {
-                    $reg_success = true;
-                } else {
-                    $reg_error = 'Registration failed. Student number or email may already be in use.';
-                }
-            }
-        }
-    }
-}
+// Safe defaults so PHP doesn't throw undefined-variable notices
+$login_error = $login_error ?? null;
+$admin_error = $admin_error ?? null;
+$reg_success = $reg_success ?? false;
+$reg_error   = $reg_error   ?? null;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -1000,7 +959,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['login_type'] ?? '') === 'r
               <label>Date of Birth <span>*</span></label>
               <div class="input-wrap">
                 <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
-                <input type="date" id="rdob" name="dob" style="padding-left:42px;" value="<?= old_val('dob') ?>" />
+                <input type="date" id="rdob" name="dob" style="padding-left:42px;" />
               </div>
               <div class="field-err">Required.</div>
             </div>
@@ -1044,15 +1003,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['login_type'] ?? '') === 'r
                 <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></span>
                 <select id="rcourse" name="course">
                   <option value="">Select…</option>
-                  <option <?= old_selected('course','BS Computer Science') ?>>BS Computer Science</option>
-                  <option <?= old_selected('course','BS Information Technology') ?>>BS Information Technology</option>
-                  <option <?= old_selected('course','BS Education') ?>>BS Education</option>
-                  <option <?= old_selected('course','BS Nursing') ?>>BS Nursing</option>
-                  <option <?= old_selected('course','BS Engineering') ?>>BS Engineering</option>
-                  <option <?= old_selected('course','BS Business Administration') ?>>BS Business Administration</option>
-                  <option <?= old_selected('course','BS Accountancy') ?>>BS Accountancy</option>
-                  <option <?= old_selected('course','AB Communication') ?>>AB Communication</option>
-                  <option <?= old_selected('course','Other') ?>>Other</option>
+                  <option>BS Computer Science</option>
+                  <option>BS Information Technology</option>
+                  <option>BS Education</option>
+                  <option>BS Nursing</option>
+                  <option>BS Engineering</option>
+                  <option>BS Business Administration</option>
+                  <option>BS Accountancy</option>
+                  <option>AB Communication</option>
+                  <option>Other</option>
                 </select>
                 <span class="select-arrow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></span>
               </div>
@@ -1064,12 +1023,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['login_type'] ?? '') === 'r
                 <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></span>
                 <select id="ryear" name="year_level">
                   <option value="">Select…</option>
-                  <option <?= old_selected('year_level','1st Year') ?>>1st Year</option>
-                  <option <?= old_selected('year_level','2nd Year') ?>>2nd Year</option>
-                  <option <?= old_selected('year_level','3rd Year') ?>>3rd Year</option>
-                  <option <?= old_selected('year_level','4th Year') ?>>4th Year</option>
-                  <option <?= old_selected('year_level','5th Year') ?>>5th Year</option>
-                  <option <?= old_selected('year_level','Graduate') ?>>Graduate</option>
+                  <option>1st Year</option>
+                  <option>2nd Year</option>
+                  <option>3rd Year</option>
+                  <option>4th Year</option>
+                  <option>5th Year</option>
+                  <option>Graduate</option>
                 </select>
                 <span class="select-arrow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></span>
               </div>
@@ -1321,7 +1280,6 @@ document.getElementById('registerForm').addEventListener('submit', function(e){
   let ok = true;
   ok = validate('rfn',  !!get('rfn'), 'First name is required.') && ok;
   ok = validate('rln',  !!get('rln'), 'Last name is required.') && ok;
-  ok = validate('rdob', !!get('rdob'), 'Date of birth is required.') && ok;
   ok = validate('rgender', !!get('rgender'), 'Please select your gender.') && ok;
   ok = validate('rsno', /^\d{3,12}$/.test(get('rsno')), 'Student number must be digits only (3-12 digits).') && ok;
   ok = validate('rcourse', !!get('rcourse'), 'Please select your course.') && ok;
