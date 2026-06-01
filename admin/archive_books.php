@@ -1,9 +1,15 @@
 <?php
+// ============================================================
+// admin/archive_books.php — DB-powered (UI unchanged)
+// ============================================================
 session_start();
-require 'library_data.php';
+require_once __DIR__ . '/library_data.php';
+require_once __DIR__ . '/../classes/Book.php';
 
-if (!isset($_SESSION['archived_books'])) {
-  $_SESSION['archived_books'] = [];
+// Session guard
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
+    header('Location: ../login/login.php');
+    exit;
 }
 
 if (!function_exists('format_book_id')) {
@@ -12,38 +18,50 @@ if (!function_exists('format_book_id')) {
   }
 }
 
-$pending_count = count(array_filter($_SESSION['borrow_requests'], function ($req) {
-  return $req['status'] === 'pending';
-}));
+$pending_count = pending_request_count();
 
+$db   = new Database();
+$book = new Book($db->getConnection());
+
+$flash_msg = $_SESSION['archive_msg'] ?? '';
+$flash_err = $_SESSION['archive_err'] ?? '';
+unset($_SESSION['archive_msg'], $_SESSION['archive_err']);
+
+// ── Handle POST (Retrieve / Permanently Delete) ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $book_id = format_book_id($_POST['book_id'] ?? 0);
+  $book_id = (int)($_POST['book_id'] ?? 0);
+  $action  = $_POST['action']        ?? 'retrieve';
 
-  foreach ($_SESSION['archived_books'] as $index => $book) {
-    if (format_book_id($book['id']) === $book_id) {
-      $already_in_books = false;
-
-      foreach ($_SESSION['books'] as $existing_book) {
-        if (format_book_id($existing_book['id']) === $book_id) {
-          $already_in_books = true;
-          break;
-        }
+  if ($book_id) {
+    if ($action === 'delete_permanent') {
+      $result = $book->delete($book_id);
+      if ($result === true) {
+        $_SESSION['archive_msg'] = 'Book permanently deleted from the database.';
+      } else {
+        $_SESSION['archive_err'] = is_string($result) ? $result : 'Failed to delete book.';
       }
-
-      if (!$already_in_books) {
-        $_SESSION['books'][] = $book;
-      }
-
-      unset($_SESSION['archived_books'][$index]);
-      $_SESSION['archived_books'] = array_values($_SESSION['archived_books']);
-
+      header('Location: archive_books.php');
+      exit;
+    } else {
+      $book->restore($book_id);
       header('Location: view_books.php?retrieved=1');
       exit;
     }
   }
 }
 
-$archived_books = $_SESSION['archived_books'];
+// ── Load archived books from DB & map to UI shape ──
+$db_archived = $book->getArchived();
+$archived_books = [];
+foreach ($db_archived as $b) {
+  $archived_books[] = [
+    'id'     => (int)$b['id'],
+    'title'  => $b['title'],
+    'author' => $b['author'],
+    'genre'  => $b['category'],
+    'copies' => (int)$b['total_copies'],
+  ];
+}
 ?>
 
 <!DOCTYPE html>
@@ -108,6 +126,13 @@ $archived_books = $_SESSION['archived_books'];
       </div>
     </div>
 
+    <?php if ($flash_msg): ?>
+      <div class="alert alert-sage" style="margin-bottom:1rem;"><?= htmlspecialchars($flash_msg) ?></div>
+    <?php endif; ?>
+    <?php if ($flash_err): ?>
+      <div class="alert alert-rust" style="margin-bottom:1rem;"><?= htmlspecialchars($flash_err) ?></div>
+    <?php endif; ?>
+
     <div class="card">
 
       <div class="card-body">
@@ -157,17 +182,20 @@ $archived_books = $_SESSION['archived_books'];
                     <td><?= htmlspecialchars($book['copies']) ?></td>
 
                     <td>
-                      <form method="POST" action="archive_books.php">
-                        <input
-                          type="hidden"
-                          name="book_id"
-                          value="<?= htmlspecialchars($book['id']) ?>"
-                        >
+                      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <form method="POST" action="archive_books.php" style="margin:0;">
+                          <input type="hidden" name="book_id" value="<?= htmlspecialchars($book['id']) ?>">
+                          <input type="hidden" name="action"  value="retrieve">
+                          <button type="submit" class="btn-primary">Retrieve</button>
+                        </form>
 
-                        <button type="submit" class="btn-primary">
-                          Retrieve
-                        </button>
-                      </form>
+                        <form method="POST" action="archive_books.php" style="margin:0;"
+                          onsubmit="return confirm('Permanently delete this book from the database? This cannot be undone.');">
+                          <input type="hidden" name="book_id" value="<?= htmlspecialchars($book['id']) ?>">
+                          <input type="hidden" name="action"  value="delete_permanent">
+                          <button type="submit" class="btn-danger">Delete Forever</button>
+                        </form>
+                      </div>
                     </td>
                   </tr>
 

@@ -1,48 +1,60 @@
 <?php
 // ============================================================
-// dashboard.php — CvSU Library Student Dashboard
+// dashboard.php — CvSU Library Student Dashboard (DB-powered)
 // ============================================================
 session_start();
+require_once __DIR__ . '/../includes/student_auth.php';
+require_once __DIR__ . '/../classes/BorrowRecord.php';
+require_once __DIR__ . '/../classes/Fine.php';
+require_once __DIR__ . '/../classes/BookRequest.php';
 
-// Guard: redirect to login if not authenticated
+$borrow  = new BorrowRecord($conn);
+$fine    = new Fine($conn);
+$request = new BookRequest($conn);
 
-// ── Session values ────────────────────────────────────────────
-$student_name   = htmlspecialchars($_SESSION['student_name']   ?? 'Juan Dela Cruz');
-$first_name     = htmlspecialchars(explode(' ', trim($_SESSION['student_name'] ?? 'Juan Dela Cruz'))[0]);
-$active_borrows = (int)($_SESSION['active_borrows']  ?? 0);
-$has_fines      = (bool)($_SESSION['has_fines']       ?? false);
+$borrow->updateOverdueStatuses();
 
-// ── TODO: replace these with real DB queries ─────────────────
-// Example using PDO (requires $pdo from db_connect.php):
-//
-// require_once '../includes/db_connect.php';
-// $stmt = $pdo->prepare("SELECT
-//     COUNT(CASE WHEN status='active'   THEN 1 END) AS active,
-//     COUNT(CASE WHEN status='returned' THEN 1 END) AS returned,
-//     COUNT(CASE WHEN status='pending'  THEN 1 END) AS pending
-//   FROM borrows WHERE student_id = ?");
-// $stmt->execute([$_SESSION['student_id']]);
-// $counts = $stmt->fetch(PDO::FETCH_ASSOC);
-//
-// $fine_stmt = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM fines
-//   WHERE student_id=? AND status='unpaid'");
-// $fine_stmt->execute([$_SESSION['student_id']]);
-// $pending_fines = $fine_stmt->fetchColumn();
+// ── Session values ──
+$student_name   = htmlspecialchars($_SESSION['student_name']   ?? 'Student');
+$first_name     = htmlspecialchars(explode(' ', trim($_SESSION['student_name'] ?? 'Student'))[0]);
 
-// Placeholder values (remove once DB is connected):
-$counts        = ['active' => 2, 'returned' => 5, 'pending' => 1];
-$pending_fines = 20;
+// ── Stats from DB ──
+$history = $borrow->getByStudent($student_id);
+$active  = array_filter($history, fn($r) => in_array($r['status'], ['active','overdue','pending_return']));
+$returned = array_filter($history, fn($r) => $r['status'] === 'returned');
 
-// Currently borrowed books for the dashboard table
-// TODO: $stmt = $pdo->prepare("SELECT b.*, bk.title, bk.author FROM borrows b
-//   JOIN books bk ON b.book_id = bk.id WHERE b.student_id=? AND b.status='active' LIMIT 5");
-// $stmt->execute([$_SESSION['student_id']]);
-// $current_books = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$myFines       = $fine->getByStudent($student_id);
+$pending_fines = array_sum(array_map(
+    fn($f) => $f['paid_status'] === 'unpaid' ? (float)$f['amount'] : 0,
+    $myFines
+));
 
-$current_books = [
-    ['title' => 'The Great Gatsby',       'author' => 'F. Scott Fitzgerald', 'due_date' => '2026-05-25', 'overdue' => false],
-    ['title' => 'To Kill a Mockingbird',  'author' => 'Harper Lee',          'due_date' => '2026-05-18', 'overdue' => true],
+$myRequests   = $request->getByStudent($student_id);
+$pendingReqs  = array_filter($myRequests, fn($r) => $r['status'] === 'pending');
+
+$counts = [
+    'active'   => count($active),
+    'returned' => count($returned),
+    'pending'  => count($pendingReqs),
 ];
+
+$active_borrows = $counts['active'];
+$has_fines      = $pending_fines > 0;
+
+// Currently borrowed (active+overdue) for the table — limit 5
+$current_books_db = array_filter($history, fn($r) => in_array($r['status'], ['active','overdue']));
+$current_books_db = array_slice($current_books_db, 0, 5);
+
+// Map to the shape the UI expects: title, author, due_date, overdue
+$current_books = [];
+foreach ($current_books_db as $b) {
+    $current_books[] = [
+        'title'    => $b['book_title'],
+        'author'   => $b['author'],
+        'due_date' => $b['due_date'],
+        'overdue'  => $b['status'] === 'overdue',
+    ];
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">

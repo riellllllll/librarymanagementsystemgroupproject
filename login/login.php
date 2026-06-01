@@ -1,94 +1,161 @@
 <?php
 // ============================================================
-// login.php — CvSU Library Login & Registration
+// login/login.php — CvSU Library Login & Registration
 // ============================================================
 session_start();
 
-// ── Guard: redirect if already logged in ─────────────────────
-// TODO: uncomment once DB + OOP classes are connected
-// if (isset($_SESSION['user_id'])) {
-//     $redirect = ($_SESSION['role'] === 'admin')
-//         ? 'admin/dashboard.php'
-//         : 'student/dashboard.php';
-//     header('Location: ' . $redirect);
-//     exit;
-// }
+// ── Load OOP classes ─────────────────────────────────────────
+require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../classes/User.php';
 
-// ── TODO: Require OOP classes (create these files first) ─────
-// require_once 'includes/Database.php';   // class Database
-// require_once 'includes/User.php';       // class User
+// ── Guard: redirect if already logged in ─────────────────────
+if (isset($_SESSION['user_id'])) {
+    $redirect = ($_SESSION['role'] === 'admin')
+        ? '../admin/dashboard.php'
+        : '../student/dashboard.php';
+    header('Location: ' . $redirect);
+    exit;
+}
+
+// Safe defaults
+$login_error = null;
+$admin_error = null;
+$reg_success = false;
+$reg_error   = null;
+$active_tab  = 'student'; // which tab to show on page load
+
+// ── Helper: preserve form input values after failed submit ──
+function old_val(string $field): string {
+    return htmlspecialchars(trim($_POST[$field] ?? ''), ENT_QUOTES);
+}
+function old_selected(string $field, string $option): string {
+    return (trim($_POST[$field] ?? '') === $option) ? 'selected' : '';
+}
+function old_checked(string $field): string {
+    return !empty($_POST[$field]) ? 'checked' : '';
+}
 
 // ── Handle Student Login ──────────────────────────────────────
-// TODO: uncomment when DB is ready
-// if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['login_type'] ?? '') === 'student') {
-//     $db     = new Database();
-//     $user   = new User($db->getConnection());
-//     $result = $user->loginStudent(
-//         trim($_POST['student_number']),
-//         $_POST['password']
-//     );
-//     if ($result) {
-//         $_SESSION['user_id']        = $result['id'];
-//         $_SESSION['student_name']   = $result['full_name'];
-//         $_SESSION['student_id']     = $result['student_number'];
-//         $_SESSION['role']           = 'student';
-//         $_SESSION['active_borrows'] = (int)$result['active_borrows'];
-//         $_SESSION['has_fines']      = (bool)$result['has_fines'];
-//         header('Location: student/dashboard.php');
-//         exit;
-//     }
-//     $login_error = 'Invalid student number or password.';
-// }
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['login_type'] ?? '') === 'student') {
+    $active_tab = 'student';
+    $db         = new Database();
+    $conn       = $db->getConnection();
+
+    if (!$conn) {
+        $login_error = 'Database connection failed. Please contact the administrator.';
+    } else {
+        $user   = new User($conn);
+        $result = $user->loginStudent(
+            trim($_POST['student_number'] ?? ''),
+            $_POST['password'] ?? ''
+        );
+        if ($result) {
+            $_SESSION['user_id']        = $result['id'];
+            $_SESSION['student_name']   = $result['full_name'];
+            $_SESSION['student_id']     = $result['student_number'];
+            $_SESSION['role']           = 'student';
+            $_SESSION['active_borrows'] = (int)$result['active_borrows'];
+            $_SESSION['has_fines']      = (bool)$result['has_fines'];
+            header('Location: ../student/dashboard.php');
+            exit;
+        }
+        $login_error = 'Invalid student number or password.';
+    }
+}
 
 // ── Handle Admin Login ────────────────────────────────────────
-// TODO: uncomment when DB is ready
-// if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['login_type'] ?? '') === 'admin') {
-//     $db     = new Database();
-//     $user   = new User($db->getConnection());
-//     $result = $user->loginAdmin(
-//         trim($_POST['username']),
-//         $_POST['password']
-//     );
-//     if ($result) {
-//         $_SESSION['user_id']  = $result['id'];
-//         $_SESSION['username'] = $result['username'];
-//         $_SESSION['role']     = 'admin';
-//         header('Location: admin/dashboard.php');
-//         exit;
-//     }
-//     $admin_error = 'Invalid username or password.';
-// }
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['login_type'] ?? '') === 'admin') {
+    $active_tab = 'admin';
+    $db         = new Database();
+    $conn       = $db->getConnection();
+
+    if (!$conn) {
+        $admin_error = 'Database connection failed. Please contact the administrator.';
+    } else {
+        $user   = new User($conn);
+        $result = $user->loginAdmin(
+            trim($_POST['username'] ?? ''),
+            $_POST['password'] ?? ''
+        );
+        if ($result) {
+            $_SESSION['user_id']      = $result['id'];
+            $_SESSION['username']     = $result['username'];
+            $_SESSION['admin_name']   = $result['full_name'];
+            $_SESSION['role']         = 'admin';
+            header('Location: ../admin/dashboard.php');
+            exit;
+        }
+        $admin_error = 'Invalid username or password.';
+    }
+}
 
 // ── Handle Registration ───────────────────────────────────────
-// TODO: uncomment when DB is ready
-// if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['login_type'] ?? '') === 'register') {
-//     $db   = new Database();
-//     $user = new User($db->getConnection());
-//     $data = [
-//         'first_name'     => trim($_POST['first_name']),
-//         'last_name'      => trim($_POST['last_name']),
-//         'middle_name'    => trim($_POST['middle_name'] ?? ''),
-//         'dob'            => $_POST['dob'],
-//         'gender'         => $_POST['gender'],
-//         'student_number' => trim($_POST['student_number']),
-//         'course'         => $_POST['course'],
-//         'year_level'     => $_POST['year_level'],
-//         'email'          => strtolower(trim($_POST['email'])),
-//         'phone'          => trim($_POST['phone'] ?? ''),
-//         'password'       => password_hash($_POST['password'], PASSWORD_DEFAULT),
-//     ];
-//     if ($user->register($data)) {
-//         $reg_success = true;
-//     } else {
-//         $reg_error = 'Registration failed. Student number or email may already be in use.';
-//     }
-// }
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['login_type'] ?? '') === 'register') {
+    $active_tab = 'register';
 
-// Safe defaults so PHP doesn't throw undefined-variable notices
-$login_error = $login_error ?? null;
-$admin_error = $admin_error ?? null;
-$reg_success = $reg_success ?? false;
-$reg_error   = $reg_error   ?? null;
+    // ── Server-side terms check (can't be bypassed by disabling JS) ──
+    if (empty($_POST['terms'])) {
+        $reg_error = 'You must agree to the Terms of Service to register.';
+    } else {
+        // ── Server-side field validation ──────────────────────────────
+        $first_name     = trim($_POST['first_name']     ?? '');
+        $last_name      = trim($_POST['last_name']      ?? '');
+        $gender         = trim($_POST['gender']          ?? '');
+        $student_number = trim($_POST['student_number']  ?? '');
+        $course         = trim($_POST['course']          ?? '');
+        $year_level     = trim($_POST['year_level']      ?? '');
+        $email          = strtolower(trim($_POST['email'] ?? ''));
+        $password       = $_POST['password']             ?? '';
+        $confirm_pw     = $_POST['confirm_password']     ?? '';
+
+        if (empty($first_name)) {
+            $reg_error = 'First name is required.';
+        } elseif (empty($last_name)) {
+            $reg_error = 'Last name is required.';
+        } elseif (empty($gender)) {
+            $reg_error = 'Please select your gender.';
+        } elseif (!preg_match('/^\d{3,12}$/', $student_number)) {
+            $reg_error = 'Student number must be digits only (3–12 digits).';
+        } elseif (empty($course)) {
+            $reg_error = 'Please select your course.';
+        } elseif (empty($year_level)) {
+            $reg_error = 'Please select your year level.';
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $reg_error = 'Enter a valid email address.';
+        } elseif (strlen($password) < 8) {
+            $reg_error = 'Password must be at least 8 characters.';
+        } elseif ($password !== $confirm_pw) {
+            $reg_error = 'Passwords do not match.';
+        } else {
+            $db   = new Database();
+            $conn = $db->getConnection();
+
+            if (!$conn) {
+                $reg_error = 'Database connection failed. Please contact the administrator.';
+            } else {
+                $user = new User($conn);
+                $data = [
+                    'first_name'     => $first_name,
+                    'last_name'      => $last_name,
+                    'middle_name'    => trim($_POST['middle_name'] ?? ''),
+                    'gender'         => $gender,
+                    'student_number' => $student_number,
+                    'course'         => $course,
+                    'year_level'     => $year_level,
+                    'email'          => $email,
+                    'phone'          => trim($_POST['phone'] ?? ''),
+                    'password'       => password_hash($password, PASSWORD_DEFAULT),
+                ];
+
+                if ($user->register($data)) {
+                    $reg_success = true;
+                } else {
+                    $reg_error = 'Registration failed. Student number or email may already be in use.';
+                }
+            }
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -768,7 +835,7 @@ $reg_error   = $reg_error   ?? null;
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             </span>
             <input type="text" id="sno" name="student_number"
-              placeholder="e.g. 202410498"
+              placeholder="e.g. 101"
               autocomplete="username"
               inputmode="numeric"
               maxlength="12"
@@ -902,7 +969,7 @@ $reg_error   = $reg_error   ?? null;
               <label>First Name <span>*</span></label>
               <div class="input-wrap">
                 <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-                <input type="text" id="rfn" name="first_name" placeholder="Juan" />
+                <input type="text" id="rfn" name="first_name" placeholder="Juan" value="<?= old_val('first_name') ?>" />
               </div>
               <div class="field-err">Required.</div>
             </div>
@@ -910,7 +977,7 @@ $reg_error   = $reg_error   ?? null;
               <label>Last Name <span>*</span></label>
               <div class="input-wrap">
                 <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-                <input type="text" id="rln" name="last_name" placeholder="Dela Cruz" />
+                <input type="text" id="rln" name="last_name" placeholder="Dela Cruz" value="<?= old_val('last_name') ?>" />
               </div>
               <div class="field-err">Required.</div>
             </div>
@@ -920,28 +987,20 @@ $reg_error   = $reg_error   ?? null;
             <label>Middle Name</label>
             <div class="input-wrap">
               <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-              <input type="text" id="rmn" name="middle_name" placeholder="Santos (optional)" />
+              <input type="text" id="rmn" name="middle_name" placeholder="Santos (optional)" value="<?= old_val('middle_name') ?>" />
             </div>
           </div>
 
           <div class="field-grid">
-            <div class="field" id="f-rdob">
-              <label>Date of Birth <span>*</span></label>
-              <div class="input-wrap">
-                <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
-                <input type="date" id="rdob" name="dob" style="padding-left:42px;" />
-              </div>
-              <div class="field-err">Required.</div>
-            </div>
             <div class="field" id="f-rgender">
               <label>Gender <span>*</span></label>
               <div class="input-wrap">
                 <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M17 16h-2v2M7 16h2v2"/></svg></span>
                 <select id="rgender" name="gender">
                   <option value="">Select…</option>
-                  <option>Male</option>
-                  <option>Female</option>
-                  <option>Prefer not to say</option>
+                  <option <?= old_selected('gender','Male') ?>>Male</option>
+                  <option <?= old_selected('gender','Female') ?>>Female</option>
+                  <option <?= old_selected('gender','Prefer not to say') ?>>Prefer not to say</option>
                 </select>
                 <span class="select-arrow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></span>
               </div>
@@ -956,9 +1015,10 @@ $reg_error   = $reg_error   ?? null;
             <div class="input-wrap">
               <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></span>
               <input type="text" id="rsno" name="student_number"
-                placeholder="e.g. 202410498"
+                placeholder="e.g. 101"
                 inputmode="numeric"
                 maxlength="12"
+                value="<?= old_val('student_number') ?>"
                 oninput="this.value=this.value.replace(/\D/g,'')" />
             </div>
             <div class="field-hint">Numbers only — no dashes</div>
@@ -972,15 +1032,14 @@ $reg_error   = $reg_error   ?? null;
                 <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></span>
                 <select id="rcourse" name="course">
                   <option value="">Select…</option>
-                  <option>BS Computer Science</option>
-                  <option>BS Information Technology</option>
-                  <option>BS Education</option>
-                  <option>BS Nursing</option>
-                  <option>BS Engineering</option>
-                  <option>BS Business Administration</option>
-                  <option>BS Accountancy</option>
-                  <option>AB Communication</option>
-                  <option>Other</option>
+                  <option <?= old_selected('course','BS Computer Science') ?>>BS Computer Science</option>
+                  <option <?= old_selected('course','BS Information Technology') ?>>BS Information Technology</option>
+                  <option <?= old_selected('course','BS Education') ?>>BS Education</option>
+                  <option <?= old_selected('course','BS Nursing') ?>>BS Nursing</option>
+                  <option <?= old_selected('course','BS Engineering') ?>>BS Engineering</option>
+                  <option <?= old_selected('course','BS Business Administration') ?>>BS Business Administration</option>
+                  <option <?= old_selected('course','BS Accountancy') ?>>BS Accountancy</option>
+                  <option <?= old_selected('course','AB Communication') ?>>AB Communication</option>
                 </select>
                 <span class="select-arrow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></span>
               </div>
@@ -992,12 +1051,10 @@ $reg_error   = $reg_error   ?? null;
                 <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></span>
                 <select id="ryear" name="year_level">
                   <option value="">Select…</option>
-                  <option>1st Year</option>
-                  <option>2nd Year</option>
-                  <option>3rd Year</option>
-                  <option>4th Year</option>
-                  <option>5th Year</option>
-                  <option>Graduate</option>
+                  <option <?= old_selected('year_level','1st Year') ?>>1st Year</option>
+                  <option <?= old_selected('year_level','2nd Year') ?>>2nd Year</option>
+                  <option <?= old_selected('year_level','3rd Year') ?>>3rd Year</option>
+                  <option <?= old_selected('year_level','4th Year') ?>>4th Year</option>
                 </select>
                 <span class="select-arrow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></span>
               </div>
@@ -1011,7 +1068,7 @@ $reg_error   = $reg_error   ?? null;
             <label>Email Address <span>*</span></label>
             <div class="input-wrap">
               <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
-              <input type="email" id="remail" name="email" placeholder="juandelacruz@school.edu.ph" />
+              <input type="email" id="remail" name="email" placeholder="juandelacruz@school.edu.ph" value="<?= old_val('email') ?>" />
             </div>
             <div class="field-err">Enter a valid email address.</div>
           </div>
@@ -1020,7 +1077,7 @@ $reg_error   = $reg_error   ?? null;
             <label>Contact Number</label>
             <div class="input-wrap">
               <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 9.5a19.79 19.79 0 0 1-3-8.59A2 2 0 0 1 3.62 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
-              <input type="tel" id="rphone" name="phone" placeholder="09XX-XXX-XXXX" />
+              <input type="tel" id="rphone" name="phone" placeholder="09XX-XXX-XXXX" value="<?= old_val('phone') ?>" />
             </div>
           </div>
 
@@ -1064,7 +1121,7 @@ $reg_error   = $reg_error   ?? null;
 
           <div class="field">
             <div class="check-field">
-              <input type="checkbox" id="rterms" name="terms" value="1" />
+              <input type="checkbox" id="rterms" name="terms" value="1" <?= old_checked('terms') ?> />
               <label for="rterms">I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a> of the Library Management System.</label>
             </div>
           </div>
@@ -1167,43 +1224,27 @@ function validate(fieldId, condition, errMsg){
 }
 
 // ── Student login ──
-// NOTE: e.preventDefault() keeps this frontend-only for now.
-// When your DB + OOP classes are ready, REMOVE the e.preventDefault()
-// line and the setTimeout block — the form will POST to PHP naturally.
 document.getElementById('studentForm').addEventListener('submit', function(e){
-  e.preventDefault(); // ← REMOVE THIS when DB is ready
   const sno = document.getElementById('sno').value.trim();
   const spw = document.getElementById('spw').value;
   let ok = true;
   ok = validate('sno', !!sno, 'Please enter your student number.') && ok;
   ok = validate('spw', !!spw, 'Password cannot be empty.') && ok;
-  if(!ok) return;
+  if(!ok){ e.preventDefault(); return; }
   const btn = this.querySelector('.btn-submit');
   btn.classList.add('loading');
-  // ↓ REMOVE this setTimeout block when DB is ready
-  setTimeout(()=>{
-    btn.classList.remove('loading');
-    showToast('Sign-in successful! Redirecting…','success');
-    // TODO: actual redirect will be handled by PHP header()
-  }, 1600);
 });
 
 // ── Admin login ──
 document.getElementById('adminForm').addEventListener('submit', function(e){
-  e.preventDefault(); // ← REMOVE THIS when DB is ready
   const aun = document.getElementById('aun').value.trim();
   const apw = document.getElementById('apw').value;
   let ok = true;
   ok = validate('aun', !!aun, 'Please enter your username.') && ok;
   ok = validate('apw', !!apw, 'Password cannot be empty.') && ok;
-  if(!ok) return;
+  if(!ok){ e.preventDefault(); return; }
   const btn = this.querySelector('.btn-submit');
   btn.classList.add('loading');
-  // ↓ REMOVE this setTimeout block when DB is ready
-  setTimeout(()=>{
-    btn.classList.remove('loading');
-    showToast('Admin access granted. Welcome!','success');
-  }, 1600);
 });
 
 // ── Forgot Password Modal ──
@@ -1242,7 +1283,7 @@ function submitForgot(){
     sentTo = val;
   } else {
     const val = document.getElementById('fpsno').value.trim();
-    ok = validate('fpsno', /^\d{6,12}$/.test(val), 'Please enter a valid student number.');
+    ok = validate('fpsno', /^\d{3,12}$/.test(val), 'Please enter a valid student number.');
     sentTo = val;
   }
   if(!ok) return;
@@ -1261,14 +1302,12 @@ document.getElementById('forgotModal').addEventListener('click', function(e){
 
 // ── Register ──
 document.getElementById('registerForm').addEventListener('submit', function(e){
-  e.preventDefault(); // ← REMOVE THIS when DB is ready
   const get = id => document.getElementById(id).value.trim();
   let ok = true;
   ok = validate('rfn',  !!get('rfn'), 'First name is required.') && ok;
   ok = validate('rln',  !!get('rln'), 'Last name is required.') && ok;
-  ok = validate('rdob', !!get('rdob'), 'Date of birth is required.') && ok;
   ok = validate('rgender', !!get('rgender'), 'Please select your gender.') && ok;
-  ok = validate('rsno', /^\d{6,12}$/.test(get('rsno')), 'Student number must be digits only (6–12 digits).') && ok;
+  ok = validate('rsno', /^\d{3,12}$/.test(get('rsno')), 'Student number must be digits only (3-12 digits).') && ok;
   ok = validate('rcourse', !!get('rcourse'), 'Please select your course.') && ok;
   ok = validate('ryear',   !!get('ryear'), 'Please select your year level.') && ok;
   ok = validate('remail',  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(get('remail')), 'Enter a valid email address.') && ok;
@@ -1280,15 +1319,9 @@ document.getElementById('registerForm').addEventListener('submit', function(e){
     showToast('Please agree to the Terms of Service.','error');
     ok = false;
   }
-  if(!ok) return;
+  if(!ok){ e.preventDefault(); return; }
   const btn = this.querySelector('.btn-submit');
   btn.classList.add('loading');
-  // ↓ REMOVE this setTimeout block when DB is ready
-  setTimeout(()=>{
-    btn.classList.remove('loading');
-    document.getElementById('regForm').style.display = 'none';
-    document.getElementById('regSuccess').classList.add('show');
-  }, 1800);
 });
 </script>
 
@@ -1325,7 +1358,7 @@ document.getElementById('registerForm').addEventListener('submit', function(e){
             <label>Student Number <span>*</span></label>
             <div class="input-wrap">
               <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></span>
-              <input type="text" id="fpsno" placeholder="e.g. 202410498" inputmode="numeric" maxlength="12" oninput="this.value=this.value.replace(/\D/g,'')" />
+              <input type="text" id="fpsno" placeholder="e.g. 101" inputmode="numeric" maxlength="12" oninput="this.value=this.value.replace(/\D/g,'')" />
             </div>
             <div class="field-err">Please enter your student number.</div>
           </div>
@@ -1353,6 +1386,14 @@ document.getElementById('registerForm').addEventListener('submit', function(e){
     </div>
   </div>
 </div>
+
+<?php if ($active_tab !== 'student'): ?>
+<script>
+  document.addEventListener('DOMContentLoaded', function(){
+    switchTab('<?= $active_tab ?>');
+  });
+</script>
+<?php endif; ?>
 
 </body>
 </html>

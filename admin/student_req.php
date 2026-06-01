@@ -1,5 +1,20 @@
 <?php
-require 'library_data.php';
+// ============================================================
+// admin/student_req.php — DB-powered (UI unchanged)
+// ============================================================
+session_start();
+require_once __DIR__ . '/library_data.php';
+require_once __DIR__ . '/../classes/BookRequest.php';
+
+// Session guard
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
+    header('Location: ../login/login.php');
+    exit;
+}
+
+$db     = new Database();
+$conn   = $db->getConnection();
+$reqObj = new BookRequest($conn);
 
 if (!function_exists('format_book_id')) {
   function format_book_id($id) {
@@ -10,61 +25,53 @@ if (!function_exists('format_book_id')) {
 if (!function_exists('format_student_number')) {
   function format_student_number($id) {
     $number = preg_replace('/\D/', '', (string)$id);
-
-    if ($number === '') {
-      return '';
-    }
-
-    $last_three = substr($number, -3);
-
-    return str_pad($last_three, 3, '0', STR_PAD_LEFT);
+    if ($number === '') return '';
+    return $number;  // show full student number, not just last 3 digits
   }
 }
 
+// ── Handle Approve / Reject ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $request_id = (int)($_POST['request_id'] ?? 0);
-  $action = $_POST['action'] ?? '';
+  $action     = $_POST['action'] ?? '';
 
-  foreach ($_SESSION['borrow_requests'] as $index => $request) {
-    if ((int)($request['id'] ?? 0) === $request_id && ($request['status'] ?? '') === 'pending') {
-      $book_id = format_book_id($request['book_id'] ?? 0);
-      $book_index = find_book_index($book_id);
-
-      if ($action === 'approve') {
-        if ($book_index !== null && (int)($_SESSION['books'][$book_index]['available'] ?? 0) > 0) {
-          $_SESSION['books'][$book_index]['available']--;
-
-          $_SESSION['borrow_requests'][$index]['status'] = 'approved';
-          $_SESSION['borrow_requests'][$index]['approved_at'] = date('M d, Y');
-
-          $_SESSION['borrowed_books'][] = [
-            'id' => uniqid('BRW-'),
-            'request_id' => $request['id'] ?? $request_id,
-            'student' => $request['student'] ?? $request['student_name'] ?? 'Unknown Student',
-            'student_id' => format_student_number($request['student_id'] ?? $request['id_number'] ?? ''),
-            'book_id' => $book_id,
-            'book_title' => $request['book_title'] ?? $request['book'] ?? $request['title'] ?? 'Unknown Book',
-            'issue_date' => date('Y-m-d'),
-            'due_date' => date('Y-m-d', strtotime('+7 days')),
-            'return_date' => '',
-            'date' => date('M d, Y'),
-            'status' => 'borrowed'
-          ];
-        }
-      } elseif ($action === 'reject') {
-        $_SESSION['borrow_requests'][$index]['status'] = 'rejected';
-      }
-
-      break;
-    }
+  if ($action === 'approve') {
+    $reqObj->approve($request_id, (int)$_SESSION['user_id']);
+  } elseif ($action === 'reject') {
+    $reqObj->reject($request_id, (int)$_SESSION['user_id']);
   }
 
   header('Location: student_req.php?updated=1');
   exit;
 }
 
+// ── Load requests from DB & map to UI shape ──
+$db_requests = $reqObj->getAll();
+$requests    = [];
+foreach ($db_requests as $r) {
+  $requests[] = [
+    'id'           => (int)$r['id'],
+    'student'      => $r['student_name'],
+    'student_id'   => $r['student_number'],
+    'book_id'      => (int)$r['book_id'],
+    'book_title'   => $r['book_title'],
+    'date'         => date('M d, Y', strtotime($r['request_date'])),
+    'request_date' => $r['request_date'],
+    'status'       => $r['status'],
+    // Dates the student picked for borrow + return
+    'student_borrow_date' => $r['requested_borrow_date'] ?? null,
+    'student_due_date'    => $r['requested_due_date']    ?? null,
+    // Stash availability so the UI can show it without calling find_book_index
+    '_available'   => (int)$r['copies_available'],
+  ];
+}
+
+// Stub for find_book_index — not used since we pass _available directly
+if (!function_exists('find_book_index')) {
+    function find_book_index($id) { return null; }
+}
+
 $pending_count = pending_request_count();
-$requests = $_SESSION['borrow_requests'];
 ?>
 
 <!DOCTYPE html>
@@ -141,7 +148,7 @@ $requests = $_SESSION['borrow_requests'];
       <div class="card-body">
 
         <div class="card-title">Borrow Requests</div>
-        <p class="card-subtitle">Review student requests and approve available books.</p>
+        <p class="card-subtitle">Review student requests and approve available books</p>
 
         <div class="table-wrap">
 
@@ -151,7 +158,8 @@ $requests = $_SESSION['borrow_requests'];
               <tr>
                 <th>Student</th>
                 <th>Book</th>
-                <th>Date</th>
+                <th>Requested On</th>
+                <th>Borrow Period</th>
                 <th>Status</th>
                 <th>Action</th>
               </tr>
@@ -162,10 +170,10 @@ $requests = $_SESSION['borrow_requests'];
               <?php if (empty($requests)): ?>
 
                 <tr>
-                  <td colspan="5">
+                  <td colspan="6">
                     <div class="empty-state">
                       <h3>No borrow requests yet</h3>
-                      <p>Student borrow requests will appear here.</p>
+                      <p>Student borrow requests will appear here</p>
                     </div>
                   </td>
                 </tr>
@@ -183,7 +191,7 @@ $requests = $_SESSION['borrow_requests'];
                     $book_title = $request['book_title'] ?? $request['book'] ?? $request['title'] ?? 'Unknown Book';
                     $request_date = $request['date'] ?? $request['request_date'] ?? $request['borrow_date'] ?? '';
                     $status = $request['status'] ?? 'pending';
-                    $available = $book_index !== null ? (int)($_SESSION['books'][$book_index]['available'] ?? 0) : 0;
+                    $available = $request['_available'] ?? 0;
                   ?>
 
                   <tr>
@@ -208,6 +216,26 @@ $requests = $_SESSION['borrow_requests'];
                     </td>
 
                     <td><?= htmlspecialchars($request_date) ?></td>
+
+                    <td>
+                      <?php
+                        $sb = $request['student_borrow_date'] ?? null;
+                        $sd = $request['student_due_date']    ?? null;
+                      ?>
+                      <?php if ($sb && $sd): ?>
+                        <span style="white-space:nowrap;font-size:0.82rem;">
+                          <?= date('M j, Y', strtotime($sb)) ?>
+                          &nbsp;→&nbsp;
+                          <strong style="color:var(--gold);"><?= date('M j, Y', strtotime($sd)) ?></strong>
+                        </span>
+                        <br>
+                        <small class="text-muted">
+                          <?= max(1, (int)((strtotime($sd) - strtotime($sb)) / 86400)) ?> day(s)
+                        </small>
+                      <?php else: ?>
+                        <small class="text-muted">Not specified</small>
+                      <?php endif; ?>
+                    </td>
 
                     <td>
                       <?php if ($status === 'pending'): ?>
@@ -252,7 +280,7 @@ $requests = $_SESSION['borrow_requests'];
                         </form>
 
                         <?php if ($available <= 0): ?>
-                          <small class="text-muted">No available copies.</small>
+                          <small class="text-muted">No available copies</small>
                         <?php endif; ?>
 
                       <?php else: ?>

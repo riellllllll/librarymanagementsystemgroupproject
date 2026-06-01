@@ -1,55 +1,49 @@
 <?php
 // ============================================================
-// borrow_history.php — CvSU Library Borrow History
+// borrow_history.php — CvSU Library Borrow History (DB-powered)
 // ============================================================
 session_start();
+require_once __DIR__ . '/../includes/student_auth.php';
+require_once __DIR__ . '/../classes/BorrowRecord.php';
 
+$borrow = new BorrowRecord($conn);
+$borrow->updateOverdueStatuses();
 
 $has_fines = (bool)($_SESSION['has_fines'] ?? false);
 
-// ── TODO: Replace with real DB query ─────────────────────────
-// require_once '../includes/db_connect.php';
-// $stmt = $pdo->prepare("
-//   SELECT b.id, b.borrow_date, b.due_date, b.return_date, b.status,
-//          bk.title, bk.author,
-//          f.amount   AS fine_amount,
-//          f.status   AS fine_status
-//   FROM borrows b
-//   JOIN books bk ON b.book_id = bk.id
-//   LEFT JOIN fines f ON f.borrow_id = b.id
-//   WHERE b.student_id = ?
-//   ORDER BY b.borrow_date DESC
-// ");
-// $stmt->execute([$_SESSION['student_id']]);
-// $history = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// ── Load from DB & map to UI shape ──
+$db_rows = $borrow->getByStudent($student_id);
+$history = [];
+foreach ($db_rows as $r) {
+    $history[] = [
+        'id'          => (int)$r['id'],
+        'title'       => $r['book_title'],
+        'author'      => $r['author'],
+        'borrow_date' => $r['borrow_date'],
+        'due_date'    => $r['due_date'],
+        'return_date' => $r['return_date'],
+        // UI uses: 'active' | 'overdue' | 'returned'
+        'status'      => in_array($r['status'], ['pending_return']) ? 'active' : $r['status'],
+        'fine_amount' => !empty($r['fine_amount']) ? (float)$r['fine_amount'] : null,
+        'fine_status' => $r['paid_status'] ?? null,
+    ];
+}
 
-// Placeholder data (remove when DB connected):
-$history = [
-    ['id'=>1,'title'=>'The Great Gatsby',      'author'=>'F. Scott Fitzgerald','borrow_date'=>'2026-05-01','due_date'=>'2026-05-25','return_date'=>null,        'status'=>'active',  'fine_amount'=>null, 'fine_status'=>null],
-    ['id'=>2,'title'=>'To Kill a Mockingbird', 'author'=>'Harper Lee',         'borrow_date'=>'2026-05-04','due_date'=>'2026-05-18','return_date'=>null,        'status'=>'overdue', 'fine_amount'=>null, 'fine_status'=>null],
-    ['id'=>3,'title'=>'1984',                  'author'=>'George Orwell',      'borrow_date'=>'2026-04-20','due_date'=>'2026-05-04','return_date'=>'2026-05-02','status'=>'returned','fine_amount'=>null, 'fine_status'=>null],
-    ['id'=>4,'title'=>'Brave New World',       'author'=>'Aldous Huxley',      'borrow_date'=>'2026-04-01','due_date'=>'2026-04-15','return_date'=>'2026-04-22','status'=>'overdue', 'fine_amount'=>20,   'fine_status'=>'unpaid'],
-    ['id'=>5,'title'=>'The Alchemist',         'author'=>'Paulo Coelho',       'borrow_date'=>'2026-03-14','due_date'=>'2026-03-28','return_date'=>'2026-03-28','status'=>'returned','fine_amount'=>null, 'fine_status'=>null],
-    ['id'=>6,'title'=>'Of Mice and Men',       'author'=>'John Steinbeck',     'borrow_date'=>'2026-03-02','due_date'=>'2026-03-16','return_date'=>'2026-03-16','status'=>'returned','fine_amount'=>null, 'fine_status'=>null],
-    ['id'=>7,'title'=>'Animal Farm',           'author'=>'George Orwell',      'borrow_date'=>'2026-02-10','due_date'=>'2026-02-24','return_date'=>'2026-02-24','status'=>'returned','fine_amount'=>10,   'fine_status'=>'paid'],
-];
-
-// ── Compute summary stats via PHP ─────────────────────────────
+// ── Compute summary stats ──
 $total_count    = count($history);
 $returned_count = count(array_filter($history, fn($e) => $e['status'] === 'returned'));
 $active_count   = count(array_filter($history, fn($e) => $e['status'] === 'active'));
 $overdue_count  = count(array_filter($history, fn($e) => $e['status'] === 'overdue'));
 $fined_count    = count(array_filter($history, fn($e) => !empty($e['fine_amount'])));
 
-// ── Group entries by month (from borrow_date) ─────────────────
+// ── Group by month ──
 $grouped = [];
 foreach ($history as $entry) {
-    // Group by the month of the borrow date
     $month_key = date('F Y', strtotime($entry['borrow_date']));
     $grouped[$month_key][] = $entry;
 }
 
-// ── Helper: days late for a returned overdue entry ────────────
+// ── Helper ──
 function days_late(string $due, ?string $returned): int {
     if (!$returned) return 0;
     $diff = (new DateTime($returned))->diff(new DateTime($due));

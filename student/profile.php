@@ -1,45 +1,47 @@
 <?php
 // ============================================================
-// profile.php — CvSU Library My Profile
+// profile.php — CvSU Library My Profile (DB-powered)
 // ============================================================
 session_start();
+require_once __DIR__ . '/../includes/student_auth.php';
+require_once __DIR__ . '/../classes/User.php';
+require_once __DIR__ . '/../classes/BorrowRecord.php';
+require_once __DIR__ . '/../classes/Fine.php';
 
-// ── Flash messages (set after redirect) ──────────────────────
+$usr        = new User($conn);
+$borrowObj  = new BorrowRecord($conn);
+$fineObj    = new Fine($conn);
+
+// ── Flash messages ──
 $success_msg = $_SESSION['flash_success'] ?? '';
 $error_msg   = $_SESSION['flash_error']   ?? '';
 unset($_SESSION['flash_success'], $_SESSION['flash_error']);
 
-// ── Handle form submissions ───────────────────────────────────
+// ── Handle form submissions ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
-    // ── Update Profile Info ───────────────────────────────────
     if ($action === 'update_profile') {
-        $phone  = trim($_POST['phone']  ?? '');
-        $course = trim($_POST['course'] ?? '');
-        $year   = trim($_POST['year']   ?? '');
+        $phone = trim($_POST['phone'] ?? '');
 
-        // Basic validation
         if ($phone && !preg_match('/^\+?[\d\s\-]{7,15}$/', $phone)) {
             $_SESSION['flash_error'] = 'Please enter a valid contact number.';
         } else {
-            // TODO: Save to database
-            // require_once '../includes/db_connect.php';
-            // $stmt = $pdo->prepare("UPDATE students SET phone=?, course=?, year_level=? WHERE id=?");
-            // $stmt->execute([$phone, $course, $year, $_SESSION['student_id']]);
-
-            // Update session so changes reflect immediately
-            $_SESSION['student_phone']  = $phone;
-            $_SESSION['student_course'] = $course;
-            $_SESSION['student_year']   = $year;
-            $_SESSION['flash_success']  = 'Profile updated successfully!';
+            // Load current row so we don't blank locked fields (course, year_level, email)
+            $cur = $usr->getStudentById($student_id);
+            $ok = $usr->updateProfile($student_id, [
+                'email'      => $cur['email']      ?? '',
+                'phone'      => $phone,
+                'course'     => $cur['course']     ?? '',
+                'year_level' => $cur['year_level'] ?? '',
+            ]);
+            $_SESSION[$ok ? 'flash_success' : 'flash_error'] =
+                $ok ? 'Profile updated successfully!' : 'Failed to update profile.';
         }
-
         header('Location: profile.php');
         exit;
     }
 
-    // ── Change Password ───────────────────────────────────────
     if ($action === 'change_password') {
         $current = $_POST['current_pw'] ?? '';
         $new_pw  = $_POST['new_pw']     ?? '';
@@ -52,58 +54,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (strlen($new_pw) < 8) {
             $_SESSION['flash_error'] = 'Password must be at least 8 characters.';
         } else {
-            // TODO: Verify current password and save new one
-            // require_once '../includes/db_connect.php';
-            // $stmt = $pdo->prepare("SELECT password_hash FROM students WHERE id=?");
-            // $stmt->execute([$_SESSION['student_id']]);
-            // $stored_hash = $stmt->fetchColumn();
-            //
-            // if (!password_verify($current, $stored_hash)) {
-            //     $_SESSION['flash_error'] = 'Current password is incorrect.';
-            // } else {
-            //     $new_hash = password_hash($new_pw, PASSWORD_DEFAULT);
-            //     $upd = $pdo->prepare("UPDATE students SET password_hash=? WHERE id=?");
-            //     $upd->execute([$new_hash, $_SESSION['student_id']]);
-            //     $_SESSION['flash_success'] = 'Password updated successfully!';
-            // }
-
-            // Placeholder (remove when DB connected):
-            $_SESSION['flash_success'] = 'Password updated successfully!';
+            $result = $usr->changePassword($student_id, $current, $new_pw);
+            $_SESSION[$result === true ? 'flash_success' : 'flash_error'] =
+                $result === true ? 'Password updated successfully!'
+                                 : (is_string($result) ? $result : 'Failed to update password.');
         }
-
         header('Location: profile.php');
         exit;
     }
 }
 
-// ── Load student data from session ───────────────────────────
-// Fallback to session / placeholder values:
+// ── Load student data from DB ──
+$me = $usr->getStudentById($student_id);
+
 $student = [
-    'id'          => $_SESSION['student_id']      ?? '2022-01234',
-    'email'       => $_SESSION['student_email']   ?? 'juan.delacruz@cvsu.edu.ph',
-    'phone'       => $_SESSION['student_phone']   ?? '+63 912 345 6789',
-    'course'      => $_SESSION['student_course']  ?? 'BS Computer Science',
-    'year'        => $_SESSION['student_year']    ?? '3rd Year',
-    'department'  => 'College of Engineering and Information Technology',
-    'lib_card'    => 'LIB-22-001234',
-    'status'      => 'Active',
-    'member_since'=> '2022-01-15',
+    'id'           => $me['student_number'] ?? '',
+    'email'        => $me['email']          ?? '',
+    'phone'        => $me['phone']          ?? '',
+    'course'       => $me['course']         ?? '',
+    'year'         => $me['year_level']     ?? '',
+    'department'   => 'College of Engineering and Information Technology',
+    'lib_card'     => 'LIB-' . str_pad((string)$student_id, 6, '0', STR_PAD_LEFT),
+    'status'       => ucfirst($me['status'] ?? 'Active'),
+    'member_since' => !empty($me['created_at']) ? date('Y-m-d', strtotime($me['created_at'])) : '',
 ];
 
-// Build distinct name parts to match your mock UI exactly
-$first_name  = $_SESSION['student_first_name']  ?? 'Juan';
-$middle_name = $_SESSION['student_middle_name'] ?? 'Gomez'; 
-$last_name   = $_SESSION['student_last_name']   ?? 'Dela Cruz';
+// Name parts
+$first_name  = $me['first_name']  ?? '';
+$middle_name = $me['middle_name'] ?? '';
+$last_name   = $me['last_name']   ?? '';
+if ($first_name === '' && $last_name === '' && !empty($me['full_name'])) {
+    $parts = explode(' ', trim($me['full_name']));
+    $first_name = $parts[0] ?? '';
+    $last_name  = $parts[count($parts) - 1] ?? '';
+}
 
-$initials = strtoupper(substr($first_name, 0, 1)) . strtoupper(substr($last_name, 0, 1));
-$full_name = "$first_name $middle_name $last_name";
+$initials  = strtoupper(substr($first_name, 0, 1)) . strtoupper(substr($last_name, 0, 1));
+$full_name = trim("$first_name $middle_name $last_name");
 
-// ── Library stats for the profile strip ──────────────────────
+// ── Library stats from DB ──
+$history = $borrowObj->getByStudent($student_id);
+$active_loans   = count(array_filter($history, fn($r) => in_array($r['status'], ['active','overdue','pending_return'])));
+$returned_count = count(array_filter($history, fn($r) => $r['status'] === 'returned'));
+$total_borrowed = count($history);
+
+$my_fines = $fineObj->getByStudent($student_id);
+$unpaid_total = array_sum(array_map(
+    fn($f) => $f['paid_status'] === 'unpaid' ? (float)$f['amount'] : 0,
+    $my_fines
+));
+
 $stats = [
-    'total_borrowed' => 7,
-    'returned'       => 5,
-    'active_loans'   => 2,
-    'unpaid_fines'   => 20,
+    'total_borrowed' => $total_borrowed,
+    'returned'       => $returned_count,
+    'active_loans'   => $active_loans,
+    'unpaid_fines'   => $unpaid_total,
 ];
 
 $has_fines = $stats['unpaid_fines'] > 0;
@@ -170,14 +175,8 @@ $has_fines = $stats['unpaid_fines'] > 0;
     <div class="profile-hero">
       <div class="profile-banner"></div>
       <div class="profile-hero-body">
-        <div class="profile-avatar-xl" title="Change photo">
+        <div class="profile-avatar-xl">
           <?= htmlspecialchars($initials) ?>
-          <div class="avatar-edit-overlay">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-              <circle cx="12" cy="13" r="4"/>
-            </svg>
-          </div>
         </div>
         <div class="profile-hero-info">
           <h2><?= htmlspecialchars($full_name) ?></h2>
@@ -189,10 +188,20 @@ $has_fines = $stats['unpaid_fines'] > 0;
               </svg>
               Student
             </span>
-            <span class="profile-chip chip-sage">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
+            <?php
+              $is_active = strcasecmp($student['status'], 'Active') === 0;
+              $chip_class = $is_active ? 'chip-sage' : 'chip-rust';
+            ?>
+            <span class="profile-chip <?= $chip_class ?>">
+              <?php if ($is_active): ?>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              <?php else: ?>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              <?php endif; ?>
               <?= htmlspecialchars($student['status']) ?>
             </span>
             <span class="profile-chip">
@@ -285,12 +294,6 @@ $has_fines = $stats['unpaid_fines'] > 0;
                   <div class="ic-label">Year Level</div>
                   <div class="ic-val"><?= htmlspecialchars($student['year']) ?></div>
                 </div>
-                <div class="info-cell right-col">
-                  </div>
-                <div class="info-cell full-width no-border">
-                  <div class="ic-label">Department / College</div>
-                  <div class="ic-val"><?= htmlspecialchars($student['department']) ?></div>
-                </div>
               </div>
             </div>
 
@@ -342,36 +345,26 @@ $has_fines = $stats['unpaid_fines'] > 0;
 
               <div class="field-grid">
                 <div class="field">
-                  <label>Course / Program</label>
+                  <label>Course / Program <small style="color:var(--muted);font-weight:400;">(locked)</small></label>
                   <div class="input-wrap">
-                    <span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></span>
-                    <select name="course" class="no-icon" style="padding-left:42px;">
-                      <?php
-                      $courses = ['BS Computer Science','BS Information Technology','BS Information Systems','Other'];
-                      foreach ($courses as $c):
-                      ?>
-                        <option <?= $c === $student['course'] ? 'selected' : '' ?>><?= htmlspecialchars($c) ?></option>
-                      <?php endforeach; ?>
-                    </select>
-                    <span class="select-arrow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></span>
+                    <span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                    <input type="text" class="no-icon" style="padding-left:42px;background:#f7f6f1;color:var(--muted);cursor:not-allowed;"
+                           value="<?= htmlspecialchars($student['course']) ?>" readonly disabled>
                   </div>
                 </div>
                 <div class="field">
-                  <label>Year Level</label>
+                  <label>Year Level <small style="color:var(--muted);font-weight:400;">(locked)</small></label>
                   <div class="input-wrap">
-                    <span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
-                    <select name="year" class="no-icon" style="padding-left:42px;">
-                      <?php
-                      $years = ['1st Year','2nd Year','3rd Year','4th Year','5th Year'];
-                      foreach ($years as $y):
-                      ?>
-                        <option <?= $y === $student['year'] ? 'selected' : '' ?>><?= htmlspecialchars($y) ?></option>
-                      <?php endforeach; ?>
-                    </select>
-                    <span class="select-arrow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></span>
+                    <span class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                    <input type="text" class="no-icon" style="padding-left:42px;background:#f7f6f1;color:var(--muted);cursor:not-allowed;"
+                           value="<?= htmlspecialchars($student['year']) ?>" readonly disabled>
                   </div>
                 </div>
               </div>
+
+              <p style="font-size:0.74rem;color:var(--muted);margin:-4px 0 8px;">
+                ⓘ Course and Year Level can only be changed by the library administrator.
+              </p>
 
               <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px;">
                 <button type="button" class="btn-outline" onclick="cancelEdit()">Cancel</button>
@@ -454,45 +447,17 @@ $has_fines = $stats['unpaid_fines'] > 0;
                 <div class="ic-val"><?= htmlspecialchars($student['id']) ?></div>
               </div>
               <div class="info-cell" style="padding:0;border:none;">
-                <div class="ic-label">Library Card No.</div>
-                <div class="ic-val" style="font-family:monospace;letter-spacing:0.08em;"><?= htmlspecialchars($student['lib_card']) ?></div>
-              </div>
-              <div class="info-cell" style="padding:0;border:none;">
                 <div class="ic-label">Account Status</div>
-                <div class="ic-val"><span class="badge badge-sage"><?= htmlspecialchars($student['status']) ?></span></div>
-              </div>
-              <div class="info-cell" style="padding:0;border:none;">
-                <div class="ic-label">Registered On</div>
-                <div class="ic-val"><?= date('F j, Y', strtotime($student['member_since'])) ?></div>
+                <div class="ic-val">
+                  <span class="badge <?= strcasecmp($student['status'], 'Active') === 0 ? 'badge-sage' : 'badge-rust' ?>">
+                    <?= htmlspecialchars($student['status']) ?>
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="card" style="margin-bottom:16px;">
-          <div class="card-body">
-            <div class="card-title">Quick Links</div>
-            <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
-              <a href="borrowed_books.php" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--input-bg);border:1px solid var(--border);text-decoration:none;color:var(--ink);font-size:0.83rem;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--gold)';this.style.background='#fdf8ee'" onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--input-bg)'">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-                View Borrowed Books
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:auto;opacity:0.4"><polyline points="9 18 15 12 9 6"/></svg>
-              </a>
-              <a href="view_fines.php" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--input-bg);border:1px solid var(--border);text-decoration:none;color:var(--ink);font-size:0.83rem;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--gold)';this.style.background='#fdf8ee'" onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--input-bg)'">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--rust)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                View Fines
-                <?php if ($stats['unpaid_fines'] > 0): ?>
-                  <span class="nav-badge" style="margin-left:auto;font-size:0.65rem;">₱<?= number_format($stats['unpaid_fines']) ?></span>
-                <?php endif; ?>
-              </a>
-              <a href="borrow_history.php" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--input-bg);border:1px solid var(--border);text-decoration:none;color:var(--ink);font-size:0.83rem;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--gold)';this.style.background='#fdf8ee'" onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--input-bg)'">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 0 .5-4"/></svg>
-                Borrow History
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:auto;opacity:0.4"><polyline points="9 18 15 12 9 6"/></svg>
-              </a>
-            </div>
-          </div>
-        </div>
 
         <div class="danger-zone">
           <h4>
