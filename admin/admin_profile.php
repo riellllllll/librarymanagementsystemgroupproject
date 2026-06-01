@@ -144,6 +144,34 @@ $admin = [
   <link rel="stylesheet" href="../assets/style.css">
   <link rel="stylesheet" href="../assets/adminStyle.css">
   <link rel="stylesheet" href="../assets/admin_profile.css">
+  <style>
+    /* Eye toggle button — scoped only to password fields so it doesn't touch other inputs */
+    .input-wrap:has(> input[type="password"]),
+    .input-wrap:has(> input[type="text"].pw-input) {
+      position: relative;
+    }
+    .pw-eye-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      padding: 4px;
+      cursor: pointer;
+      color: #8a8a8a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+    }
+    .pw-eye-btn:hover { color: #b88a3e; }
+    /* Padding only on password fields, not all inputs */
+    .input-wrap > input[type="password"],
+    .input-wrap > input[type="text"].pw-input {
+      padding-right: 38px !important;
+    }
+  </style>
 </head>
 
 <body>
@@ -288,16 +316,6 @@ $admin = [
                 </div>
 
                 <div class="info-cell">
-                  <div class="info-label">Contact Number</div>
-                  <div class="info-value"><?= htmlspecialchars($admin['contact']) ?></div>
-                </div>
-
-                <div class="info-cell">
-                  <div class="info-label">Department</div>
-                  <div class="info-value"><?= htmlspecialchars($admin['department']) ?></div>
-                </div>
-
-                <div class="info-cell">
                   <div class="info-label">Campus</div>
                   <div class="info-value"><?= htmlspecialchars($admin['campus']) ?></div>
                 </div>
@@ -410,6 +428,9 @@ $admin = [
                     id="currentPw"
                     placeholder="Enter current password"
                   >
+                  <button type="button" class="pw-eye-btn" onclick="togglePwField('currentPw', this)" aria-label="Show password">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
                 </div>
               </div>
 
@@ -424,6 +445,9 @@ $admin = [
                     placeholder="Enter new password"
                     oninput="checkStrength(this.value)"
                   >
+                  <button type="button" class="pw-eye-btn" onclick="togglePwField('newPw', this)" aria-label="Show password">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
                 </div>
 
                 <div class="password-strength">
@@ -443,6 +467,9 @@ $admin = [
                     id="confirmPw"
                     placeholder="Confirm new password"
                   >
+                  <button type="button" class="pw-eye-btn" onclick="togglePwField('confirmPw', this)" aria-label="Show password">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
                 </div>
               </div>
 
@@ -487,10 +514,39 @@ $admin = [
           </div>
         </section>
 
-        <section class="admin-assistance">
-          <h4>Account Assistance</h4>
-          <p>For admin credential or permission concerns, contact the system administrator.</p>
-          <a href="mailto:library@cvsu.edu.ph">Contact Support</a>
+        <section class="admin-assistance" style="background:#fef2f2;border:1px solid rgba(192,57,43,0.18);border-radius:12px;padding:18px 20px;">
+          <h4 style="font-size:0.92rem;font-weight:700;color:#7a2020;margin:0 0 6px;display:flex;align-items:center;gap:8px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            Account Assistance
+          </h4>
+          <p style="font-size:0.82rem;color:#6b6b6b;margin:0 0 12px;line-height:1.5;">
+            For admin credential or permission concerns, contact the system administrator.
+          </p>
+          <button id="contactSupportBtn" type="button" onclick="toggleAdminContactPanel()"
+                  style="background:#c0392b;color:#fff;font-size:0.78rem;padding:8px 16px;border-radius:8px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;border:none;font-weight:600;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+            </svg>
+            Contact Us
+          </button>
+
+          <!-- Contact Panel (hidden by default) -->
+          <div id="adminContactPanel" style="display:none;margin-top:12px;background:#fff;border:1px solid rgba(192,57,43,0.18);border-radius:10px;padding:14px 16px;">
+            <div style="font-size:0.63rem;letter-spacing:0.14em;text-transform:uppercase;color:#aab4cc;margin-bottom:6px;">System Administrator</div>
+            <a href="mailto:sysadmin@cvsu.edu.ph"
+               style="display:inline-flex !important;align-items:center;gap:8px;font-size:0.88rem;font-weight:600;color:#1a1a1a !important;background:transparent !important;text-decoration:none;word-break:break-all;padding:0 !important;border:none !important;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+              </svg>
+              sysadmin@cvsu.edu.ph
+            </a>
+            <div style="font-size:0.72rem;color:#888;margin-top:6px;line-height:1.5;">
+              Office hours: Mon–Fri, 8:00 AM – 5:00 PM
+            </div>
+          </div>
         </section>
       </aside>
 
@@ -592,6 +648,30 @@ $admin = [
   <?php elseif ($error_msg): ?>
     window.addEventListener('DOMContentLoaded', () => showToast(<?= json_encode($error_msg) ?>, 'error'));
   <?php endif; ?>
+
+  // ── Toggle password visibility ──
+  function togglePwField(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    if (input.type === 'password') {
+      input.type = 'text';
+      input.classList.add('pw-input');
+      btn.setAttribute('aria-label', 'Hide password');
+      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+    } else {
+      input.type = 'password';
+      input.classList.remove('pw-input');
+      btn.setAttribute('aria-label', 'Show password');
+      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+    }
+  }
+
+  // ── Toggle admin contact panel (slide open email info) ──
+  function toggleAdminContactPanel() {
+    const panel = document.getElementById('adminContactPanel');
+    if (!panel) return;
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  }
 </script>
 
 </body>
