@@ -15,9 +15,24 @@ if (!function_exists('format_student_number')) {
   }
 }
 
-require_once '../includes/books_dom.php';
-
-$all_books = load_books_from_xml();
+$default_books = [
+  ['id' => '01', 'title' => 'The Great Gatsby', 'author' => 'F. Scott Fitzgerald', 'genre' => 'Fiction', 'category' => 'Fiction', 'copies' => 3, 'available' => 2, 'color' => 'color-a'],
+  ['id' => '02', 'title' => 'To Kill a Mockingbird', 'author' => 'Harper Lee', 'genre' => 'Fiction', 'category' => 'Fiction', 'copies' => 4, 'available' => 1, 'color' => 'color-b'],
+  ['id' => '03', 'title' => 'A Brief History of Time', 'author' => 'Stephen Hawking', 'genre' => 'Science', 'category' => 'Science', 'copies' => 2, 'available' => 2, 'color' => 'color-c'],
+  ['id' => '04', 'title' => 'Sapiens', 'author' => 'Yuval Noah Harari', 'genre' => 'History', 'category' => 'History', 'copies' => 3, 'available' => 0, 'color' => 'color-d'],
+  ['id' => '05', 'title' => 'Clean Code', 'author' => 'Robert C. Martin', 'genre' => 'Technology', 'category' => 'Technology', 'copies' => 5, 'available' => 4, 'color' => 'color-e'],
+  ['id' => '06', 'title' => '1984', 'author' => 'George Orwell', 'genre' => 'Fiction', 'category' => 'Fiction', 'copies' => 3, 'available' => 2, 'color' => 'color-a'],
+  ['id' => '07', 'title' => 'The Selfish Gene', 'author' => 'Richard Dawkins', 'genre' => 'Science', 'category' => 'Science', 'copies' => 2, 'available' => 1, 'color' => 'color-b'],
+  ['id' => '08', 'title' => 'Calculus Made Easy', 'author' => 'Silvanus P. Thompson', 'genre' => 'Mathematics', 'category' => 'Mathematics', 'copies' => 4, 'available' => 3, 'color' => 'color-c'],
+  ['id' => '09', 'title' => 'Design Patterns', 'author' => 'GoF', 'genre' => 'Technology', 'category' => 'Technology', 'copies' => 3, 'available' => 3, 'color' => 'color-d'],
+  ['id' => '10', 'title' => 'Noli Me Tangere', 'author' => 'Jose Rizal', 'genre' => 'Literature', 'category' => 'Literature', 'copies' => 6, 'available' => 5, 'color' => 'color-e'],
+  ['id' => '11', 'title' => 'El Filibusterismo', 'author' => 'Jose Rizal', 'genre' => 'Literature', 'category' => 'Literature', 'copies' => 5, 'available' => 4, 'color' => 'color-a'],
+  ['id' => '12', 'title' => 'Guns, Germs, and Steel', 'author' => 'Jared Diamond', 'genre' => 'History', 'category' => 'History', 'copies' => 2, 'available' => 2, 'color' => 'color-b'],
+  ['id' => '13', 'title' => 'The Pragmatic Programmer', 'author' => 'Andrew Hunt', 'genre' => 'Technology', 'category' => 'Technology', 'copies' => 3, 'available' => 2, 'color' => 'color-c'],
+  ['id' => '14', 'title' => 'Pride and Prejudice', 'author' => 'Jane Austen', 'genre' => 'Literature', 'category' => 'Literature', 'copies' => 4, 'available' => 3, 'color' => 'color-d'],
+  ['id' => '15', 'title' => 'Cosmos', 'author' => 'Carl Sagan', 'genre' => 'Science', 'category' => 'Science', 'copies' => 3, 'available' => 1, 'color' => 'color-e'],
+  ['id' => '16', 'title' => 'The Art of War', 'author' => 'Sun Tzu', 'genre' => 'History', 'category' => 'History', 'copies' => 4, 'available' => 4, 'color' => 'color-a'],
+];
 
 $default_borrow_requests = [
   [
@@ -41,7 +56,7 @@ $default_borrow_requests = [
 ];
 
 if (!isset($_SESSION['books']) || !is_array($_SESSION['books'])) {
-  $_SESSION['books'] = is_array($all_books) ? $all_books : [];
+  $_SESSION['books'] = $default_books;
 }
 
 foreach ($_SESSION['books'] as $index => $book) {
@@ -86,22 +101,13 @@ if (!isset($_SESSION['return_requests']) || !is_array($_SESSION['return_requests
   $_SESSION['return_requests'] = [];
 }
 
-foreach ($_SESSION['borrowed_books'] as $index => $borrowed_book) {
-  if (isset($borrowed_book['book_id'])) {
-    $_SESSION['borrowed_books'][$index]['book_id'] = format_book_id($borrowed_book['book_id']);
-  }
-
-  if (($borrowed_book['student_id'] ?? '') === '2026-0001') {
-    $_SESSION['borrowed_books'][$index]['student_id'] = '101';
-  }
-
-  if (($borrowed_book['student_id'] ?? '') === '2026-0002') {
-    $_SESSION['borrowed_books'][$index]['student_id'] = '102';
-  }
-}
-
-if (!isset($_SESSION['pending_fines_total'])) {
-  $_SESSION['pending_fines_total'] = 20;
+/** Count of students with unpaid fines */
+function students_with_fines(): int
+{
+    $r = get_db()->query(
+        "SELECT COUNT(DISTINCT user_id) AS c FROM fines WHERE paid_status = 'unpaid'"
+    );
+    return (int)($r->fetch_assoc()['c'] ?? 0);
 }
 
 if (!function_exists('pending_request_count')) {

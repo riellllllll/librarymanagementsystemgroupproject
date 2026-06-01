@@ -1,21 +1,40 @@
 <?php
-$current_page = basename($_SERVER['PHP_SELF']);
-$request_badge = $pending_count ?? 0;
-$archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_books']) : 0;
+// ============================================================
+// admin/sideBar.php — Admin Sidebar (session + live DB badges)
+// ============================================================
+
+// Session guard — every admin page must have session_start() before including this
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
+    header('Location: ../login/login.php');
+    exit;
+}
+
+// library_data.php is already loaded by each parent page,
+// but load it here as a safety net
+if (!function_exists('pending_request_count')) {
+    require_once __DIR__ . '/library_data.php';
+}
+
+$current_page  = basename($_SERVER['PHP_SELF']);
+$request_badge = pending_request_count();
+$archive_badge = archived_book_count();
+
+// Admin display name from session
+$admin_initials = strtoupper(substr($_SESSION['admin_name'] ?? 'A', 0, 2));
+$admin_name     = htmlspecialchars($_SESSION['admin_name'] ?? 'Admin');
 ?>
 
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-logo">
     <div class="logo-icon">
       <svg viewBox="0 0 48 48" aria-hidden="true">
-        <rect x="6" y="8" width="8" height="32" rx="1.5" fill="#c9973a"/>
-        <rect x="16" y="10" width="6" height="30" rx="1.5" fill="#e8c26a"/>
-        <rect x="24" y="6" width="10" height="36" rx="1.5" fill="#c9973a"/>
-        <rect x="36" y="9" width="6" height="31" rx="1.5" fill="#a07830"/>
-        <rect x="5" y="38" width="38" height="2.5" rx="1.25" fill="#7a6030"/>
+        <rect x="6"  y="8"  width="8"  height="32" rx="1.5" fill="#c9973a"/>
+        <rect x="16" y="10" width="6"  height="30" rx="1.5" fill="#e8c26a"/>
+        <rect x="24" y="6"  width="10" height="36" rx="1.5" fill="#c9973a"/>
+        <rect x="36" y="9"  width="6"  height="31" rx="1.5" fill="#a07830"/>
+        <rect x="5"  y="38" width="38" height="2.5" rx="1.25" fill="#7a6030"/>
       </svg>
     </div>
-
     <div>
       <h2>Cv<em>SU</em></h2>
       <div class="sidebar-subtitle">Admin Panel</div>
@@ -52,7 +71,6 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
         <path d="M10 12h4"/>
       </svg>
       Archive Books
-
       <?php if ($archive_badge > 0): ?>
         <span class="nav-badge"><?= $archive_badge ?></span>
       <?php endif; ?>
@@ -66,7 +84,6 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
         <path d="M8 9h8M8 13h5"/>
       </svg>
       Student Requests
-
       <?php if ($request_badge > 0): ?>
         <span class="nav-badge"><?= $request_badge ?></span>
       <?php endif; ?>
@@ -80,13 +97,6 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
       Borrowed Books
     </a>
 
-    <a href="issue_book.php" class="nav-link <?= $current_page === 'issue_book.php' ? 'active' : '' ?>">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M12 5v14M5 12l7-7 7 7"/>
-      </svg>
-      Issue Book
-    </a>
-
     <a href="return_book.php" class="nav-link <?= $current_page === 'return_book.php' ? 'active' : '' ?>">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
         <path d="M9 14l-4-4 4-4"/>
@@ -97,20 +107,11 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
 
     <div class="nav-section-label">Students</div>
 
-    <a href="view_students.php" class="nav-link <?= $current_page === 'view_students.php' ? 'active' : '' ?>">
+    <a href="manage_students.php" class="nav-link <?= $current_page === 'manage_students.php' ? 'active' : '' ?>">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
         <circle cx="9" cy="7" r="4"/>
         <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-      </svg>
-      Students
-    </a>
-
-    <a href="manage_students.php" class="nav-link <?= $current_page === 'manage_students.php' ? 'active' : '' ?>">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06"/>
-        <path d="M4.27 7.11l.06.06A1.65 1.65 0 0 0 6.15 7.5"/>
       </svg>
       Manage Students
     </a>
@@ -135,14 +136,24 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
       </svg>
       My Profile
     </a>
+
+    <div class="nav-section-label">Data</div>
+
+    <a href="library_export.php" class="nav-link <?= $current_page === 'library_export.php' ? 'active' : '' ?>">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Export / Import XML
+    </a>
   </nav>
 
   <div class="sidebar-footer">
     <div class="sidebar-user">
-      <div class="user-avatar">AD</div>
-
+      <div class="user-avatar"><?= $admin_initials ?></div>
       <div class="user-info">
-        <div class="user-name">Admin</div>
+        <div class="user-name"><?= $admin_name ?></div>
         <div class="user-role">Administrator</div>
       </div>
     </div>
@@ -158,6 +169,7 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
   </div>
 </aside>
 
+<!-- Logout Confirmation Modal -->
 <input type="checkbox" id="logoutModalToggle" class="logout-modal-check">
 
 <div class="modal-backdrop logout-modal" role="dialog" aria-modal="true">
@@ -180,9 +192,7 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
         </svg>
       </div>
 
-      <div class="modal-title" style="font-size:1.15rem;">
-        Log Out?
-      </div>
+      <div class="modal-title" style="font-size:1.15rem;">Log Out?</div>
 
       <p class="modal-desc" style="margin-bottom:24px;">
         Are you sure you want to log out of the CvSU Library System?
@@ -193,7 +203,6 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
         <label for="logoutModalToggle" class="btn-outline" style="flex:1;">
           Stay
         </label>
-
         <a href="logout.php"
            class="btn-danger"
            style="flex:1;padding:10px 20px;border-radius:10px;font-size:0.85rem;justify-content:center;">

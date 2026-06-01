@@ -1,149 +1,92 @@
 <?php
-// borrowed_books.php - Admin Borrowed Books Management
+// ============================================================
+// admin/borrowed_books.php — DB-powered (UI unchanged)
+// ============================================================
 session_start();
-require 'library_data.php';
+require_once __DIR__ . '/library_data.php';
+require_once __DIR__ . '/../classes/BorrowRecord.php';
 
-if (!isset($_SESSION['archived_books'])) {
-  $_SESSION['archived_books'] = [];
+// Session guard
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
+    header('Location: ../login/login.php');
+    exit;
 }
 
-$pending_count = count(array_filter($_SESSION['borrow_requests'], function ($req) {
-  return $req['status'] === 'pending';
-}));
+$pending_count = pending_request_count();
 
-// Mock data for borrowed books with simplified IDs
-$borrowed_books_data = [
-    [
-        'id' => 1,
-        'book_id' => '01',
-        'book_title' => 'The Great Gatsby',
-        'student_id' => '101',
-        'student_name' => 'Emma Watson',
-        'student_class' => 'Grade 11-A',
-        'borrow_date' => '2026-05-01',
-        'due_date' => '2026-05-16',
-        'return_date' => null,
-        'status' => 'borrowed',
-        'fine' => 45.00
-    ],
-    [
-        'id' => 2,
-        'book_id' => '02',
-        'book_title' => 'Sapiens',
-        'student_id' => '101',
-        'student_name' => 'Emma Watson',
-        'student_class' => 'Grade 11-A',
-        'borrow_date' => '2026-05-10',
-        'due_date' => '2026-05-25',
-        'return_date' => null,
-        'status' => 'borrowed',
-        'fine' => 0.00
-    ],
-    [
-        'id' => 3,
-        'book_id' => '03',
-        'book_title' => 'Deep Work',
-        'student_id' => '102',
-        'student_name' => 'James Carter',
-        'student_class' => 'Grade 10-B',
-        'borrow_date' => '2026-04-18',
-        'due_date' => '2026-05-03',
-        'return_date' => null,
-        'status' => 'overdue',
-        'fine' => 110.00
-    ],
-    [
-        'id' => 4,
-        'book_id' => '04',
-        'book_title' => 'Atomic Habits',
-        'student_id' => '102',
-        'student_name' => 'James Carter',
-        'student_class' => 'Grade 10-B',
-        'borrow_date' => '2026-05-12',
-        'due_date' => '2026-05-27',
-        'return_date' => null,
-        'status' => 'borrowed',
-        'fine' => 0.00
-    ],
-    [
-        'id' => 5,
-        'book_id' => '05',
-        'book_title' => 'Dune',
-        'student_id' => '103',
-        'student_name' => 'Lina Zhang',
-        'student_class' => 'Grade 12-C',
-        'borrow_date' => '2026-03-01',
-        'due_date' => '2026-03-16',
-        'return_date' => null,
-        'status' => 'overdue',
-        'fine' => 350.00
-    ],
-    [
-        'id' => 6,
-        'book_id' => '06',
-        'book_title' => 'The Hobbit',
-        'student_id' => '104',
-        'student_name' => 'Oliver Chen',
-        'student_class' => 'Grade 9-D',
-        'borrow_date' => '2026-04-01',
-        'due_date' => '2026-04-16',
-        'return_date' => '2026-04-22',
-        'status' => 'returned',
-        'fine' => 30.00
-    ],
-    [
-        'id' => 7,
-        'book_id' => '07',
-        'book_title' => 'To Kill a Mockingbird',
-        'student_id' => '104',
-        'student_name' => 'Oliver Chen',
-        'student_class' => 'Grade 9-D',
-        'borrow_date' => '2026-05-12',
-        'due_date' => '2026-05-27',
-        'return_date' => null,
-        'status' => 'borrowed',
-        'fine' => 0.00
-    ]
-];
+$db     = new Database();
+$borrow = new BorrowRecord($db->getConnection());
+$borrow->updateOverdueStatuses();
+
+// Map DB → UI status
+function _map_status(string $db_status): string {
+    return match($db_status) {
+        'active'         => 'borrowed',
+        'overdue'        => 'overdue',
+        'pending_return' => 'borrowed',
+        'returned'       => 'returned',
+        default          => 'borrowed',
+    };
+}
+
+// ── Load all records from DB ──
+$db_rows = $borrow->getAll();
+
+// Build the same $borrowed_books_data shape the UI expects
+$borrowed_books_data = [];
+foreach ($db_rows as $r) {
+    $borrowed_books_data[] = [
+        'id'            => (int)$r['id'],
+        'book_id'       => str_pad((string)$r['book_id'], 2, '0', STR_PAD_LEFT),
+        'book_title'    => $r['book_title'],
+        'student_id'    => $r['student_number'],
+        'student_name'  => $r['student_name'],
+        'student_class' => $r['student_number'],  // no "class" column; show student number instead
+        'borrow_date'   => $r['borrow_date'],
+        'due_date'      => $r['due_date'],
+        'return_date'   => $r['return_date'],
+        'status'        => _map_status($r['status']),
+        'fine'          => 0.00,  // shown in view_fines, not here
+    ];
+}
 
 // Status filter options
 $status_options = [
-    'all' => 'All Books',
+    'all'      => 'All Books',
     'borrowed' => 'Borrowed',
-    'overdue' => 'Overdue',
+    'overdue'  => 'Overdue',
     'returned' => 'Returned'
 ];
 
 $selected_status = $_GET['status'] ?? 'all';
-$search_query = strtolower(trim($_GET['q'] ?? ''));
+$search_query    = strtolower(trim($_GET['q'] ?? ''));
 
-// Filter borrowed books
+// Filter
 $filtered = array_values(array_filter($borrowed_books_data, function ($book) use ($selected_status, $search_query) {
     $matches_status = $selected_status === 'all' || $book['status'] === $selected_status;
-    
+
     $book_text = strtolower(
         $book['book_id'] . ' ' .
         $book['book_title'] . ' ' .
         $book['student_name'] . ' ' .
         $book['student_id']
     );
-    
+
     $matches_search = $search_query === '' || strpos($book_text, $search_query) !== false;
-    
     return $matches_status && $matches_search;
 }));
 
 $total = count($filtered);
 $books = $filtered;
 
-// Calculate statistics
+// Stats from full set
 $total_borrowed = 0;
-$overdue_count = 0;
+$overdue_count  = 0;
 $returned_count = 0;
 
 foreach ($borrowed_books_data as $book) {
     if ($book['status'] !== 'returned') $total_borrowed++;
-    if ($book['status'] === 'overdue') $overdue_count++;
+    if ($book['status'] === 'overdue')  $overdue_count++;
     if ($book['status'] === 'returned') $returned_count++;
 }
 ?>

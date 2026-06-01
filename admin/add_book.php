@@ -1,10 +1,18 @@
 <?php
+// ============================================================
+// admin/add_book.php — DB-powered (UI unchanged)
+// ============================================================
 session_start();
-require 'library_data.php';
+require_once __DIR__ . '/library_data.php';
+require_once __DIR__ . '/../classes/Book.php';
 
-$pending_count = count(array_filter($_SESSION['borrow_requests'], function ($req) {
-  return $req['status'] === 'pending';
-}));
+// Session guard
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
+    header('Location: ../login/login.php');
+    exit;
+}
+
+$pending_count = pending_request_count();
 
 $genres = [
   'Fiction',
@@ -16,24 +24,23 @@ $genres = [
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  $next_id = 1;
+  $db   = new Database();
+  $book = new Book($db->getConnection());
 
-  foreach ($_SESSION['books'] as $book) {
-    $next_id = max($next_id, (int)$book['id'] + 1);
+  $result = $book->add([
+    'title'       => trim($_POST['title']  ?? ''),
+    'author'      => trim($_POST['author'] ?? ''),
+    'category'    => trim($_POST['genre']  ?? ''),
+    'copies'      => (int)($_POST['copies'] ?? 1),
+    'added_by'    => (int)$_SESSION['user_id'],
+  ]);
+
+  if ($result === true) {
+    header('Location: view_books.php?added=1');
+    exit;
   }
-
-  $_SESSION['books'][] = [
-    'id' => $next_id,
-    'title' => trim($_POST['title'] ?? ''),
-    'author' => trim($_POST['author'] ?? ''),
-    'genre' => trim($_POST['genre'] ?? ''),
-    'copies' => (int)($_POST['copies'] ?? 1),
-    'available' => (int)($_POST['copies'] ?? 1),
-    'color' => 'color-a'
-  ];
-
-  header('Location: view_books.php?added=1');
-  exit;
+  // If we get here, $result is an error string or false — fall through and show form again
+  $error = is_string($result) ? $result : 'Failed to add book.';
 }
 ?>
 
@@ -105,6 +112,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="card">
 
       <div class="card-body">
+
+        <?php if (!empty($error)): ?>
+          <div class="alert alert-rust" style="margin-bottom:16px;">
+            <?= htmlspecialchars($error) ?>
+          </div>
+        <?php endif; ?>
 
         <form method="POST">
 
