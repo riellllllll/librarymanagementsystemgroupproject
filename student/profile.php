@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // ── Load student data from session ───────────────────────────
 // Fallback to session / placeholder values:
 $student = [
-    'id'          => $_SESSION['student_id']      ?? '2022-01234',
+    'id'          => $_SESSION['student_id']      ?? '101',
     'email'       => $_SESSION['student_email']   ?? 'juan.delacruz@cvsu.edu.ph',
     'phone'       => $_SESSION['student_phone']   ?? '+63 912 345 6789',
     'course'      => $_SESSION['student_course']  ?? 'BS Computer Science',
@@ -624,4 +624,3 @@ $has_fines = $stats['unpaid_fines'] > 0;
   <?php endif; ?>
 </script>
 </body>
-</html>

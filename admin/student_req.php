@@ -1,13 +1,33 @@
 <?php
 require 'library_data.php';
 
+if (!function_exists('format_book_id')) {
+  function format_book_id($id) {
+    return str_pad((string)(int)$id, 2, '0', STR_PAD_LEFT);
+  }
+}
+
+if (!function_exists('format_student_number')) {
+  function format_student_number($id) {
+    $number = preg_replace('/\D/', '', (string)$id);
+
+    if ($number === '') {
+      return '';
+    }
+
+    $last_three = substr($number, -3);
+
+    return str_pad($last_three, 3, '0', STR_PAD_LEFT);
+  }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $request_id = (int)($_POST['request_id'] ?? 0);
   $action = $_POST['action'] ?? '';
 
   foreach ($_SESSION['borrow_requests'] as $index => $request) {
     if ((int)($request['id'] ?? 0) === $request_id && ($request['status'] ?? '') === 'pending') {
-      $book_id = (int)($request['book_id'] ?? 0);
+      $book_id = format_book_id($request['book_id'] ?? 0);
       $book_index = find_book_index($book_id);
 
       if ($action === 'approve') {
@@ -21,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'id' => uniqid('BRW-'),
             'request_id' => $request['id'] ?? $request_id,
             'student' => $request['student'] ?? $request['student_name'] ?? 'Unknown Student',
-            'student_id' => $request['student_id'] ?? $request['id_number'] ?? '',
+            'student_id' => format_student_number($request['student_id'] ?? $request['id_number'] ?? ''),
             'book_id' => $book_id,
             'book_title' => $request['book_title'] ?? $request['book'] ?? $request['title'] ?? 'Unknown Book',
             'issue_date' => date('Y-m-d'),
@@ -121,7 +141,7 @@ $requests = $_SESSION['borrow_requests'];
       <div class="card-body">
 
         <div class="card-title">Borrow Requests</div>
-        <p class="card-subtitle">Review student requests and approve available books.</p>
+        <p class="card-subtitle">Review student requests and approve available books</p>
 
         <div class="table-wrap">
 
@@ -145,7 +165,7 @@ $requests = $_SESSION['borrow_requests'];
                   <td colspan="5">
                     <div class="empty-state">
                       <h3>No borrow requests yet</h3>
-                      <p>Student borrow requests will appear here.</p>
+                      <p>Student borrow requests will appear here</p>
                     </div>
                   </td>
                 </tr>
@@ -157,8 +177,8 @@ $requests = $_SESSION['borrow_requests'];
                   <?php
                     $request_id = $request['id'] ?? 0;
                     $student_name = $request['student'] ?? $request['student_name'] ?? 'Unknown Student';
-                    $student_id = $request['student_id'] ?? $request['id_number'] ?? '';
-                    $book_id = (int)($request['book_id'] ?? 0);
+                    $student_id = format_student_number($request['student_id'] ?? $request['id_number'] ?? '');
+                    $book_id = format_book_id($request['book_id'] ?? 0);
                     $book_index = find_book_index($book_id);
                     $book_title = $request['book_title'] ?? $request['book'] ?? $request['title'] ?? 'Unknown Book';
                     $request_date = $request['date'] ?? $request['request_date'] ?? $request['borrow_date'] ?? '';
@@ -174,7 +194,7 @@ $requests = $_SESSION['borrow_requests'];
                       <?php if ($student_id !== ''): ?>
                         <br>
                         <small class="text-muted">
-                          <?= htmlspecialchars($student_id) ?>
+                          Student No: <?= htmlspecialchars($student_id) ?>
                         </small>
                       <?php endif; ?>
                     </td>
@@ -232,7 +252,7 @@ $requests = $_SESSION['borrow_requests'];
                         </form>
 
                         <?php if ($available <= 0): ?>
-                          <small class="text-muted">No available copies.</small>
+                          <small class="text-muted">No available copies</small>
                         <?php endif; ?>
 
                       <?php else: ?>

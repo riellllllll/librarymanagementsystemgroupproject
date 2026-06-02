@@ -3,9 +3,134 @@ require 'library_data.php';
 
 $message = '';
 $error = '';
+$fine_per_day = 5;
 
 if (!isset($_SESSION['borrowed_books']) || !is_array($_SESSION['borrowed_books'])) {
   $_SESSION['borrowed_books'] = [];
+}
+
+function has_pending_return_requests() {
+  foreach ($_SESSION['return_requests'] as $request) {
+    if (($request['status'] ?? '') === 'pending') {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function demo_requests_already_added() {
+  foreach ($_SESSION['return_requests'] as $request) {
+    if (str_starts_with($request['id'] ?? '', 'RET-DEMO-')) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function add_demo_return_request($request) {
+  $has_borrow = false;
+  $has_request = false;
+
+  foreach ($_SESSION['borrowed_books'] as $index => $book) {
+    if (($book['id'] ?? '') === $request['borrow_id']) {
+      $has_borrow = true;
+      $_SESSION['borrowed_books'][$index]['student'] = $request['student'];
+      $_SESSION['borrowed_books'][$index]['student_id'] = $request['student_id'];
+      $_SESSION['borrowed_books'][$index]['book_id'] = $request['book_id'];
+      $_SESSION['borrowed_books'][$index]['book_title'] = $request['book_title'];
+      $_SESSION['borrowed_books'][$index]['issue_date'] = $request['issue_date'];
+      $_SESSION['borrowed_books'][$index]['due_date'] = $request['due_date'];
+      $_SESSION['borrowed_books'][$index]['return_date'] = '';
+      $_SESSION['borrowed_books'][$index]['days_overdue'] = 0;
+      $_SESSION['borrowed_books'][$index]['fine_amount'] = 0;
+      $_SESSION['borrowed_books'][$index]['fine_status'] = 'none';
+      $_SESSION['borrowed_books'][$index]['status'] = 'borrowed';
+      break;
+    }
+  }
+
+  foreach ($_SESSION['return_requests'] as $index => $existing_request) {
+    if (($existing_request['id'] ?? '') === $request['id']) {
+      $has_request = true;
+      $_SESSION['return_requests'][$index] = $request;
+      break;
+    }
+  }
+
+  if (!$has_borrow) {
+    $_SESSION['borrowed_books'][] = [
+      'id' => $request['borrow_id'],
+      'request_id' => null,
+      'student' => $request['student'],
+      'student_id' => $request['student_id'],
+      'book_id' => $request['book_id'],
+      'book_title' => $request['book_title'],
+      'issue_date' => $request['issue_date'],
+      'due_date' => $request['due_date'],
+      'return_date' => '',
+      'date' => date('M d, Y', strtotime($request['issue_date'])),
+      'status' => 'borrowed'
+    ];
+  }
+
+  if (!$has_request) {
+    $_SESSION['return_requests'][] = $request;
+  }
+}
+
+if (!demo_requests_already_added()) {
+  add_demo_return_request([
+    'id' => 'RET-DEMO-001',
+    'borrow_id' => 'BRW-DEMO-001',
+    'student' => 'Juan Dela Cruz',
+    'student_id' => '101',
+    'book_id' => '01',
+    'book_title' => 'The Great Gatsby',
+    'issue_date' => '2026-05-10',
+    'due_date' => date('Y-m-d', strtotime('-7 days')),
+    'requested_at' => date('Y-m-d'),
+    'status' => 'pending'
+  ]);
+
+  add_demo_return_request([
+    'id' => 'RET-DEMO-002',
+    'borrow_id' => 'BRW-DEMO-002',
+    'student' => 'Maria Santos',
+    'student_id' => '102',
+    'book_id' => '05',
+    'book_title' => 'Clean Code',
+    'issue_date' => date('Y-m-d', strtotime('-3 days')),
+    'due_date' => date('Y-m-d', strtotime('+4 days')),
+    'requested_at' => date('Y-m-d'),
+    'status' => 'pending'
+  ]);
+
+  add_demo_return_request([
+    'id' => 'RET-DEMO-003',
+    'borrow_id' => 'BRW-DEMO-003',
+    'student' => 'Lina Zhang',
+    'student_id' => '103',
+    'book_id' => '04',
+    'book_title' => 'Sapiens',
+    'issue_date' => date('Y-m-d', strtotime('-14 days')),
+    'due_date' => date('Y-m-d', strtotime('-1 day')),
+    'requested_at' => date('Y-m-d'),
+    'status' => 'pending'
+  ]);
+
+  add_demo_return_request([
+    'id' => 'RET-DEMO-004',
+    'borrow_id' => 'BRW-DEMO-004',
+    'student' => 'Oliver Chen',
+    'student_id' => '104',
+    'book_id' => '08',
+    'book_title' => 'Calculus Made Easy',
+    'issue_date' => date('Y-m-d', strtotime('-5 days')),
+    'due_date' => date('Y-m-d'),
+    'requested_at' => date('Y-m-d'),
+    'status' => 'pending'
+  ]);
 }
 
 function redirect_with_message($type, $text) {
@@ -31,61 +156,86 @@ function days_overdue($due_date) {
   return 0;
 }
 
-// Process return via GET (table button)
-if (isset($_GET['return_id'])) {
-  $found = false;
-  foreach ($_SESSION['borrowed_books'] as &$book) {
-    if (($book['id'] ?? '') === $_GET['return_id']) {
-      if (($book['status'] ?? '') === 'borrowed') {
-        $book['status'] = 'returned';
-        $book['return_date'] = date('Y-m-d');
+function return_success_message($days_overdue, $fine_amount) {
+  if ($fine_amount > 0) {
+    return 'Return confirmed. Fine added: PHP ' . number_format($fine_amount, 2) . ' for ' . $days_overdue . ' overdue day' . ($days_overdue > 1 ? 's' : '') . '.';
+  }
 
-        $book_index = find_book_index($book['book_id'] ?? 0);
-        if ($book_index !== null) {
-          $_SESSION['books'][$book_index]['available']++;
-        }
-        $found = true;
-        redirect_with_message('msg', 'Book returned successfully.');
-      } else {
-        redirect_with_message('err', 'This book has already been returned.');
-      }
-    }
-  }
-  unset($book);
-  if (!$found) {
-    redirect_with_message('err', 'Record not found.');
-  }
+  return 'Return confirmed. No overdue fine.';
 }
 
-// Process return via POST (quick return form)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_book'])) {
-  $borrow_id = trim($_POST['borrow_id'] ?? '');
+function process_return_record(&$book, $fine_per_day) {
+  $overdue_days = days_overdue($book['due_date'] ?? '');
+  $fine_amount = $overdue_days * $fine_per_day;
 
-  if ($borrow_id === '') {
-    $error = "Please enter a Borrow Record ID or Book ID.";
-  } else {
-    $found = false;
-    foreach ($_SESSION['borrowed_books'] as &$book) {
-      if (($book['id'] ?? '') === $borrow_id || (string)($book['book_id'] ?? '') === $borrow_id) {
-        if (($book['status'] ?? '') === 'borrowed') {
-          $book['status'] = 'returned';
-          $book['return_date'] = date('Y-m-d');
+  $book['status'] = 'returned';
+  $book['return_date'] = date('Y-m-d');
+  $book['days_overdue'] = $overdue_days;
+  $book['fine_amount'] = $fine_amount;
+  $book['fine_status'] = $fine_amount > 0 ? 'pending' : 'none';
 
-          $book_index = find_book_index($book['book_id'] ?? 0);
-          if ($book_index !== null) {
-            $_SESSION['books'][$book_index]['available']++;
+  if ($fine_amount > 0) {
+    $_SESSION['pending_fines_total'] = pending_fines_total() + $fine_amount;
+  }
+
+  $book_index = find_book_index($book['book_id'] ?? 0);
+  if ($book_index !== null) {
+    $_SESSION['books'][$book_index]['available']++;
+  }
+
+  return [$overdue_days, $fine_amount];
+}
+
+// Admin confirms or rejects a student's return request.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['return_request_action'])) {
+  $request_id = $_POST['return_request_id'] ?? '';
+  $action = $_POST['return_request_action'] ?? '';
+
+  $found_request = false;
+
+  foreach ($_SESSION['return_requests'] as $request_index => $request) {
+    if (($request['id'] ?? '') === $request_id && ($request['status'] ?? '') === 'pending') {
+      $found_request = true;
+
+      if ($action === 'confirm') {
+        $borrow_found = false;
+
+        foreach ($_SESSION['borrowed_books'] as $book_index => $book) {
+          if (($book['id'] ?? '') === ($request['borrow_id'] ?? '') && ($book['status'] ?? '') === 'borrowed') {
+            $borrow_found = true;
+
+            [$overdue_days, $fine_amount] = process_return_record($_SESSION['borrowed_books'][$book_index], $fine_per_day);
+
+            $_SESSION['return_requests'][$request_index]['status'] = 'confirmed';
+            $_SESSION['return_requests'][$request_index]['confirmed_at'] = date('Y-m-d');
+            $_SESSION['return_requests'][$request_index]['days_overdue'] = $overdue_days;
+            $_SESSION['return_requests'][$request_index]['fine_amount'] = $fine_amount;
+
+            session_write_close();
+            redirect_with_message('msg', return_success_message($overdue_days, $fine_amount));
           }
-          $found = true;
-          redirect_with_message('msg', 'Book returned successfully.');
-        } else {
-          redirect_with_message('err', 'This book has already been returned.');
+        }
+
+        if (!$borrow_found) {
+          session_write_close();
+          redirect_with_message('err', 'Borrow record not found or already returned.');
         }
       }
+
+      if ($action === 'reject') {
+        $_SESSION['return_requests'][$request_index]['status'] = 'rejected';
+        $_SESSION['return_requests'][$request_index]['rejected_at'] = date('Y-m-d');
+
+        session_write_close();
+        redirect_with_message('err', 'Return request rejected. The book was not marked as returned.');
+      }
+
+      break;
     }
-    unset($book);
-    if (!$found) {
-      $error = "No active borrow record found with that ID.";
-    }
+  }
+
+  if (!$found_request) {
+    redirect_with_message('err', 'Return request not found.');
   }
 }
 
@@ -96,48 +246,6 @@ if (isset($_GET['msg'])) {
 if (isset($_GET['err'])) {
   $error = $_GET['err'];
 }
-
-// Filter and sort borrowed books
-$search = trim($_GET['search'] ?? '');
-$filter = $_GET['filter'] ?? 'all';
-
-$borrowedBooks = array_filter($_SESSION['borrowed_books'], function ($book) {
-  return ($book['status'] ?? '') === 'borrowed';
-});
-
-// Apply search
-if ($search !== '') {
-  $search_lower = strtolower($search);
-  $borrowedBooks = array_filter($borrowedBooks, function ($book) use ($search_lower) {
-    return
-      str_contains(strtolower($book['student'] ?? ''), $search_lower) ||
-      str_contains(strtolower($book['student_id'] ?? ''), $search_lower) ||
-      str_contains(strtolower($book['book_title'] ?? ''), $search_lower) ||
-      str_contains((string)($book['book_id'] ?? ''), $search_lower) ||
-      str_contains(strtolower($book['id'] ?? ''), $search_lower);
-  });
-}
-
-// Apply filter
-if ($filter === 'overdue') {
-  $borrowedBooks = array_filter($borrowedBooks, function ($book) {
-    return !empty($book['due_date']) && $book['due_date'] < date('Y-m-d');
-  });
-} elseif ($filter === 'due_today') {
-  $borrowedBooks = array_filter($borrowedBooks, function ($book) {
-    return ($book['due_date'] ?? '') === date('Y-m-d');
-  });
-}
-
-// Sort: overdue first, then by due date
-usort($borrowedBooks, function ($a, $b) {
-  $overdueA = !empty($a['due_date']) && $a['due_date'] < date('Y-m-d') ? 1 : 0;
-  $overdueB = !empty($b['due_date']) && $b['due_date'] < date('Y-m-d') ? 1 : 0;
-  if ($overdueA !== $overdueB) {
-    return $overdueB - $overdueA;
-  }
-  return strtotime($a['due_date'] ?? '9999-12-31') - strtotime($b['due_date'] ?? '9999-12-31');
-});
 
 $totalBorrowed = count(array_filter($_SESSION['borrowed_books'], function ($b) {
   return ($b['status'] ?? '') === 'borrowed';
@@ -155,6 +263,10 @@ $returnedToday = count(array_filter($_SESSION['borrowed_books'], function ($b) {
   return ($b['status'] ?? '') === 'returned' && ($b['return_date'] ?? '') === date('Y-m-d');
 }));
 
+$pendingReturnRequests = array_filter($_SESSION['return_requests'], function ($request) {
+  return ($request['status'] ?? '') === 'pending';
+});
+
 $pending_count = pending_request_count();
 $currentPage = basename($_SERVER['PHP_SELF']);
 ?>
@@ -171,6 +283,30 @@ $currentPage = basename($_SERVER['PHP_SELF']);
   <link rel="stylesheet" href="../assets/adminStyle.css">
   <link rel="stylesheet" href="../assets/issue_book.css">
   <link rel="stylesheet" href="../assets/return_book.css">
+  <style>
+    .return-request-fine {
+      display: inline-flex;
+      flex-direction: column;
+      gap: 3px;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+
+    .return-request-fine.has-fine {
+      color: #b93a2e;
+    }
+
+    .return-request-fine.no-fine {
+      color: #588157;
+    }
+
+    .return-request-fine small {
+      color: #667085;
+      font-size: 11px;
+      font-weight: 500;
+    }
+  </style>
 </head>
 <body>
 
@@ -202,7 +338,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
     <div class="page-header">
       <h1>Return Book</h1>
-      <p>Process book returns and view all currently borrowed records.</p>
+      <p>Confirm student return requests, mark books as returned, and calculate overdue fines.</p>
       <div class="gold-rule"><span></span><i>*</i><span></span></div>
     </div>
 
@@ -264,96 +400,66 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
     <div class="card issue-book-card">
       <div class="card-body">
-        <div class="card-title">Quick Return</div>
-        <p class="card-subtitle">Enter a Borrow Record ID or Book ID to process a return instantly.</p>
-
-        <form method="POST" action="return_book.php" class="quick-return-form">
-          <div class="field">
-            <label for="borrow_id">Borrow / Book ID <span>*</span></label>
-            <div class="input-wrap">
-              <input class="no-icon" type="text" id="borrow_id" name="borrow_id" placeholder="Enter ID" required>
-            </div>
-          </div>
-          <button type="submit" name="return_book" class="btn-primary">Process Return</button>
-        </form>
-      </div>
-    </div>
-
-    <div class="card issue-book-card">
-      <div class="card-body">
-        <div class="card-title">Borrowed Books</div>
-        <p class="card-subtitle">All active borrow records. Overdue entries are highlighted in red.</p>
-
-        <form method="GET" action="return_book.php" class="search-filter-bar">
-          <div class="field">
-            <div class="input-wrap">
-              <input class="no-icon" type="text" name="search" placeholder="Search student, book, or ID..." value="<?php echo htmlspecialchars($search); ?>">
-            </div>
-          </div>
-          <div class="field">
-            <div class="input-wrap">
-              <select class="no-icon" name="filter">
-                <option value="all" <?php echo $filter === 'all' ? 'selected' : ''; ?>>All Active</option>
-                <option value="overdue" <?php echo $filter === 'overdue' ? 'selected' : ''; ?>>Overdue Only</option>
-                <option value="due_today" <?php echo $filter === 'due_today' ? 'selected' : ''; ?>>Due Today</option>
-              </select>
-            </div>
-          </div>
-          <button type="submit" class="btn-primary">Filter</button>
-          <?php if ($search !== '' || $filter !== 'all'): ?>
-            <a href="return_book.php" class="btn-outline">Clear</a>
-          <?php endif; ?>
-        </form>
+        <div class="card-title">Student Return Requests</div>
+        <p class="card-subtitle">When a student returns a book, the request appears here for admin confirmation.</p>
 
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Borrow ID</th>
+                <th>Request ID</th>
                 <th>Book</th>
                 <th>Student</th>
-                <th>Issue Date</th>
+                <th>Requested</th>
                 <th>Due Date</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th>Fine If Confirmed</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
-              <?php if (!empty($borrowedBooks)): ?>
-                <?php foreach ($borrowedBooks as $row):
-                  $isOverdue = !empty($row['due_date']) && $row['due_date'] < date('Y-m-d');
-                  $isDueToday = ($row['due_date'] ?? '') === date('Y-m-d');
-                  $rowClass = $isOverdue ? 'overdue-row' : ($isDueToday ? 'due-today-row' : '');
-                  $overdueDays = days_overdue($row['due_date'] ?? '');
+              <?php if (!empty($pendingReturnRequests)): ?>
+                <?php foreach ($pendingReturnRequests as $request):
+                  $overdueDays = days_overdue($request['due_date'] ?? '');
+                  $fineAmount = $overdueDays * $fine_per_day;
                 ?>
-                  <tr class="<?php echo $rowClass; ?>">
-                    <td><?php echo htmlspecialchars($row['id'] ?? '-'); ?></td>
+                  <tr class="<?php echo $overdueDays > 0 ? 'overdue-row' : ''; ?>">
+                    <td><?php echo htmlspecialchars($request['id'] ?? '-'); ?></td>
                     <td>
-                      <?php echo htmlspecialchars($row['book_title'] ?? 'Unknown Book'); ?>
+                      <?php echo htmlspecialchars($request['book_title'] ?? 'Unknown Book'); ?>
                       <br>
-                      <small class="text-muted">Book ID: <?php echo htmlspecialchars($row['book_id'] ?? '-'); ?></small>
+                      <small class="text-muted">Book ID: <?php echo htmlspecialchars($request['book_id'] ?? '-'); ?></small>
                     </td>
                     <td>
-                      <?php echo htmlspecialchars($row['student'] ?? 'Unknown Student'); ?>
+                      <?php echo htmlspecialchars($request['student'] ?? 'Unknown Student'); ?>
                       <br>
-                      <small class="text-muted"><?php echo htmlspecialchars($row['student_id'] ?? '-'); ?></small>
+                      <small class="text-muted"><?php echo htmlspecialchars($request['student_id'] ?? '-'); ?></small>
                     </td>
-                    <td><?php echo htmlspecialchars(format_book_date($row['issue_date'] ?? $row['date'] ?? '')); ?></td>
+                    <td><?php echo htmlspecialchars(format_book_date($request['requested_at'] ?? '')); ?></td>
                     <td>
-                      <?php echo htmlspecialchars(format_book_date($row['due_date'] ?? '')); ?>
-                      <?php if ($isOverdue): ?>
+                      <?php echo htmlspecialchars(format_book_date($request['due_date'] ?? '')); ?>
+                      <?php if ($overdueDays > 0): ?>
                         <span class="badge-warning"><?php echo $overdueDays; ?> day<?php echo $overdueDays > 1 ? 's' : ''; ?> overdue</span>
-                      <?php elseif ($isDueToday): ?>
-                        <span class="badge-due-today">Due today</span>
                       <?php endif; ?>
                     </td>
                     <td>
-                      <span class="badge badge-gold">Borrowed</span>
+                      <?php if ($fineAmount > 0): ?>
+                        <span class="return-request-fine has-fine">
+                          PHP <?php echo number_format($fineAmount, 2); ?> fine
+                          <small><?php echo $overdueDays; ?> day<?php echo $overdueDays > 1 ? 's' : ''; ?> overdue</small>
+                        </span>
+                      <?php else: ?>
+                        <span class="return-request-fine no-fine">
+                          No fine
+                          <small>Returned on time</small>
+                        </span>
+                      <?php endif; ?>
                     </td>
                     <td>
-                      <div class="return-actions">
-                        <a href="return_book.php?return_id=<?php echo urlencode($row['id'] ?? ''); ?>" class="btn-outline btn-small" onclick="return confirm('Mark this book as returned?');">Return</a>
-                      </div>
+                      <form method="POST" action="return_book.php" style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <input type="hidden" name="return_request_id" value="<?php echo htmlspecialchars($request['id'] ?? ''); ?>">
+                        <button type="submit" name="return_request_action" value="confirm" class="btn-primary">Confirm Return</button>
+                        <button type="submit" name="return_request_action" value="reject" class="btn-outline">Reject</button>
+                      </form>
                     </td>
                   </tr>
                 <?php endforeach; ?>
@@ -361,8 +467,8 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                 <tr>
                   <td colspan="7">
                     <div class="empty-state">
-                      <h3>No borrowed books found</h3>
-                      <p><?php echo $search !== '' ? 'Try a different search term.' : 'All books have been returned.'; ?></p>
+                      <h3>No return requests</h3>
+                      <p>Student return requests will appear here before the book is marked returned.</p>
                     </div>
                   </td>
                 </tr>
@@ -370,7 +476,6 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             </tbody>
           </table>
         </div>
-
       </div>
     </div>
 
