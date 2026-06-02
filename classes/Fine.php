@@ -2,14 +2,17 @@
 // ============================================================
 // classes/Fine.php — Fine Management Class
 // ============================================================
+require_once __DIR__ . '/Notification.php';
 
 class Fine
 {
     private mysqli $conn;
+    private Notification $notif;
 
     public function __construct(mysqli $conn)
     {
-        $this->conn = $conn;
+        $this->conn  = $conn;
+        $this->notif = new Notification($conn);
     }
 
     /** All fines grouped by student (admin view) */
@@ -160,7 +163,26 @@ class Fine
         }
 
         $ok = $stmt->execute() && $stmt->affected_rows > 0;
+        $affected = $stmt->affected_rows;
         $stmt->close();
+
+        // Notify student that their payment is being processed
+        if ($ok) {
+            $methodLabels = [
+                'counter' => 'Cash (over the counter)',
+                'gcash'   => 'GCash',
+                'maya'    => 'Maya',
+                'bank'    => 'Bank Transfer',
+            ];
+            $methodLabel = $methodLabels[$method] ?? $method;
+
+            $this->notif->create(
+                $userId,
+                'info',
+                'Payment Submitted — Awaiting Approval',
+                'Your fine payment via ' . $methodLabel . ' has been submitted. The admin will review and approve it shortly. (' . $affected . ' fine' . ($affected > 1 ? 's' : '') . ')'
+            );
+        }
         return $ok;
     }
 
