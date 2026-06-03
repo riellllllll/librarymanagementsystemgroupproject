@@ -306,7 +306,7 @@ $admin = [
                 </div>
 
                 <div class="info-cell">
-                  <div class="info-label">Employee No.</div>
+                  <div class="info-label">Username.</div>
                   <div class="info-value"><?= htmlspecialchars($admin['employee_no']) ?></div>
                 </div>
 

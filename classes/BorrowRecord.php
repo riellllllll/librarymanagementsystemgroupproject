@@ -457,6 +457,7 @@ class BorrowRecord
      * - Creates a NEW fine if:
      *     a) the borrow is overdue but has no fine yet, OR
      *     b) the borrow is overdue, the previous fine was already paid, and more days have passed
+     * - Notifies the student the FIRST time a fine is created for each borrow
      */
     public function updateOverdueStatuses(): void
     {
@@ -469,7 +470,6 @@ class BorrowRecord
         );
 
         // 2) Update existing UNPAID fines to match current overdue days
-        //    (only touches active 'unpaid' rows — leaves paid/payment_requested alone)
         $this->conn->query(
             "UPDATE fines f
              JOIN borrow_records br ON br.id = f.borrow_id
@@ -486,12 +486,23 @@ class BorrowRecord
                AND br.due_date < CURDATE()"
         );
 
-        // 3) Find overdue borrows where the CURRENT fine situation doesn't cover today.
-        //    For each such borrow, insert a new 'unpaid' fine for the remaining amount.
-        //    Logic: total fine owed = (today - due) * rate
-        //           already accounted for = sum of all existing fines for that borrow
-        //           remaining = owed - already_accounted
-        //    Only insert if remaining > 0 AND no active 'unpaid'/'payment_requested' fine exists yet.
+        // 3a) BEFORE creating fines, find borrows that will get their FIRST fine
+        //     (no fines exist for this borrow at all yet)
+        $newOverdueRes = $this->conn->query(
+            "SELECT br.id AS borrow_id, br.user_id, br.due_date,
+                    b.title AS book_title,
+                    (DATEDIFF(CURDATE(), br.due_date) * $rate) AS fine_amount,
+                    DATEDIFF(CURDATE(), br.due_date) AS days_overdue
+             FROM borrow_records br
+             JOIN books b ON b.id = br.book_id
+             WHERE br.status IN ('overdue','pending_return')
+               AND br.return_date IS NULL
+               AND br.due_date < CURDATE()
+               AND NOT EXISTS (SELECT 1 FROM fines f WHERE f.borrow_id = br.id)"
+        );
+        $newFines = $newOverdueRes ? $newOverdueRes->fetch_all(MYSQLI_ASSOC) : [];
+
+        // 3b) Now insert new fines (covers both first-ever AND additional-cycle cases)
         $this->conn->query(
             "INSERT INTO fines (borrow_id, user_id, amount, paid_status)
              SELECT br.id, br.user_id,
@@ -510,5 +521,18 @@ class BorrowRecord
              GROUP BY br.id, br.user_id, br.due_date
              HAVING remaining > 0"
         );
+
+        // 3c) Send notification ONCE per borrow that just got its first fine
+        foreach ($newFines as $nf) {
+            $this->notif->create(
+                (int)$nf['user_id'],
+                'fine',
+                'Overdue Fine — ₱' . number_format((float)$nf['fine_amount'], 2),
+                '"' . $nf['book_title'] . '" is now ' . (int)$nf['days_overdue'] .
+                ' day' . ((int)$nf['days_overdue'] > 1 ? 's' : '') . ' overdue. ' .
+                'A fine of ₱' . number_format((float)$nf['fine_amount'], 2) .
+                ' has been applied. Please return the book and settle the fine.'
+            );
+        }
     }
 }
