@@ -154,7 +154,7 @@ class User
                      AS total_fines
              FROM users u
              WHERE u.role = 'student'
-             ORDER BY u.full_name ASC"
+             ORDER BY CAST(u.student_number AS UNSIGNED) ASC, u.student_number ASC"
         );
 
         return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
