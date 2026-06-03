@@ -482,10 +482,12 @@ require_once '../includes/sidebar.php';
        openPayModal(id, 'Book Title', amount)    — pay one fine   */
   let payTarget   = null;
   let payBookName = '';
+  let payAmount   = 0;
 
   function openPayModal(target, bookTitle, amount) {
     payTarget   = target;
     payBookName = bookTitle || 'All Outstanding Fines';
+    payAmount   = amount || (target === 'all' ? <?= (int)$total_unpaid ?> : 0);
 
     const isAll     = target === 'all';
     const amountVal = isAll
@@ -543,10 +545,12 @@ require_once '../includes/sidebar.php';
     if (isAll) {
       addInput('action', 'submit_payment_all');
     } else {
-      addInput('action',  'submit_payment');
-      addInput('fine_id', payTarget);
+      addInput('action',     'submit_payment');
+      addInput('fine_id',    payTarget);
+      addInput('book_title', payBookName);
     }
     addInput('method', method);
+    addInput('amount', payAmount);
 
     document.body.appendChild(form);
     form.submit();
