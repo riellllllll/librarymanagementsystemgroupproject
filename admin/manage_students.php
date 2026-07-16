@@ -101,6 +101,42 @@ foreach ($db_students as $s) {
 <link rel="stylesheet" href="../assets/student.css">
 <link rel="stylesheet" href="../assets/managestudent.css">
 <link rel="stylesheet" href="../assets/adminStyle.css">
+<style>
+  .ms-sort-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+  .ms-sort-icon {
+    position: absolute;
+    left: 14px;
+    pointer-events: none;
+    color: inherit;
+    opacity: 0.7;
+  }
+  .ms-sort-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 10px 34px 10px 38px;
+    border-radius: 10px;
+    border: 1px solid rgba(0,0,0,0.12);
+    background: #fff;
+    cursor: pointer;
+    color: inherit;
+  }
+  .ms-sort-select:hover { background: rgba(0,0,0,0.02); }
+  .ms-sort-select:focus { outline: none; border-color: #8b3a2a; }
+  .ms-sort-arrow {
+    position: absolute;
+    right: 12px;
+    pointer-events: none;
+    opacity: 0.6;
+  }
+</style>
 </head>
 <body>
 
@@ -222,11 +258,114 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
         <svg class="ms-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" class="ms-search-input" id="searchStudents" placeholder="Search by name, ID, or course...">
       </div>
+
+      <div class="ms-filters-wrap">
+        <button type="button" class="ms-filter-trigger" id="filterTriggerBtn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="11" cy="18" r="2" fill="currentColor" stroke="none"/></svg>
+          Filters
+          <span class="ms-filter-badge" id="filterBadge" style="display:none;">0</span>
+        </button>
+
+        <div class="ms-filter-backdrop" id="filterBackdrop"></div>
+
+        <div class="ms-filter-panel" id="filterPanel">
+          <div class="ms-filter-panel-header">
+            <span class="ms-filter-panel-title">Filter Students</span>
+            <button type="button" class="ms-filter-panel-close" id="filterPanelClose" aria-label="Close filters">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <div class="ms-filter-group">
+            <div class="ms-filter-group-title">Course</div>
+            <div class="ms-filter-options" data-group="course">
+              <button type="button" class="ms-filter-pill active" data-value="">All Courses</button>
+              <button type="button" class="ms-filter-pill" data-value="BS Computer Science">BS Computer Science</button>
+              <button type="button" class="ms-filter-pill" data-value="BS Information Technology">BS Information Technology</button>
+              <button type="button" class="ms-filter-pill" data-value="BS Education">BS Education</button>
+              <button type="button" class="ms-filter-pill" data-value="BS Nursing">BS Nursing</button>
+              <button type="button" class="ms-filter-pill" data-value="BS Engineering">BS Engineering</button>
+              <button type="button" class="ms-filter-pill" data-value="BS Business Administration">BS Business Administration</button>
+              <button type="button" class="ms-filter-pill" data-value="BS Accountancy">BS Accountancy</button>
+              <button type="button" class="ms-filter-pill" data-value="AB Communication">AB Communication</button>
+            </div>
+          </div>
+
+          <div class="ms-filter-group">
+            <div class="ms-filter-group-title">Year Level</div>
+            <div class="ms-filter-options" data-group="year">
+              <button type="button" class="ms-filter-pill active" data-value="">All Years</button>
+              <button type="button" class="ms-filter-pill" data-value="1st Year">1st Year</button>
+              <button type="button" class="ms-filter-pill" data-value="2nd Year">2nd Year</button>
+              <button type="button" class="ms-filter-pill" data-value="3rd Year">3rd Year</button>
+              <button type="button" class="ms-filter-pill" data-value="4th Year">4th Year</button>
+            </div>
+          </div>
+
+          <div class="ms-filter-group">
+            <div class="ms-filter-group-title">Status</div>
+            <div class="ms-filter-options" data-group="status">
+              <button type="button" class="ms-filter-pill active" data-value="">All Status</button>
+              <button type="button" class="ms-filter-pill" data-value="active">Active</button>
+              <button type="button" class="ms-filter-pill" data-value="inactive">Inactive</button>
+            </div>
+          </div>
+
+          <div class="ms-filter-group">
+            <div class="ms-filter-group-title">Borrowed Books</div>
+            <div class="ms-filter-options" data-group="borrowed">
+              <button type="button" class="ms-filter-pill active" data-value="">All Borrowed</button>
+              <button type="button" class="ms-filter-pill" data-value="has">Has Borrowed Books</button>
+              <button type="button" class="ms-filter-pill" data-value="none">No Borrowed Books</button>
+            </div>
+          </div>
+
+          <div class="ms-filter-group">
+            <div class="ms-filter-group-title">Fines</div>
+            <div class="ms-filter-options" data-group="fines">
+              <button type="button" class="ms-filter-pill active" data-value="">All Fines</button>
+              <button type="button" class="ms-filter-pill" data-value="has">Has Fines</button>
+              <button type="button" class="ms-filter-pill" data-value="none">No Fines</button>
+            </div>
+          </div>
+
+          <div class="ms-filter-panel-footer">
+            <button type="button" class="ms-filter-clear-link" id="clearFiltersBtn">Clear all</button>
+            <button type="button" class="ms-filter-done-btn" id="filterDoneBtn">Done</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ms-sort-wrap">
+        <svg class="ms-sort-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+        <select id="sortStudents" class="ms-sort-select" title="Sort students">
+          <option value="default">Sort by</option>
+          <option value="id-asc">Student ID (A–Z)</option>
+          <option value="id-desc">Student ID (Z–A)</option>
+          <option value="name-asc">Name (A–Z)</option>
+          <option value="name-desc">Name (Z–A)</option>
+          <option value="course-asc">Course (A–Z)</option>
+          <option value="course-desc">Course (Z–A)</option>
+          <option value="year-asc">Year Level (Low–High)</option>
+          <option value="year-desc">Year Level (High–Low)</option>
+          <option value="status-asc">Status (A–Z)</option>
+          <option value="borrowed-desc">Most Borrowed Books</option>
+          <option value="borrowed-asc">Least Borrowed Books</option>
+          <option value="fines-desc">Highest Fines</option>
+          <option value="fines-asc">Lowest Fines</option>
+        </select>
+        <span class="select-arrow ms-sort-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+      </div>
+
       <button class="btn-primary" onclick="openAddModal()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Add Student
       </button>
     </div>
+
+    <!-- Active filter chips (YouTube-style) -->
+    <div class="ms-active-chips" id="activeChipsRow"></div>
+    <span class="ms-filter-count" id="filterResultCount"></span>
 
     <!-- Students Table Card -->
     <div class="card ms-table-card">
@@ -250,7 +389,14 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
             </thead>
             <tbody>
               <?php foreach ($students as $student): ?>
-              <tr data-id="<?php echo $student['id']; ?>" data-name="<?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?>">
+              <tr data-id="<?php echo $student['id']; ?>"
+                  data-student-id="<?php echo htmlspecialchars($student['student_id']); ?>"
+                  data-name="<?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?>"
+                  data-course="<?php echo htmlspecialchars($student['course']); ?>"
+                  data-year="<?php echo htmlspecialchars($student['year']); ?>"
+                  data-status="<?php echo htmlspecialchars($student['status']); ?>"
+                  data-borrowed="<?php echo (int)$student['borrowed']; ?>"
+                  data-fines="<?php echo (float)$student['fines']; ?>">
                 <td><span class="ms-student-id"><?php echo htmlspecialchars($student['student_id']); ?></span></td>
                 <td>
                   <div class="ms-student-name">
@@ -672,17 +818,237 @@ document.addEventListener('keydown', function(e) {
     closeViewModal();
     closeEditModal();
     closeRemoveModal();
+    closeFilterPanel();
   }
 });
 
-// ── Search Filter ──
-document.getElementById('searchStudents').addEventListener('input', function() {
-  const term = this.value.toLowerCase();
-  const rows = document.querySelectorAll('#studentsTable tbody tr');
-  rows.forEach(function(row) {
-    const text = row.textContent.toLowerCase();
-    row.style.display = text.includes(term) ? '' : 'none';
+// ── Search + Filter (Course / Year / Status / Borrowed / Fines) — YouTube-style panel ──
+// Groups in this list allow selecting more than one pill at once.
+// Everything else (Status, Borrowed, Fines) stays single-select.
+const MULTI_SELECT_GROUPS = ['course', 'year'];
+function isMulti(group) { return MULTI_SELECT_GROUPS.includes(group); }
+
+// Multi-select groups store an array of values; single-select groups store a plain string.
+const studentFilterState = { course: [], year: [], status: '', borrowed: '', fines: '' };
+
+const filterTriggerBtn = document.getElementById('filterTriggerBtn');
+const filterPanel      = document.getElementById('filterPanel');
+const filterBackdrop   = document.getElementById('filterBackdrop');
+const filterBadge      = document.getElementById('filterBadge');
+const activeChipsRow   = document.getElementById('activeChipsRow');
+
+function openFilterPanel() {
+  filterPanel.classList.add('open');
+  filterBackdrop.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeFilterPanel() {
+  filterPanel.classList.remove('open');
+  filterBackdrop.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+const filterGroupLabels = {
+  course:   'Course',
+  year:     'Year',
+  status:   'Status',
+  borrowed: 'Borrowed',
+  fines:    'Fines'
+};
+
+function findPill(group, value) {
+  return document.querySelector(`.ms-filter-options[data-group="${group}"] .ms-filter-pill[data-value="${CSS.escape(value)}"]`);
+}
+
+// Refresh which pills look "active" for a given group based on studentFilterState.
+function syncPillsUI(group) {
+  const value = studentFilterState[group];
+  document.querySelectorAll(`.ms-filter-options[data-group="${group}"] .ms-filter-pill`).forEach(function(pill) {
+    if (isMulti(group)) {
+      const isAllPill = pill.dataset.value === '';
+      pill.classList.toggle('active', isAllPill ? value.length === 0 : value.includes(pill.dataset.value));
+    } else {
+      pill.classList.toggle('active', pill.dataset.value === value);
+    }
   });
+}
+
+// Toggle a single pill's value on/off within a group, respecting multi vs single select.
+function togglePill(group, value) {
+  if (isMulti(group)) {
+    if (value === '') {
+      studentFilterState[group] = []; // "All" pill clears the group
+    } else {
+      const arr = studentFilterState[group];
+      const idx = arr.indexOf(value);
+      if (idx === -1) arr.push(value); else arr.splice(idx, 1);
+    }
+  } else {
+    studentFilterState[group] = value;
+  }
+  syncPillsUI(group);
+  refreshFilterChrome();
+  applyStudentFilters();
+}
+
+// Used by the chip "x" buttons to remove one specific value.
+function removeFilterValue(group, value) {
+  if (isMulti(group)) {
+    const arr = studentFilterState[group];
+    const idx = arr.indexOf(value);
+    if (idx !== -1) arr.splice(idx, 1);
+  } else {
+    studentFilterState[group] = '';
+  }
+  syncPillsUI(group);
+  refreshFilterChrome();
+  applyStudentFilters();
+}
+
+function refreshFilterChrome() {
+  const activeGroups = Object.keys(studentFilterState).filter(g =>
+    isMulti(g) ? studentFilterState[g].length > 0 : studentFilterState[g] !== ''
+  );
+
+  // Count total selected values (so picking 2 courses shows badge "2", not "1 group").
+  const count = activeGroups.reduce((sum, g) => sum + (isMulti(g) ? studentFilterState[g].length : 1), 0);
+
+  filterTriggerBtn.classList.toggle('active', count > 0);
+  if (count > 0) {
+    filterBadge.style.display = 'inline-flex';
+    filterBadge.textContent = count;
+  } else {
+    filterBadge.style.display = 'none';
+  }
+
+  activeChipsRow.innerHTML = '';
+  activeGroups.forEach(function(group) {
+    const values = isMulti(group) ? studentFilterState[group] : [studentFilterState[group]];
+    values.forEach(function(value) {
+      const pill  = findPill(group, value);
+      const label = pill ? pill.textContent : value;
+
+      const chip = document.createElement('span');
+      chip.className = 'ms-chip';
+      chip.innerHTML = `${filterGroupLabels[group]}: ${label} <button type="button" aria-label="Remove filter" data-group="${group}">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>`;
+      chip.querySelector('button').addEventListener('click', function() {
+        removeFilterValue(group, value);
+      });
+      activeChipsRow.appendChild(chip);
+    });
+  });
+}
+
+document.querySelectorAll('.ms-filter-options').forEach(function(optionsEl) {
+  const group = optionsEl.dataset.group;
+  optionsEl.querySelectorAll('.ms-filter-pill').forEach(function(pill) {
+    pill.addEventListener('click', function() {
+      togglePill(group, pill.dataset.value);
+    });
+  });
+});
+
+filterTriggerBtn.addEventListener('click', function(e) {
+  e.stopPropagation();
+  if (filterPanel.classList.contains('open')) {
+    closeFilterPanel();
+  } else {
+    openFilterPanel();
+  }
+});
+
+document.getElementById('filterDoneBtn').addEventListener('click', closeFilterPanel);
+document.getElementById('filterPanelClose').addEventListener('click', closeFilterPanel);
+filterBackdrop.addEventListener('click', closeFilterPanel);
+
+function applyStudentFilters() {
+  const term      = document.getElementById('searchStudents').value.toLowerCase();
+  const course    = studentFilterState.course; // array
+  const year      = studentFilterState.year;   // array
+  const status    = studentFilterState.status;
+  const borrowed  = studentFilterState.borrowed;
+  const fines     = studentFilterState.fines;
+
+  const rows = document.querySelectorAll('#studentsTable tbody tr');
+  let visibleCount = 0;
+
+  rows.forEach(function(row) {
+    const text       = row.textContent.toLowerCase();
+    const rCourse    = row.dataset.course || '';
+    const rYear      = row.dataset.year || '';
+    const rStatus    = row.dataset.status || '';
+    const rBorrowed  = parseInt(row.dataset.borrowed, 10) || 0;
+    const rFines     = parseFloat(row.dataset.fines) || 0;
+
+    let visible = true;
+    if (term && !text.includes(term))               visible = false;
+    if (course.length && !course.includes(rCourse)) visible = false;
+    if (year.length && !year.includes(rYear))        visible = false;
+    if (status && rStatus !== status)           visible = false;
+    if (borrowed === 'has'  && rBorrowed <= 0)  visible = false;
+    if (borrowed === 'none' && rBorrowed > 0)   visible = false;
+    if (fines === 'has'  && rFines <= 0)        visible = false;
+    if (fines === 'none' && rFines > 0)         visible = false;
+
+    row.style.display = visible ? '' : 'none';
+    if (visible) visibleCount++;
+  });
+
+  const countEl = document.getElementById('filterResultCount');
+  const totalRows = rows.length;
+  countEl.textContent = (visibleCount === totalRows)
+    ? ''
+    : `Showing ${visibleCount} of ${totalRows}`;
+}
+
+document.getElementById('searchStudents').addEventListener('input', applyStudentFilters);
+
+// ── Sort ──
+function getSortValue(row, key) {
+  switch (key) {
+    case 'id':       return (row.dataset.studentId || '').toLowerCase();
+    case 'name':     return (row.dataset.name || '').toLowerCase();
+    case 'course':   return (row.dataset.course || '').toLowerCase();
+    case 'year':     return parseInt(row.dataset.year, 10) || 0;
+    case 'status':   return (row.dataset.status || '').toLowerCase();
+    case 'borrowed': return parseInt(row.dataset.borrowed, 10) || 0;
+    case 'fines':    return parseFloat(row.dataset.fines) || 0;
+    default:         return '';
+  }
+}
+
+function sortStudentsTable(sortVal) {
+  if (!sortVal || sortVal === 'default') return;
+
+  const [key, dir] = sortVal.split('-');
+  const tbody = document.querySelector('#studentsTable tbody');
+  const rows  = Array.from(tbody.querySelectorAll('tr'));
+
+  rows.sort(function(a, b) {
+    const va = getSortValue(a, key);
+    const vb = getSortValue(b, key);
+    if (va < vb) return dir === 'asc' ? -1 : 1;
+    if (va > vb) return dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  rows.forEach(function(row) { tbody.appendChild(row); });
+}
+
+document.getElementById('sortStudents').addEventListener('change', function() {
+  sortStudentsTable(this.value);
+});
+
+document.getElementById('clearFiltersBtn').addEventListener('click', function() {
+  document.getElementById('searchStudents').value = '';
+  Object.keys(studentFilterState).forEach(function(group) {
+    studentFilterState[group] = isMulti(group) ? [] : '';
+    syncPillsUI(group);
+  });
+  refreshFilterChrome();
+  applyStudentFilters();
 });
 
 // ── Modal: View Student ──

@@ -19,30 +19,20 @@ $conn = $db->getConnection();
 
 // ── Helper: load all fine data grouped by student_number ──
 function load_fines_data(mysqli $conn): array {
-    // For each borrow we want ONE representative fine row:
-    //   - if there's an unpaid or payment_requested fine → use that (most recent)
-    //   - otherwise the latest paid fine
-    // We still need fine_id for Approve/Pay buttons, so we pick the chosen fine's id.
+    // Full history: every fine record that has ever been created is kept and
+    // shown here — nothing is collapsed into a single "representative" row
+    // per borrow anymore, so paid/rejected/superseded fines stay on record.
     $sql = "
         SELECT u.id AS uid, u.student_number, u.full_name, u.course, u.year_level, u.email,
-               agg.id AS fine_id, agg.amount, agg.paid_status, agg.payment_method, agg.payment_submitted_at,
+               f.id AS fine_id, f.amount, f.paid_status, f.payment_method, f.payment_submitted_at, f.created_at,
                br.id AS borrow_id, br.borrow_date, br.due_date, br.return_date,
                b.id AS book_id, b.title AS book_title,
                GREATEST(0, DATEDIFF(COALESCE(br.return_date, CURDATE()), br.due_date)) AS days_overdue
-        FROM borrow_records br
+        FROM fines f
+        JOIN borrow_records br ON br.id = f.borrow_id
         JOIN books b ON b.id = br.book_id
         JOIN users u ON u.id = br.user_id
-        -- inner derived table: pick the chosen fine per borrow
-        JOIN (
-            SELECT f.borrow_id,
-                   SUBSTRING_INDEX(GROUP_CONCAT(f.id ORDER BY
-                       FIELD(f.paid_status,'unpaid','payment_requested','paid') ASC,
-                       f.created_at DESC), ',', 1) AS chosen_id
-            FROM fines f
-            GROUP BY f.borrow_id
-        ) pick ON pick.borrow_id = br.id
-        JOIN fines agg ON agg.id = pick.chosen_id
-        ORDER BY u.full_name ASC, agg.created_at DESC
+        ORDER BY u.full_name ASC, f.created_at DESC
     ";
     $res = $conn->query($sql);
     $data = [];
@@ -69,6 +59,7 @@ function load_fines_data(mysqli $conn): array {
         };
         $data[$sno]['fines'][] = [
             'fine_id'              => (int)$r['fine_id'],
+            'borrow_id'            => (int)$r['borrow_id'],
             'book_id'              => str_pad((string)$r['book_id'], 2, '0', STR_PAD_LEFT),
             'book_title'           => $r['book_title'],
             'issue_date'           => $r['borrow_date'],
@@ -79,9 +70,23 @@ function load_fines_data(mysqli $conn): array {
             'status'               => $ui_status,
             'payment_method'       => $r['payment_method'],
             'payment_submitted_at' => $r['payment_submitted_at'],
+            'recorded_at'          => $r['created_at'],
         ];
     }
     return $data;
+}
+
+// ── Helper: count overdue books without double-counting a book that has
+//    more than one fine record on file (keeps "Overdue Books" meaningful
+//    even though we now keep every historical fine row) ──
+function count_overdue_books(array $fines, array $statuses): int {
+    $seen = [];
+    foreach ($fines as $fine) {
+        if (!in_array($fine['status'], $statuses, true)) continue;
+        if ($fine['days_overdue'] <= 0) continue;
+        $seen[$fine['borrow_id']] = true;
+    }
+    return count($seen);
 }
 
 // ── Helper: find a fine_id by (student_number + padded book_id) ──
@@ -300,14 +305,13 @@ foreach ($stats_pool as $sdata) {
     $total_fines += $fine['fine_amount'];
     if ($fine['status'] === 'pending') {
       $pending_fines += $fine['fine_amount'];
-      if ($fine['days_overdue'] > 0) $overdue_books++;
     } elseif ($fine['status'] === 'payment_requested') {
       $requested_fines += $fine['fine_amount'];
-      if ($fine['days_overdue'] > 0) $overdue_books++;
     } else {
       $paid_fines += $fine['fine_amount'];
     }
   }
+  $overdue_books += count_overdue_books($sdata['fines'], ['pending', 'payment_requested']);
 }
 ?>
 <!DOCTYPE html>
@@ -321,6 +325,7 @@ foreach ($stats_pool as $sdata) {
   <link rel="stylesheet" href="../assets/student.css">
   <link rel="stylesheet" href="../assets/adminStyle.css">
   <link rel="stylesheet" href="../assets/adminFines.css">
+  
 </head>
 <body>
 
@@ -465,27 +470,120 @@ foreach ($stats_pool as $sdata) {
       </div>
       <?php endif; ?>
 
-      <!-- ── Search bar ─────────────────────────────────────────── -->
-      <form class="fines-search-bar" method="GET" action="view_fines.php">
-        <input type="hidden" name="status_filter" value="<?= htmlspecialchars($status_filter) ?>">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"/>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
-        <input
-          type="text"
-          name="student_id"
-          placeholder="Search by name or Student ID…"
-          value="<?= $student_data ? '' : htmlspecialchars($search_query) ?>"
-          autocomplete="off"
-          maxlength="50"
-        >
-        <?php if ($search_query && !$student_data): ?>
-          <a href="view_fines.php?status_filter=<?= urlencode($status_filter) ?>" class="fines-search-clear" title="Clear search">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </a>
+      <!-- ── Search bar + Filters ────────────────────────────────── -->
+      <div class="fines-toolbar-row">
+        <form class="fines-search-bar" method="GET" action="view_fines.php">
+          <input type="hidden" name="status_filter" value="<?= htmlspecialchars($status_filter) ?>">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            type="text"
+            name="student_id"
+            placeholder="Search by name or Student ID…"
+            value="<?= $student_data ? '' : htmlspecialchars($search_query) ?>"
+            autocomplete="off"
+            maxlength="50"
+          >
+          <?php if ($search_query && !$student_data): ?>
+            <a href="view_fines.php?status_filter=<?= urlencode($status_filter) ?>" class="fines-search-clear" title="Clear search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </a>
+          <?php endif; ?>
+        </form>
+
+        <?php if (!($selected_student_id && $student_data)): ?>
+        <div class="ms-filters-wrap">
+          <button type="button" class="ms-filter-trigger" id="filterTriggerBtn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="11" cy="18" r="2" fill="currentColor" stroke="none"/></svg>
+            Filters
+            <span class="ms-filter-badge" id="filterBadge" style="display:none;">0</span>
+          </button>
+
+          <div class="ms-filter-backdrop" id="filterBackdrop"></div>
+
+          <div class="ms-filter-panel" id="filterPanel">
+            <div class="ms-filter-panel-header">
+              <span class="ms-filter-panel-title">Filter Students</span>
+              <button type="button" class="ms-filter-panel-close" id="filterPanelClose" aria-label="Close filters">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+
+            <div class="ms-filter-group">
+              <div class="ms-filter-group-title">Course</div>
+              <div class="ms-filter-options" data-group="course">
+                <button type="button" class="ms-filter-pill active" data-value="">All Courses</button>
+                <button type="button" class="ms-filter-pill" data-value="BS Computer Science">BS Computer Science</button>
+                <button type="button" class="ms-filter-pill" data-value="BS Information Technology">BS Information Technology</button>
+                <button type="button" class="ms-filter-pill" data-value="BS Education">BS Education</button>
+                <button type="button" class="ms-filter-pill" data-value="BS Nursing">BS Nursing</button>
+                <button type="button" class="ms-filter-pill" data-value="BS Engineering">BS Engineering</button>
+                <button type="button" class="ms-filter-pill" data-value="BS Business Administration">BS Business Administration</button>
+                <button type="button" class="ms-filter-pill" data-value="BS Accountancy">BS Accountancy</button>
+                <button type="button" class="ms-filter-pill" data-value="AB Communication">AB Communication</button>
+              </div>
+            </div>
+
+            <div class="ms-filter-group">
+              <div class="ms-filter-group-title">Year Level</div>
+              <div class="ms-filter-options" data-group="year">
+                <button type="button" class="ms-filter-pill active" data-value="">All Years</button>
+                <button type="button" class="ms-filter-pill" data-value="1st Year">1st Year</button>
+                <button type="button" class="ms-filter-pill" data-value="2nd Year">2nd Year</button>
+                <button type="button" class="ms-filter-pill" data-value="3rd Year">3rd Year</button>
+                <button type="button" class="ms-filter-pill" data-value="4th Year">4th Year</button>
+              </div>
+            </div>
+
+            <div class="ms-filter-group">
+              <div class="ms-filter-group-title">Overdue Books</div>
+              <div class="ms-filter-options" data-group="overdue">
+                <button type="button" class="ms-filter-pill active" data-value="">All Students</button>
+                <button type="button" class="ms-filter-pill" data-value="has">Has Overdue Books</button>
+                <button type="button" class="ms-filter-pill" data-value="none">No Overdue Books</button>
+              </div>
+            </div>
+
+            <div class="ms-filter-group">
+              <div class="ms-filter-group-title">Pending Fines</div>
+              <div class="ms-filter-options" data-group="pending">
+                <button type="button" class="ms-filter-pill active" data-value="">All Students</button>
+                <button type="button" class="ms-filter-pill" data-value="has">Has Pending Fines</button>
+                <button type="button" class="ms-filter-pill" data-value="none">No Pending Fines</button>
+              </div>
+            </div>
+
+            <div class="ms-filter-group">
+              <div class="ms-filter-group-title">Awaiting Approval</div>
+              <div class="ms-filter-options" data-group="awaiting">
+                <button type="button" class="ms-filter-pill active" data-value="">All Students</button>
+                <button type="button" class="ms-filter-pill" data-value="has">Has Payment Awaiting</button>
+                <button type="button" class="ms-filter-pill" data-value="none">No Payment Awaiting</button>
+              </div>
+            </div>
+
+            <div class="ms-filter-group">
+              <div class="ms-filter-group-title">Paid Fines</div>
+              <div class="ms-filter-options" data-group="paid">
+                <button type="button" class="ms-filter-pill active" data-value="">All Students</button>
+                <button type="button" class="ms-filter-pill" data-value="has">Has Paid Fines</button>
+                <button type="button" class="ms-filter-pill" data-value="none">No Paid Fines</button>
+              </div>
+            </div>
+
+            <div class="ms-filter-panel-footer">
+              <button type="button" class="ms-filter-clear-link" id="clearFiltersBtn">Clear all</button>
+              <button type="button" class="ms-filter-done-btn" id="filterDoneBtn">Done</button>
+            </div>
+          </div>
+        </div>
         <?php endif; ?>
-      </form>
+      </div>
+
+      <div class="ms-active-chips" id="activeChipsRow"></div>
+      <span class="ms-filter-count" id="filterResultCount"></span>
 
       <!-- Stats row -->
       <div class="stats-fines-grid">
@@ -685,7 +783,7 @@ foreach ($stats_pool as $sdata) {
         </div>
 
         <div class="table-fines-wrapper">
-          <table class="table-fines">
+          <table class="table-fines fines-filterable-table">
             <thead>
               <tr>
                 <th>Student ID</th>
@@ -702,17 +800,18 @@ foreach ($stats_pool as $sdata) {
             <tbody>
               <?php foreach ($search_matches as $sid):
                 $sdata = $fines_data[$sid];
-                $s_pending = 0; $s_requested = 0; $s_paid = 0; $s_overdue = 0;
+                $s_pending = 0; $s_requested = 0; $s_paid = 0;
                 foreach ($sdata['fines'] as $fine) {
-                  if ($fine['status'] === 'pending')           { $s_pending   += $fine['fine_amount']; if ($fine['days_overdue'] > 0) $s_overdue++; }
+                  if ($fine['status'] === 'pending')           { $s_pending   += $fine['fine_amount']; }
                   elseif ($fine['status'] === 'payment_requested') { $s_requested += $fine['fine_amount']; }
                   else                                          { $s_paid      += $fine['fine_amount']; }
                 }
+                $s_overdue = count_overdue_books($sdata['fines'], ['pending']);
                 if ($status_filter === 'pending'           && $s_pending    == 0) continue;
                 if ($status_filter === 'payment_requested' && $s_requested  == 0) continue;
                 if ($status_filter === 'paid'              && $s_paid       == 0) continue;
               ?>
-              <tr>
+              <tr data-course="<?= htmlspecialchars($sdata['course']) ?>" data-year="<?= htmlspecialchars($sdata['year_level']) ?>" data-overdue="<?= $s_overdue > 0 ? 'has' : 'none' ?>" data-pending="<?= $s_pending > 0 ? 'has' : 'none' ?>" data-awaiting="<?= $s_requested > 0 ? 'has' : 'none' ?>" data-paid="<?= $s_paid > 0 ? 'has' : 'none' ?>">
                 <td><code style="font-size:11px;background:#f3f4f6;padding:2px 6px;border-radius:4px;"><?= htmlspecialchars($sid) ?></code></td>
                 <td style="text-align:left;padding-left:14px;">
                   <div style="display:flex;align-items:center;gap:8px;">
@@ -760,7 +859,7 @@ foreach ($stats_pool as $sdata) {
         </div>
 
         <div class="table-fines-wrapper">
-          <table class="table-fines">
+          <table class="table-fines fines-filterable-table">
             <thead>
               <tr>
                 <th>Student ID</th>
@@ -776,17 +875,18 @@ foreach ($stats_pool as $sdata) {
             </thead>
             <tbody>
               <?php foreach ($fines_data as $sid => $sdata):
-                $s_pending = 0; $s_requested = 0; $s_paid = 0; $s_overdue = 0;
+                $s_pending = 0; $s_requested = 0; $s_paid = 0;
                 foreach ($sdata['fines'] as $fine) {
-                  if ($fine['status'] === 'pending')                { $s_pending   += $fine['fine_amount']; if ($fine['days_overdue'] > 0) $s_overdue++; }
+                  if ($fine['status'] === 'pending')                { $s_pending   += $fine['fine_amount']; }
                   elseif ($fine['status'] === 'payment_requested')  { $s_requested += $fine['fine_amount']; }
                   else                                              { $s_paid      += $fine['fine_amount']; }
                 }
+                $s_overdue = count_overdue_books($sdata['fines'], ['pending']);
                 if ($status_filter === 'pending'           && $s_pending   == 0) continue;
                 if ($status_filter === 'payment_requested' && $s_requested == 0) continue;
                 if ($status_filter === 'paid'              && $s_paid      == 0) continue;
               ?>
-              <tr>
+              <tr data-course="<?= htmlspecialchars($sdata['course']) ?>" data-year="<?= htmlspecialchars($sdata['year_level']) ?>" data-overdue="<?= $s_overdue > 0 ? 'has' : 'none' ?>" data-pending="<?= $s_pending > 0 ? 'has' : 'none' ?>" data-awaiting="<?= $s_requested > 0 ? 'has' : 'none' ?>" data-paid="<?= $s_paid > 0 ? 'has' : 'none' ?>">
                 <td><code style="font-size:11px;background:#f3f4f6;padding:2px 6px;border-radius:4px;"><?= htmlspecialchars($sid) ?></code></td>
                 <td style="text-align:left;padding-left:14px;">
                   <div style="display:flex;align-items:center;gap:8px;">
@@ -827,6 +927,204 @@ foreach ($stats_pool as $sdata) {
   </main>
 
 </div><!-- /.main-wrapper -->
+
+<script>
+// ── Filters (Course / Year Level / Overdue Books) — YouTube-style panel ──
+(function() {
+  var filterTriggerBtn = document.getElementById('filterTriggerBtn');
+  if (!filterTriggerBtn) return; // not rendered on the single-student detail view
+
+  var filterPanel    = document.getElementById('filterPanel');
+  var filterBackdrop = document.getElementById('filterBackdrop');
+  var filterBadge    = document.getElementById('filterBadge');
+  var activeChipsRow = document.getElementById('activeChipsRow');
+  var filterCountEl  = document.getElementById('filterResultCount');
+
+  // Groups in this list allow selecting more than one pill at once.
+  // Everything else stays single-select (picking one clears the rest).
+  var MULTI_SELECT_GROUPS = ['course', 'year'];
+
+  // Multi-select groups store an array of values; single-select groups store a plain string.
+  var filterState = { course: [], year: [], overdue: '', pending: '', awaiting: '', paid: '' };
+
+  var filterGroupLabels = {
+    course:   'Course',
+    year:     'Year',
+    overdue:  'Overdue',
+    pending:  'Pending',
+    awaiting: 'Awaiting',
+    paid:     'Paid'
+  };
+
+  function isMulti(group) { return MULTI_SELECT_GROUPS.indexOf(group) !== -1; }
+
+  function findPill(group, value) {
+    return document.querySelector('.ms-filter-options[data-group="' + group + '"] .ms-filter-pill[data-value="' + CSS.escape(value) + '"]');
+  }
+
+  function openFilterPanel() {
+    filterPanel.classList.add('open');
+    filterBackdrop.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeFilterPanel() {
+    filterPanel.classList.remove('open');
+    filterBackdrop.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  // Refresh which pills look "active" for a given group based on filterState.
+  function syncPillsUI(group) {
+    var value = filterState[group];
+    document.querySelectorAll('.ms-filter-options[data-group="' + group + '"] .ms-filter-pill').forEach(function(pill) {
+      if (isMulti(group)) {
+        var isAllPill = pill.dataset.value === '';
+        pill.classList.toggle('active', isAllPill ? value.length === 0 : value.indexOf(pill.dataset.value) !== -1);
+      } else {
+        pill.classList.toggle('active', pill.dataset.value === value);
+      }
+    });
+  }
+
+  // Toggle a single pill's value on/off within a group, respecting multi vs single select.
+  function togglePill(group, value) {
+    if (isMulti(group)) {
+      if (value === '') {
+        filterState[group] = []; // "All" pill clears the group
+      } else {
+        var arr = filterState[group];
+        var idx = arr.indexOf(value);
+        if (idx === -1) arr.push(value); else arr.splice(idx, 1);
+      }
+    } else {
+      filterState[group] = value;
+    }
+    syncPillsUI(group);
+    refreshFilterChrome();
+    applyFinesFilters();
+  }
+
+  // Used by the chip "x" buttons to remove one specific value.
+  function removeFilterValue(group, value) {
+    if (isMulti(group)) {
+      var arr = filterState[group];
+      var idx = arr.indexOf(value);
+      if (idx !== -1) arr.splice(idx, 1);
+    } else {
+      filterState[group] = '';
+    }
+    syncPillsUI(group);
+    refreshFilterChrome();
+    applyFinesFilters();
+  }
+
+  function refreshFilterChrome() {
+    var activeGroups = Object.keys(filterState).filter(function(g) {
+      return isMulti(g) ? filterState[g].length > 0 : filterState[g] !== '';
+    });
+
+    // Count total selected values (so picking 2 courses shows badge "2", not "1 group").
+    var count = activeGroups.reduce(function(sum, g) {
+      return sum + (isMulti(g) ? filterState[g].length : 1);
+    }, 0);
+
+    filterTriggerBtn.classList.toggle('active', count > 0);
+    if (count > 0) {
+      filterBadge.style.display = 'inline-flex';
+      filterBadge.textContent = count;
+    } else {
+      filterBadge.style.display = 'none';
+    }
+
+    activeChipsRow.innerHTML = '';
+    activeGroups.forEach(function(group) {
+      var values = isMulti(group) ? filterState[group] : [filterState[group]];
+      values.forEach(function(value) {
+        var pill  = findPill(group, value);
+        var label = pill ? pill.textContent : value;
+
+        var chip = document.createElement('span');
+        chip.className = 'ms-chip';
+        chip.innerHTML = filterGroupLabels[group] + ': ' + label +
+          ' <button type="button" aria-label="Remove filter" data-group="' + group + '">' +
+          '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+          '</button>';
+        chip.querySelector('button').addEventListener('click', function() {
+          removeFilterValue(group, value);
+        });
+        activeChipsRow.appendChild(chip);
+      });
+    });
+  }
+
+  function applyFinesFilters() {
+    var rows = document.querySelectorAll('.fines-filterable-table tbody tr');
+    var visibleCount = 0;
+
+    rows.forEach(function(row) {
+      var rCourse   = row.dataset.course   || '';
+      var rYear     = row.dataset.year     || '';
+      var rOverdue  = row.dataset.overdue  || '';
+      var rPending  = row.dataset.pending  || '';
+      var rAwaiting = row.dataset.awaiting || '';
+      var rPaid     = row.dataset.paid     || '';
+
+      var visible = true;
+      if (filterState.course.length && filterState.course.indexOf(rCourse) === -1) visible = false;
+      if (filterState.year.length   && filterState.year.indexOf(rYear)     === -1) visible = false;
+      if (filterState.overdue  && rOverdue  !== filterState.overdue)  visible = false;
+      if (filterState.pending  && rPending  !== filterState.pending)  visible = false;
+      if (filterState.awaiting && rAwaiting !== filterState.awaiting) visible = false;
+      if (filterState.paid     && rPaid     !== filterState.paid)     visible = false;
+
+      row.style.display = visible ? '' : 'none';
+      if (visible) visibleCount++;
+    });
+
+    var totalRows = rows.length;
+    if (filterCountEl) {
+      filterCountEl.textContent = (visibleCount === totalRows || totalRows === 0)
+        ? ''
+        : 'Showing ' + visibleCount + ' of ' + totalRows;
+    }
+  }
+
+  document.querySelectorAll('.ms-filter-options').forEach(function(optionsEl) {
+    var group = optionsEl.dataset.group;
+    optionsEl.querySelectorAll('.ms-filter-pill').forEach(function(pill) {
+      pill.addEventListener('click', function() {
+        togglePill(group, pill.dataset.value);
+      });
+    });
+  });
+
+  filterTriggerBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (filterPanel.classList.contains('open')) {
+      closeFilterPanel();
+    } else {
+      openFilterPanel();
+    }
+  });
+
+  document.getElementById('filterDoneBtn').addEventListener('click', closeFilterPanel);
+  document.getElementById('filterPanelClose').addEventListener('click', closeFilterPanel);
+  filterBackdrop.addEventListener('click', closeFilterPanel);
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeFilterPanel();
+  });
+
+  document.getElementById('clearFiltersBtn').addEventListener('click', function() {
+    Object.keys(filterState).forEach(function(group) {
+      filterState[group] = isMulti(group) ? [] : '';
+      syncPillsUI(group);
+    });
+    refreshFilterChrome();
+    applyFinesFilters();
+  });
+})();
+</script>
 
 </body>
 </html>
