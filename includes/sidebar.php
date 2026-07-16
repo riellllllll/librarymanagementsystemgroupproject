@@ -5,17 +5,23 @@
  * Requires session_start() to already be called in the parent file.
  * Uses $_SESSION variables set at login:
  *   $_SESSION['student_name']    — e.g. "Juan Dela Cruz"
- *   $_SESSION['student_id']      — e.g. "2021-00123"
+ *   $_SESSION['student_id']      — e.g. "101"
  *   $_SESSION['active_borrows']  — int count of currently borrowed books
  *   $_SESSION['has_fines']       — bool: true if any unpaid fines exist
  */
 
+// ── Session guard: only logged-in students may proceed ──────────────────────
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'student') {
+    header('Location: ../login/login.php');
+    exit;
+}
+
 // ── Derive values from session ──────────────────────────────────────────────
-$_s_name     = htmlspecialchars($_SESSION['student_name']  ?? 'Juan Dela Cruz');
+$_s_name     = htmlspecialchars($_SESSION['student_name']  ?? 'Student');
 $_s_borrows  = (int)($_SESSION['active_borrows']           ?? 0);
 
 // Build initials from first + last word of name
-$_s_parts    = explode(' ', trim($_SESSION['student_name'] ?? 'Juan Dela Cruz'));
+$_s_parts    = explode(' ', trim($_SESSION['student_name'] ?? 'Student'));
 $_s_initials = strtoupper(substr($_s_parts[0], 0, 1));
 if (count($_s_parts) > 1) {
     $_s_initials .= strtoupper(substr(end($_s_parts), 0, 1));
@@ -25,8 +31,10 @@ if (count($_s_parts) > 1) {
 $_s_page = basename($_SERVER['PHP_SELF']);
 
 // Helper: returns ' active' if the given href matches the current page
-function _nav_active(string $href, string $current): string {
-    return $href === $current ? ' active' : '';
+if (!function_exists('_nav_active')) {
+    function _nav_active(string $href, string $current): string {
+        return $href === $current ? ' active' : '';
+    }
 }
 ?>
 
@@ -134,16 +142,12 @@ function _nav_active(string $href, string $current): string {
 
 <!-- ══════════════════════════════════════════════════════════
      LOGOUT CONFIRMATION MODAL
-     Uses .modal-backdrop / .modal / .btn-danger / .btn-outline
-     already defined in student.css — no extra CSS needed.
      ══════════════════════════════════════════════════════════ -->
 <div class="modal-backdrop" id="logoutModal" role="dialog" aria-modal="true" aria-labelledby="logoutModalTitle">
   <div class="modal" style="max-width:400px;">
 
-    <!-- Gold top bar (from student.css .modal-top) -->
     <div class="modal-top" style="background:linear-gradient(90deg,#8b3a2a,#c06040,#8b3a2a);"></div>
 
-    <!-- Close × -->
     <button class="modal-close" onclick="closeLogoutModal()" aria-label="Cancel">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -152,7 +156,6 @@ function _nav_active(string $href, string $current): string {
 
     <div class="modal-body" style="text-align:center;">
 
-      <!-- Icon -->
       <div style="width:60px;height:60px;border-radius:50%;background:rgba(192,57,43,0.1);border:1px solid rgba(192,57,43,0.2);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c0392b" stroke-width="1.8">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -168,7 +171,6 @@ function _nav_active(string $href, string $current): string {
         Any unsaved changes will be lost.
       </p>
 
-      <!-- Action buttons -->
       <div style="display:flex;gap:10px;">
         <button type="button" class="btn-outline" style="flex:1;" onclick="closeLogoutModal()">
           Stay
@@ -189,19 +191,15 @@ function _nav_active(string $href, string $current): string {
 </div>
 
 <script>
-/* ── Logout modal helpers ──
-   Scoped with var so they don't collide if this include is loaded multiple times. */
 function openLogoutModal() {
   document.getElementById('logoutModal').classList.add('open');
 }
 function closeLogoutModal() {
   document.getElementById('logoutModal').classList.remove('open');
 }
-/* Close on backdrop click */
 document.getElementById('logoutModal').addEventListener('click', function(e) {
   if (e.target === this) closeLogoutModal();
 });
-/* Close on Escape key */
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') closeLogoutModal();
 });

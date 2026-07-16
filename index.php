@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// admin/index.php — redirects to login (path fixed)
+// index.php (ROOT) — Entry point, redirects to login
 // ============================================================
-header("Location: ../login/login.php");
+header("Location: login/login.php");
 exit;
