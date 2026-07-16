@@ -646,4 +646,3 @@ $has_fines = $stats['unpaid_fines'] > 0;
   }
 </script>
 </body>
-</html>

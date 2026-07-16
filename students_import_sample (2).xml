@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<students>
+  <student>
+    <student_number>205</student_number>
+    <name>Kevin Torres</name>
+    <email>kevin.torres@cvsu.edu.ph</email>
+    <course>BS Computer Science</course>
+    <year_level>1st Year</year_level>
+  </student>
+  <student>
+    <student_number>206</student_number>
+    <name>Angela Cruz</name>
+    <email>angela.cruz@cvsu.edu.ph</email>
+    <course>BS Information Technology</course>
+    <year_level>2nd Year</year_level>
+  </student>
+  <student>
+    <student_number>207</student_number>
+    <first_name>Miguel</first_name>
+    <last_name>Reyes</last_name>
+    <email>miguel.reyes@cvsu.edu.ph</email>
+    <course>BS Nursing</course>
+    <year_level>3rd Year</year_level>
+  </student>
+  <student>
+    <student_number>208</student_number>
+    <name>Samantha Lim</name>
+    <email>samantha.lim@cvsu.edu.ph</email>
+    <course>BS Accountancy</course>
+    <year_level>4th Year</year_level>
+  </student>
+</students>
