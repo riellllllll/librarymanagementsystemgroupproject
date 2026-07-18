@@ -175,6 +175,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $pay_book_id = $_POST['book_id'] ?? '';
       $fid = $direct_fine_id ?: _find_fine_id($fines_data, $post_student_id, $pay_book_id);
       if ($fid) {
+        // Capture user_id + amount BEFORE updating so we can notify after
+        $row = null;
+        $q = $conn->prepare("SELECT user_id, amount FROM fines WHERE id = ? LIMIT 1");
+        $q->bind_param('i', $fid);
+        $q->execute();
+        $row = $q->get_result()->fetch_assoc();
+        $q->close();
+
         $upd = $conn->prepare(
           "UPDATE fines SET paid_status = 'paid', paid_date = CURDATE() WHERE id = ? AND paid_status = 'payment_requested'"
         );
@@ -183,8 +191,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $affected = $upd->affected_rows;
         $upd->close();
         if ($affected > 0) {
-          $_SESSION['fine_flash']      = "Payment of ₱" . number_format((float)($_POST['amount'] ?? 0), 2) . " approved for \"" . htmlspecialchars($_POST['book_title'] ?? '') . "\" — marked as Paid.";
+          $book_title = $_POST['book_title'] ?? '';
+          $amount     = (float)($_POST['amount'] ?? ($row['amount'] ?? 0));
+          $_SESSION['fine_flash']      = "Payment of ₱" . number_format($amount, 2) . " approved for \"" . htmlspecialchars($book_title) . "\" — marked as Paid.";
           $_SESSION['fine_flash_type'] = 'success';
+
+          // Notify student
+          if ($row && !empty($row['user_id'])) {
+            require_once __DIR__ . '/../classes/Notification.php';
+            $notif = new Notification($conn);
+            $notif->create(
+              (int)$row['user_id'],
+              'approved',
+              'Payment Approved ✓',
+              'Your fine payment of ₱' . number_format($amount, 2) . ' for "' . $book_title . '" has been approved by the admin. Thank you!'
+            );
+          }
         } else {
           $_SESSION['fine_flash']      = "Could not approve — payment already processed.";
           $_SESSION['fine_flash_type'] = 'warning';
@@ -210,6 +232,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $pay_book_id = $_POST['book_id'] ?? '';
       $fid = $direct_fine_id ?: _find_fine_id($fines_data, $post_student_id, $pay_book_id);
       if ($fid) {
+        // Get user_id + amount BEFORE update so we can notify
+        $row = null;
+        $q = $conn->prepare("SELECT user_id, amount FROM fines WHERE id = ? LIMIT 1");
+        $q->bind_param('i', $fid);
+        $q->execute();
+        $row = $q->get_result()->fetch_assoc();
+        $q->close();
+
         $upd = $conn->prepare(
           "UPDATE fines SET paid_status = 'unpaid', payment_method = NULL, payment_submitted_at = NULL WHERE id = ? AND paid_status = 'payment_requested'"
         );
@@ -221,6 +251,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           ? "Payment request rejected for \"" . htmlspecialchars($_POST['book_title'] ?? '') . "\" — fine reset to Pending."
           : "Could not reject — payment already processed.";
         $_SESSION['fine_flash_type'] = 'warning';
+
+        // Notify student
+        if ($affected > 0 && $row && !empty($row['user_id'])) {
+          require_once __DIR__ . '/../classes/Notification.php';
+          $notif = new Notification($conn);
+          $book_title = $_POST['book_title'] ?? '';
+          $amount     = (float)($row['amount'] ?? 0);
+          $notif->create(
+            (int)$row['user_id'],
+            'rejected',
+            'Payment Rejected',
+            'Your payment request of ₱' . number_format($amount, 2) . ' for "' . $book_title . '" was not approved. Please contact the library or submit again.'
+          );
+        }
       }
       $sf = $_POST['status_filter'] ?? 'payment_requested';
       $from_queue = !empty($_POST['from_queue']);
@@ -238,6 +282,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $pay_book_id = $_POST['book_id'] ?? '';
       $fid = $direct_fine_id ?: _find_fine_id($fines_data, $post_student_id, $pay_book_id);
       if ($fid) {
+        // Capture user_id + amount BEFORE update so we can notify
+        $row = null;
+        $q = $conn->prepare("SELECT user_id, amount FROM fines WHERE id = ? LIMIT 1");
+        $q->bind_param('i', $fid);
+        $q->execute();
+        $row = $q->get_result()->fetch_assoc();
+        $q->close();
+
         $upd = $conn->prepare(
           "UPDATE fines SET paid_status = 'paid', paid_date = CURDATE(), payment_method = 'Cash (Admin)' WHERE id = ? AND paid_status = 'unpaid'"
         );
@@ -246,8 +298,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $affected = $upd->affected_rows;
         $upd->close();
         if ($affected > 0) {
-          $_SESSION['fine_flash']      = "Payment of ₱" . number_format((float)($_POST['amount'] ?? 0), 2) . " recorded for \"" . htmlspecialchars($_POST['book_title'] ?? '') . "\" — marked as Paid.";
+          $book_title = $_POST['book_title'] ?? '';
+          $amount     = (float)($_POST['amount'] ?? ($row['amount'] ?? 0));
+          $_SESSION['fine_flash']      = "Payment of ₱" . number_format($amount, 2) . " recorded for \"" . htmlspecialchars($book_title) . "\" — marked as Paid.";
           $_SESSION['fine_flash_type'] = 'success';
+
+          // Notify student
+          if ($row && !empty($row['user_id'])) {
+            require_once __DIR__ . '/../classes/Notification.php';
+            $notif = new Notification($conn);
+            $notif->create(
+              (int)$row['user_id'],
+              'approved',
+              'Fine Marked as Paid',
+              'Your fine of ₱' . number_format($amount, 2) . ' for "' . $book_title . '" has been marked as paid at the library counter.'
+            );
+          }
         } else {
           $_SESSION['fine_flash']      = "Could not pay — fine already processed.";
           $_SESSION['fine_flash_type'] = 'warning';

@@ -109,13 +109,13 @@ class User
         $stmt = $this->conn->prepare(
             "INSERT INTO users
              (role, student_number, first_name, last_name, middle_name, full_name,
-              email, password, dob, gender, course, year_level, phone)
-             VALUES ('student', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+              email, password, gender, course, year_level, phone)
+             VALUES ('student', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
 
-        // 12 variables → 12 's' characters in the type string
+        // 11 variables → 11 's' characters in the type string
         $stmt->bind_param(
-            'ssssssssssss',
+            'sssssssssss',
             $data['student_number'],
             $data['first_name'],
             $data['last_name'],
@@ -123,7 +123,6 @@ class User
             $full_name,
             $data['email'],
             $data['password'],      // already hashed in login.php
-            $data['dob'],
             $data['gender'],
             $data['course'],
             $data['year_level'],
