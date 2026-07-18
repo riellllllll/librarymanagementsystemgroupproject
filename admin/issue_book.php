@@ -36,13 +36,16 @@ function format_book_date($date) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['issue_book'])) {
   $book_id    = trim($_POST['book_id']    ?? '');
   $student_id = trim($_POST['student_id'] ?? '');   // student NUMBER (e.g. 101)
-  $issue_date = trim($_POST['issue_date'] ?? '');
+  $issue_date = date('Y-m-d');                      // face-to-face issuing: always today, ignore any posted value
   $due_date   = trim($_POST['due_date']   ?? '');
+  $max_due    = date('Y-m-d', strtotime('+7 days'));
 
-  if ($book_id === '' || $student_id === '' || $issue_date === '' || $due_date === '') {
+  if ($book_id === '' || $student_id === '' || $due_date === '') {
     $error = "All fields are required.";
   } elseif ($due_date < $issue_date) {
-    $error = "Due date cannot be earlier than issue date.";
+    $error = "Due date cannot be earlier than the issue date.";
+  } elseif ($due_date > $max_due) {
+    $error = "Due date cannot be more than 7 days from the issue date.";
   } else {
     // Look up student DB id from student_number
     $student = $borrow->findStudent($student_id);
@@ -269,15 +272,26 @@ $currentPage   = basename($_SERVER['PHP_SELF']);
             <div class="field">
               <label for="book_id">Book ID <span>*</span></label>
               <div class="input-wrap">
-                <!-- ONLY CHANGE: added min="0" below -->
-                <input class="no-icon" type="number" id="book_id" name="book_id" placeholder="Enter Book ID" min="0" required>
+                <span class="ico">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                  </svg>
+                </span>
+                <input type="number" id="book_id" name="book_id" placeholder="Enter Book ID" min="0" required>
               </div>
             </div>
 
             <div class="field">
               <label for="student_id">Student ID <span>*</span></label>
               <div class="input-wrap">
-                <input class="no-icon" type="text" id="student_id" name="student_id" placeholder="Enter Student ID" required>
+                <span class="ico">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="8" r="4"/>
+                    <path d="M4 21c0-4 3.5-6 8-6s8 2 8 6"/>
+                  </svg>
+                </span>
+                <input type="text" id="student_id" name="student_id" placeholder="Enter Student ID" required>
               </div>
             </div>
           </div>
@@ -286,15 +300,22 @@ $currentPage   = basename($_SERVER['PHP_SELF']);
             <div class="field">
               <label for="issue_date">Issue Date <span>*</span></label>
               <div class="input-wrap">
-                <input class="no-icon" type="date" id="issue_date" name="issue_date" value="<?php echo date('Y-m-d'); ?>" required>
+                <input class="no-icon" type="date" id="issue_date" value="<?php echo date('Y-m-d'); ?>" disabled>
+                <input type="hidden" name="issue_date" value="<?php echo date('Y-m-d'); ?>">
               </div>
+              <small class="field-hint">Issuing is face-to-face, so this is always today's date.</small>
             </div>
 
             <div class="field">
               <label for="due_date">Due Date <span>*</span></label>
               <div class="input-wrap">
-                <input class="no-icon" type="date" id="due_date" name="due_date" required>
+                <input class="no-icon" type="date" id="due_date" name="due_date"
+                       min="<?php echo date('Y-m-d'); ?>"
+                       max="<?php echo date('Y-m-d', strtotime('+7 days')); ?>"
+                       value="<?php echo date('Y-m-d', strtotime('+7 days')); ?>"
+                       required>
               </div>
+              <small class="field-hint">Choose a date from today up to 7 days from now.</small>
             </div>
           </div>
 
@@ -311,11 +332,31 @@ $currentPage   = basename($_SERVER['PHP_SELF']);
     <div class="card issue-book-card">
       <div class="card-body">
 
-        <div class="card-title">Issued Books Record</div>
-        <p class="card-subtitle">Records from manual issuing and approved student requests.</p>
+        <div class="issue-book-record-head">
+          <div>
+            <div class="card-title">Issued Books Record</div>
+            <p class="card-subtitle">Records from manual issuing and approved student requests.</p>
+          </div>
+
+          <div class="issue-book-filters">
+            <div class="issue-search-wrap">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="7"/>
+                <path d="m21 21-4.3-4.3"/>
+              </svg>
+              <input type="text" id="issueSearchInput" placeholder="Search student or book...">
+            </div>
+
+            <select id="issueStatusFilter">
+              <option value="">All Status</option>
+              <option value="borrowed">Borrowed</option>
+              <option value="returned">Returned</option>
+            </select>
+          </div>
+        </div>
 
         <div class="table-wrap">
-          <table>
+          <table id="issueBookTable">
             <thead>
               <tr>
                 <th>ID</th>
@@ -332,7 +373,8 @@ $currentPage   = basename($_SERVER['PHP_SELF']);
             <tbody>
               <?php if (!empty($borrowedBooks)): ?>
                 <?php foreach ($borrowedBooks as $row): ?>
-                  <tr>
+                  <tr data-status="<?php echo htmlspecialchars($row['status'] ?? ''); ?>"
+                      data-search="<?php echo htmlspecialchars(strtolower(($row['student'] ?? '') . ' ' . ($row['student_id'] ?? '') . ' ' . ($row['book_title'] ?? '') . ' ' . ($row['book_id'] ?? ''))); ?>">
                     <td><?php echo htmlspecialchars($row['id'] ?? $row['request_id'] ?? '-'); ?></td>
 
                     <td>
@@ -384,6 +426,13 @@ $currentPage   = basename($_SERVER['PHP_SELF']);
               <?php endif; ?>
             </tbody>
           </table>
+
+          <?php if (!empty($borrowedBooks)): ?>
+            <div class="empty-state" id="issueNoMatches" style="display:none;">
+              <h3>No matching records</h3>
+              <p>Try a different search term or status filter.</p>
+            </div>
+          <?php endif; ?>
         </div>
 
       </div>
@@ -392,6 +441,41 @@ $currentPage   = basename($_SERVER['PHP_SELF']);
   </main>
 
 </div>
+
+<script>
+(function () {
+  var searchInput  = document.getElementById('issueSearchInput');
+  var statusSelect = document.getElementById('issueStatusFilter');
+  var table        = document.getElementById('issueBookTable');
+  var noMatches     = document.getElementById('issueNoMatches');
+  if (!table) return;
+
+  var rows = Array.prototype.slice.call(table.querySelectorAll('tbody tr[data-search]'));
+
+  function applyFilters() {
+    var term   = (searchInput ? searchInput.value : '').trim().toLowerCase();
+    var status = statusSelect ? statusSelect.value : '';
+    var visibleCount = 0;
+
+    rows.forEach(function (row) {
+      var matchesTerm   = !term || row.getAttribute('data-search').indexOf(term) !== -1;
+      var matchesStatus = !status || row.getAttribute('data-status') === status ||
+                           (status === 'borrowed' && row.getAttribute('data-status') !== 'returned');
+      var visible = matchesTerm && matchesStatus;
+      row.style.display = visible ? '' : 'none';
+      if (visible) visibleCount++;
+    });
+
+    if (noMatches) {
+      noMatches.style.display = (visibleCount === 0 && rows.length > 0) ? 'block' : 'none';
+      table.style.display = (visibleCount === 0 && rows.length > 0) ? 'none' : '';
+    }
+  }
+
+  if (searchInput)  searchInput.addEventListener('input', applyFilters);
+  if (statusSelect) statusSelect.addEventListener('change', applyFilters);
+})();
+</script>
 
 </body>
 </html>

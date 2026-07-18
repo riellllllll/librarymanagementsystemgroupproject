@@ -145,7 +145,7 @@ class User
     {
         $result = $this->conn->query(
             "SELECT u.id, u.student_number, u.full_name, u.first_name, u.last_name, u.middle_name,
-                    u.email, u.course, u.year_level, u.status, u.created_at,
+                    u.email, u.course, u.year_level, u.status, u.created_at, u.qr_token,
                     (SELECT COUNT(*) FROM borrow_records
                      WHERE user_id = u.id AND status IN ('active','overdue','pending_return'))
                      AS active_borrows,
@@ -158,6 +158,22 @@ class User
         );
 
         return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    }
+
+    /**
+     * Backfill qr_token for students created before this feature existed.
+     * Safe to call on every page load — only touches rows where it's NULL.
+     */
+    public function backfillQrTokens(): void
+    {
+        $result = $this->conn->query(
+            "SELECT id FROM users WHERE role = 'student' AND qr_token IS NULL"
+        );
+        if (!$result) return;
+
+        while ($row = $result->fetch_assoc()) {
+            $this->regenerateQrToken((int)$row['id']);
+        }
     }
 
     /**
@@ -177,8 +193,9 @@ class User
 
     /**
      * Admin manually adds a student account
+     * Returns the new student's ID on success, or false on duplicate/failure
      */
-    public function addStudent(array $data): bool
+    public function addStudent(array $data): int|false
     {
         // Check for duplicate
         $check = $this->conn->prepare(
@@ -190,28 +207,89 @@ class User
         if ($check->num_rows > 0) { $check->close(); return false; }
         $check->close();
 
-        $full_name = trim($data['first_name'] . ' ' . $data['last_name']);
+        $middle    = $data['middle_name'] ?? '';
+        $full_name = trim(
+            $data['first_name'] . ' ' .
+            ($middle !== '' ? $middle . ' ' : '') .
+            $data['last_name']
+        );
         $hashed    = password_hash($data['password'], PASSWORD_DEFAULT);
+        $qrToken   = $this->generateUniqueQrToken();
 
         $stmt = $this->conn->prepare(
             "INSERT INTO users
-             (role, student_number, first_name, last_name, full_name, email, password, course, year_level)
-             VALUES ('student', ?, ?, ?, ?, ?, ?, ?, ?)"
+             (role, student_number, first_name, last_name, middle_name, full_name, email, password, course, year_level, qr_token)
+             VALUES ('student', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
         $stmt->bind_param(
-            'ssssssss',
+            'ssssssssss',
             $data['student_number'],
             $data['first_name'],
             $data['last_name'],
+            $middle,
             $full_name,
             $data['email'],
             $hashed,
             $data['course'],
-            $data['year_level']
+            $data['year_level'],
+            $qrToken
         );
         $ok = $stmt->execute();
+        $newId = $ok ? $this->conn->insert_id : false;
         $stmt->close();
-        return $ok;
+        return $newId;
+    }
+
+    /**
+     * Generate a random token for QR-based identity, guaranteed unique.
+     * The token (not the student number) is what gets encoded in the QR
+     * code, so a lost/photographed ID can't be used to guess another
+     * student's code.
+     */
+    private function generateUniqueQrToken(): string
+    {
+        do {
+            $token = bin2hex(random_bytes(16));
+            $stmt  = $this->conn->prepare("SELECT id FROM users WHERE qr_token = ? LIMIT 1");
+            $stmt->bind_param('s', $token);
+            $stmt->execute();
+            $stmt->store_result();
+            $exists = $stmt->num_rows > 0;
+            $stmt->close();
+        } while ($exists);
+
+        return $token;
+    }
+
+    /**
+     * Look up a student by their QR token (for future attendance scanning)
+     */
+    public function getStudentByQrToken(string $token): array|false
+    {
+        $stmt = $this->conn->prepare(
+            "SELECT id, student_number, full_name, email, course, year_level, status
+             FROM users WHERE qr_token = ? AND role = 'student' LIMIT 1"
+        );
+        $stmt->bind_param('s', $token);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row ?? false;
+    }
+
+    /**
+     * Regenerate a student's QR token (e.g. if their ID/QR was compromised)
+     */
+    public function regenerateQrToken(int $id): string|false
+    {
+        $token = $this->generateUniqueQrToken();
+        $stmt  = $this->conn->prepare(
+            "UPDATE users SET qr_token = ? WHERE id = ? AND role = 'student'"
+        );
+        $stmt->bind_param('si', $token, $id);
+        $ok = $stmt->execute();
+        $stmt->close();
+        return $ok ? $token : false;
     }
 
     /**
