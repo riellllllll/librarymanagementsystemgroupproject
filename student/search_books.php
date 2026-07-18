@@ -1,26 +1,29 @@
 <?php
 // search_books.php
 session_start();
+require_once __DIR__ . '/../includes/student_auth.php';
+require_once __DIR__ . '/../classes/Book.php';
+
 $active_page = 'search';
 
-$all_books = [
-  ['id'=>1, 'title'=>'The Great Gatsby',         'author'=>'F. Scott Fitzgerald','category'=>'Fiction',     'year'=>1925,'copies'=>3,'available'=>2,'color'=>'color-a'],
-  ['id'=>2, 'title'=>'To Kill a Mockingbird',    'author'=>'Harper Lee',          'category'=>'Fiction',     'year'=>1960,'copies'=>4,'available'=>1,'color'=>'color-b'],
-  ['id'=>3, 'title'=>'A Brief History of Time',  'author'=>'Stephen Hawking',     'category'=>'Science',     'year'=>1988,'copies'=>2,'available'=>2,'color'=>'color-c'],
-  ['id'=>4, 'title'=>'Sapiens',                  'author'=>'Yuval Noah Harari',   'category'=>'History',     'year'=>2011,'copies'=>3,'available'=>0,'color'=>'color-d'],
-  ['id'=>5, 'title'=>'Clean Code',               'author'=>'Robert C. Martin',    'category'=>'Technology',  'year'=>2008,'copies'=>5,'available'=>4,'color'=>'color-e'],
-  ['id'=>6, 'title'=>'1984',                     'author'=>'George Orwell',       'category'=>'Fiction',     'year'=>1949,'copies'=>3,'available'=>2,'color'=>'color-a'],
-  ['id'=>7, 'title'=>'The Selfish Gene',         'author'=>'Richard Dawkins',     'category'=>'Science',     'year'=>1976,'copies'=>2,'available'=>1,'color'=>'color-b'],
-  ['id'=>8, 'title'=>'Calculus Made Easy',       'author'=>'Silvanus P. Thompson','category'=>'Mathematics', 'year'=>1914,'copies'=>4,'available'=>3,'color'=>'color-c'],
-  ['id'=>9, 'title'=>'Design Patterns',          'author'=>'GoF',                 'category'=>'Technology',  'year'=>1994,'copies'=>3,'available'=>3,'color'=>'color-d'],
-  ['id'=>10,'title'=>'Noli Me Tangere',          'author'=>'Jose Rizal',          'category'=>'Literature',  'year'=>1887,'copies'=>6,'available'=>5,'color'=>'color-e'],
-  ['id'=>11,'title'=>'El Filibusterismo',        'author'=>'Jose Rizal',          'category'=>'Literature',  'year'=>1891,'copies'=>5,'available'=>4,'color'=>'color-a'],
-  ['id'=>12,'title'=>'Guns, Germs, and Steel',   'author'=>'Jared Diamond',       'category'=>'History',     'year'=>1997,'copies'=>2,'available'=>2,'color'=>'color-b'],
-  ['id'=>13,'title'=>'The Pragmatic Programmer', 'author'=>'Andrew Hunt',         'category'=>'Technology',  'year'=>1999,'copies'=>3,'available'=>2,'color'=>'color-c'],
-  ['id'=>14,'title'=>'Pride and Prejudice',      'author'=>'Jane Austen',         'category'=>'Literature',  'year'=>1813,'copies'=>4,'available'=>3,'color'=>'color-d'],
-  ['id'=>15,'title'=>'Cosmos',                   'author'=>'Carl Sagan',          'category'=>'Science',     'year'=>1980,'copies'=>3,'available'=>1,'color'=>'color-e'],
-  ['id'=>16,'title'=>'The Art of War',           'author'=>'Sun Tzu',             'category'=>'History',     'year'=>500, 'copies'=>4,'available'=>4,'color'=>'color-a'],
-];
+$bookObj = new Book($conn);
+
+// Load from DB
+$db_books = $bookObj->getAll();
+$colors   = ['color-a','color-b','color-c','color-d','color-e'];
+$all_books = [];
+foreach ($db_books as $i => $b) {
+    $all_books[] = [
+        'id'        => (int)$b['id'],
+        'title'     => $b['title'],
+        'author'    => $b['author'],
+        'category'  => $b['category'],
+        'year'      => 0,  // year not in DB, kept for UI compatibility
+        'copies'    => (int)$b['total_copies'],
+        'available' => (int)$b['copies_available'],
+        'color'     => $colors[$i % count($colors)],
+    ];
+}
 
 $categories = ['All','Fiction','Science','History','Technology','Literature','Mathematics'];
 
@@ -62,100 +65,7 @@ function hl(string $text, string $q): string {
 </head>
 <body>
 
-<!-- SIDEBAR -->
-<<aside class="sidebar" id="sidebar">
-  <div class="sidebar-logo">
-    <div class="logo-icon">
-      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="6"  y="8"  width="8"  height="32" rx="1.5" fill="#c9973a"/>
-        <rect x="16" y="10" width="6"  height="30" rx="1.5" fill="#e8c26a"/>
-        <rect x="24" y="6"  width="10" height="36" rx="1.5" fill="#c9973a"/>
-        <rect x="36" y="9"  width="6"  height="31" rx="1.5" fill="#a07830"/>
-        <rect x="5"  y="38" width="38" height="2.5" rx="1.25" fill="#7a6030"/>
-      </svg>
-    </div>
-    <div>
-      <h2>Cv<<em>SU</em></h2>
-      <div class="sidebar-subtitle">Library System</div>
-    </div>
-  </div>
-
-  <nav class="sidebar-nav">
-    <div class="nav-section-label">Main</div>
-    <a href="dashboard.php" class="nav-link ">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-        <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
-      </svg>
-      Dashboard
-    </a>
-    <div class="nav-section-label">Books</div>
-    <a href="view_books.php" class="nav-link ">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-      </svg>
-      Browse Books
-    </a>
-    <a href="search_books.php" class="nav-link active">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      </svg>
-      Search Books
-    </a>
-    <a href="request_borrow.php" class="nav-link ">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M12 5v14M5 12l7-7 7 7"/>
-      </svg>
-      Request Borrow
-    </a>
-
-    <div class="nav-section-label">My Library</div>
-    <a href="borrow_history.php" class="nav-link ">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 0 .5-4"/>
-        <polyline points="3 3 3.05 11 11 10.94"/>
-      </svg>
-      Borrow History
-    </a>
-    <a href="return_book.php" class="nav-link ">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-1"/>
-      </svg>
-      Return a Book
-    </a>
-    <a href="view_fines.php" class="nav-link ">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-      </svg>
-      My Fines
-    </a>
-
-    <div class="nav-section-label">Account</div>
-    <a href="profile.php" class="nav-link ">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-      </svg>
-      My Profile
-    </a>
-  </nav>
-
-  <div class="sidebar-footer">
-    <div class="sidebar-user">
-      <div class="user-avatar">JC</div>
-      <div class="user-info">
-        <div class="user-name">Juan Dela Cruz</div>
-        <div class="user-role">Student</div>
-      </div>
-    </div>
-    <a href="../includes/logout.php" class="btn-logout">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-        <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-      </svg>
-      Log Out
-    </a>
-  </div>
-</aside>
+<?php require_once "../includes/sidebar.php"; ?>
 
 <!-- MAIN WRAPPER -->
 <div class="main-wrapper">

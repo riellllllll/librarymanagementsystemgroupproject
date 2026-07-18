@@ -1,53 +1,35 @@
 <?php
+// ============================================================
+// admin/dashboard.php — DB-powered (UI unchanged)
+// ============================================================
 session_start();
-require 'library_data.php';
+require_once __DIR__ . '/library_data.php';
+require_once __DIR__ . '/../classes/BorrowRecord.php';
+
+// Session guard
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
+    header('Location: ../login/login.php');
+    exit;
+}
 
 $pending_count = pending_request_count();
 
+// Update overdue statuses
+$db     = new Database();
+$borrow = new BorrowRecord($db->getConnection());
+$borrow->updateOverdueStatuses();
+
+// ── Fetch recent borrowed records from DB ───────────────────
+$recent_db = get_recent_borrowed(5);
 $recent_borrowed = [];
-
-if (isset($_SESSION['borrowed_books']) && is_array($_SESSION['borrowed_books'])) {
-  foreach ($_SESSION['borrowed_books'] as $borrow) {
+foreach ($recent_db as $r) {
     $recent_borrowed[] = [
-      'book_title' => $borrow['book_title'] ?? $borrow['book'] ?? $borrow['title'] ?? 'Unknown Book',
-      'student' => $borrow['student'] ?? $borrow['student_name'] ?? 'Unknown Student',
-      'date' => $borrow['date'] ?? $borrow['borrow_date'] ?? $borrow['approved_at'] ?? '',
-      'status' => $borrow['status'] ?? 'borrowed'
+        'book_title' => $r['book_title'],
+        'student'    => $r['student'],
+        'date'       => date('M j, Y', strtotime($r['date'])),
+        'status'     => $r['status'],
     ];
-  }
 }
-
-if (isset($_SESSION['borrow_requests']) && is_array($_SESSION['borrow_requests'])) {
-  foreach ($_SESSION['borrow_requests'] as $request) {
-    if (($request['status'] ?? '') === 'approved') {
-      $recent_borrowed[] = [
-        'book_title' => $request['book_title'] ?? $request['book'] ?? $request['title'] ?? 'Unknown Book',
-        'student' => $request['student'] ?? $request['student_name'] ?? 'Unknown Student',
-        'date' => $request['approved_at'] ?? $request['date'] ?? $request['request_date'] ?? '',
-        'status' => 'borrowed'
-      ];
-    }
-  }
-}
-
-if (empty($recent_borrowed)) {
-  $recent_borrowed = [
-    [
-      'book_title' => 'The Great Gatsby',
-      'student' => 'Juan Dela Cruz',
-      'date' => 'May 25, 2026',
-      'status' => 'borrowed'
-    ],
-    [
-      'book_title' => 'To Kill a Mockingbird',
-      'student' => 'Maria Santos',
-      'date' => 'May 18, 2026',
-      'status' => 'borrowed'
-    ]
-  ];
-}
-
-$recent_borrowed = array_slice(array_reverse($recent_borrowed), 0, 5);
 ?>
 
 <!DOCTYPE html>
@@ -132,7 +114,7 @@ $recent_borrowed = array_slice(array_reverse($recent_borrowed), 0, 5);
           </svg>
         </div>
 
-        <div class="stat-value"><?= count($_SESSION['archived_books']) ?></div>
+        <div class="stat-value"><?= archived_book_count() ?></div>
         <div class="stat-label">ARCHIVED BOOKS</div>
       </div>
 
@@ -189,7 +171,17 @@ $recent_borrowed = array_slice(array_reverse($recent_borrowed), 0, 5);
                   <td><?= htmlspecialchars($borrow['student']) ?></td>
                   <td><?= htmlspecialchars($borrow['date']) ?></td>
                   <td>
-                    <span class="badge badge-gold">BORROWED</span>
+                    <?php
+                      $s = $borrow['status'] ?? 'active';
+                      $label = strtoupper($s === 'pending_return' ? 'PENDING RETURN' : $s);
+                      $cls   = match($s) {
+                        'returned'       => 'badge-sage',
+                        'overdue'        => 'badge-rust',
+                        'pending_return' => 'badge-gold',
+                        default          => 'badge-gold',
+                      };
+                    ?>
+                    <span class="badge <?= $cls ?>"><?= htmlspecialchars($label) ?></span>
                   </td>
                 </tr>
 

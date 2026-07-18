@@ -5,7 +5,7 @@
 /* ── Stats grid ─────────────────────────────────────────────── */
 .stats-fines-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 15px;
   margin-bottom: 20px;
 }
@@ -24,6 +24,11 @@
   transform: translateY(-2px);
   box-shadow: 0 6px 18px rgba(15, 22, 35, 0.1);
 }
+
+/* Colour-coded top borders per card type */
+.stat-fines-pending   { border-top-color: #dc3545; }
+.stat-fines-requested { border-top-color: #d97706; }
+.stat-fines-paid      { border-top-color: #28a745; }
 
 .stat-fines-label {
   font-size: 10px;
@@ -57,7 +62,6 @@
   box-shadow: 0 4px 16px rgba(26, 17, 11, 0.18);
 }
 
-/* Header row: avatar + name block */
 .student-fines-header {
   display: flex;
   align-items: center;
@@ -104,13 +108,11 @@
   font-weight: 500;
 }
 
-/* Divider line between header and chips */
 .student-fines-info .student-fines-header {
   padding-bottom: 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 
-/* Detail chips row */
 .student-fines-details {
   display: flex;
   align-items: center;
@@ -154,7 +156,7 @@
   color: #c89b3c;
 }
 
-/* ── Status filter tabs (All / Pending / Paid) ───────────────── */
+/* ── Status filter tabs ───────────────────────────────────────── */
 .fines-filter-tabs {
   display: flex;
   align-items: center;
@@ -182,10 +184,7 @@
   position: relative;
 }
 
-.fines-tab svg {
-  flex-shrink: 0;
-  stroke-width: 2.2;
-}
+.fines-tab svg { flex-shrink: 0; stroke-width: 2.2; }
 
 .fines-tab:hover {
   background: #eae5dc;
@@ -193,45 +192,148 @@
   border-color: rgba(200, 155, 60, 0.25);
 }
 
-/* ── All Fines tab ── dark/gold theme */
 .fines-tab.active-all {
   background: #1a110b;
   color: #fff;
   border-color: #1a110b;
   box-shadow: 0 4px 12px rgba(26, 17, 11, 0.25);
 }
+.fines-tab.active-all svg { color: #c89b3c; }
 
-.fines-tab.active-all svg {
-  color: #c89b3c;
-}
-
-/* ── Pending tab ── warm red theme */
 .fines-tab.active-pending {
   background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
   color: #be123c;
   border-color: rgba(190, 18, 60, 0.25);
   box-shadow: 0 4px 12px rgba(190, 18, 60, 0.1);
 }
+.fines-tab.active-pending svg { color: #be123c; stroke-width: 2.5; }
 
-.fines-tab.active-pending svg {
-  color: #be123c;
-  stroke-width: 2.5;
+/* ── NEW: Awaiting Approval tab ── amber theme */
+.fines-tab.active-requested {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  color: #92400e;
+  border-color: rgba(180, 83, 9, 0.3);
+  box-shadow: 0 4px 12px rgba(180, 83, 9, 0.1);
 }
+.fines-tab.active-requested svg { color: #d97706; stroke-width: 2.5; }
+.fines-tab.active-requested .tab-count-badge { background: #92400e; }
 
-/* ── Paid tab ── green theme */
 .fines-tab.active-paid {
   background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
   color: #166534;
   border-color: rgba(22, 101, 52, 0.25);
   box-shadow: 0 4px 12px rgba(22, 101, 52, 0.1);
 }
+.fines-tab.active-paid svg { color: #16a34a; stroke-width: 3; }
 
-.fines-tab.active-paid svg {
-  color: #16a34a;
-  stroke-width: 3;
+/* ── Payment Requests Queue banner ───────────────────────────── */
+.payment-requests-queue {
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
+  border: 1px solid rgba(180, 83, 9, 0.22);
+  border-left: 4px solid #d97706;
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
 }
 
-/* ── Fines toolbar: title + search ───────────────────────────── */
+.prq-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.prq-badge-lg {
+  min-width: 36px;
+  height: 36px;
+  background: #d97706;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 4px rgba(217, 119, 6, 0.18);
+}
+
+.prq-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #92400e;
+  line-height: 1.2;
+}
+
+.prq-sub {
+  font-size: 11px;
+  color: #b45309;
+  margin-top: 2px;
+}
+
+/* ── Approve / Reject buttons ────────────────────────────────── */
+.btn-approve {
+  background: #16a34a;
+  color: #fff;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.18s ease, transform 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-approve:hover {
+  background: #15803d;
+  transform: translateY(-1px);
+}
+
+.btn-reject {
+  background: #f3f4f6;
+  color: #6b7280;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-reject:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: rgba(185, 28, 28, 0.3);
+  transform: translateY(-1px);
+}
+
+/* ── Payment method chip ─────────────────────────────────────── */
+.payment-method-chip {
+  display: inline-flex;
+  align-items: center;
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid rgba(22, 101, 52, 0.2);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Awaiting amount in overview table */
+.awaiting-amount {
+  color: #b45309;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+/* ── Fines toolbar ────────────────────────────────────────────── */
 .fines-toolbar {
   display: flex;
   align-items: center;
@@ -246,52 +348,6 @@
   font-weight: 600;
   color: var(--ink, #1a1a2e);
   flex: 1;
-}
-
-/* Inline search inside page content (NOT topbar) */
-.fines-search {
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: min(300px, 100%);
-  min-height: 36px;
-  padding: 0 12px;
-  gap: 8px;
-  background: #fff;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(15,23,42,0.06);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.fines-search:focus-within {
-  border-color: rgba(201,151,58,0.6);
-  box-shadow: 0 0 0 3px rgba(201,151,58,0.12);
-}
-
-.fines-search svg {
-  flex: 0 0 auto;
-  width: 13px;
-  height: 13px;
-  color: var(--gold, #c9973a);
-  stroke-width: 2.4;
-}
-
-.fines-search input {
-  width: 100%;
-  min-width: 0;
-  height: 34px;
-  color: #1f2937;
-  background: transparent;
-  border: 0;
-  outline: 0;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 400;
-}
-
-.fines-search input::placeholder {
-  color: #98a2b3;
 }
 
 /* ── Section title ───────────────────────────────────────────── */
@@ -323,9 +379,7 @@
   font-size: 12px;
 }
 
-.table-fines thead {
-  background: var(--surface, #f8f9fa);
-}
+.table-fines thead { background: var(--surface, #f8f9fa); }
 
 .table-fines th {
   padding: 10px 8px;
@@ -339,7 +393,6 @@
   white-space: nowrap;
 }
 
-/* book title column left-aligned */
 .table-fines th:nth-child(2),
 .table-fines td:nth-child(2) {
   text-align: left;
@@ -354,15 +407,10 @@
   vertical-align: middle;
 }
 
-.table-fines tbody tr:last-child td {
-  border-bottom: none;
-}
+.table-fines tbody tr:last-child td { border-bottom: none; }
+.table-fines tbody tr:hover          { background: #faf8f5; }
 
-.table-fines tbody tr:hover {
-  background: #faf8f5;
-}
-
-/* ── Fine amount — smaller, tighter ─────────────────────────── */
+/* ── Fine amount ─────────────────────────────────────────────── */
 .fine-amount {
   font-size: 12px;
   font-weight: 700;
@@ -380,17 +428,11 @@
   white-space: nowrap;
 }
 
-.status-pending {
-  background: #fde8ea;
-  color: #c0392b;
-}
+.status-pending   { background: #fde8ea; color: #c0392b; }
+.status-requested { background: #fff8e1; color: #b45309; }  /* amber — new */
+.status-paid      { background: #d4f4dd; color: #1e7e34; }
 
-.status-paid {
-  background: #d4f4dd;
-  color: #1e7e34;
-}
-
-/* ── Pay button ──────────────────────────────────────────────── */
+/* ── Pay button (admin manual) ───────────────────────────────── */
 .btn-fines {
   padding: 5px 12px;
   border-radius: 6px;
@@ -404,21 +446,9 @@
   line-height: 1;
 }
 
-.btn-fines-success {
-  background: #28a745;
-  color: #fff;
-}
-
-.btn-fines-success:hover {
-  background: #1e7e34;
-  transform: translateY(-1px);
-}
-
-.btn-fines-paid-check {
-  color: #28a745;
-  font-size: 14px;
-  display: inline-block;
-}
+.btn-fines-success         { background: #28a745; color: #fff; }
+.btn-fines-success:hover   { background: #1e7e34; transform: translateY(-1px); }
+.btn-fines-paid-check      { color: #28a745; font-size: 14px; display: inline-block; }
 
 /* ── Total summary bar ───────────────────────────────────────── */
 .total-summary-fines {
@@ -434,16 +464,8 @@
   font-size: 13px;
 }
 
-.total-summary-fines .summary-label {
-  font-weight: 600;
-  color: var(--ink, #1a1a2e);
-}
-
-.total-summary-fines .summary-amount {
-  font-size: 16px;
-  font-weight: 700;
-  color: #dc3545;
-}
+.total-summary-fines .summary-label  { font-weight: 600; color: var(--ink, #1a1a2e); }
+.total-summary-fines .summary-amount { font-size: 16px; font-weight: 700; color: #dc3545; }
 
 .btn-pay-all {
   background: #dc3545;
@@ -457,10 +479,28 @@
   font-family: inherit;
   transition: background 0.18s ease, transform 0.15s ease;
 }
+.btn-pay-all:hover { background: #b02a37; transform: translateY(-1px); }
 
-.btn-pay-all:hover {
-  background: #b02a37;
-  transform: translateY(-1px);
+/* ── Alert / success message ─────────────────────────────────── */
+.alert-fines {
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.alert-fines-success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.alert-fines-warning {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeeba;
 }
 
 /* ── Empty / no-data state ───────────────────────────────────── */
@@ -473,25 +513,7 @@
   font-size: 13px;
   font-weight: 500;
 }
-
-.no-data-fines p {
-  margin-top: 8px;
-  font-size: 11px;
-  color: var(--muted, #9aa1b1);
-}
-
-/* ── Success alert ───────────────────────────────────────────── */
-.alert-fines {
-  background: #d4edda;
-  color: #155724;
-  padding: 10px 14px;
-  border-radius: 8px;
-  margin-bottom: 16px;
-  text-align: center;
-  font-size: 12px;
-  font-weight: 500;
-  border: 1px solid #c3e6cb;
-}
+.no-data-fines p { margin-top: 8px; font-size: 11px; color: var(--muted, #9aa1b1); }
 
 /* ── Fines container card ────────────────────────────────────── */
 .fines-container {
@@ -501,147 +523,7 @@
   box-shadow: 0 2px 12px rgba(15, 22, 35, 0.06);
 }
 
-/* ── Topbar search (global — keep as-is for other pages) ─────── */
-.topbar-search {
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: min(420px, 100%);
-  min-height: 42px;
-  padding: 0 14px;
-  gap: 10px;
-  color: #8b96aa;
-  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96)), #fff;
-  border: 1px solid rgba(201,151,58,0.28);
-  border-radius: 999px;
-  box-shadow: 0 10px 24px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.9);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-}
-
-.topbar-search::before {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  z-index: -1;
-  border-radius: inherit;
-  background: linear-gradient(135deg, rgba(201,151,58,0.38), rgba(232,194,106,0.08));
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.topbar-search:focus-within {
-  border-color: rgba(201,151,58,0.72);
-  box-shadow: 0 14px 32px rgba(15,23,42,0.12), 0 0 0 4px rgba(201,151,58,0.14);
-  transform: translateY(-1px);
-}
-
-.topbar-search:focus-within::before {
-  opacity: 1;
-}
-
-.topbar-search svg {
-  flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
-  color: var(--gold, #c9973a);
-  stroke-width: 2.4;
-}
-
-.topbar-search input {
-  width: 100%;
-  min-width: 0;
-  height: 40px;
-  color: #1f2937;
-  background: transparent;
-  border: 0;
-  outline: 0;
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.topbar-search input::placeholder {
-  color: #98a2b3;
-  font-weight: 400;
-}
-
-/* ── All-students overview: View button as link ─────────────── */
-a.btn-fines.btn-fines-success {
-  display: inline-block;
-}
-
-a.btn-fines.btn-fines-success:hover {
-  background: #1e7e34;
-  transform: translateY(-1px);
-  color: #fff;
-}
-@media (max-width: 1024px) {
-  .stats-fines-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 768px) {
-  .stats-fines-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .student-fines-details {
-    gap: 5px;
-  }
-
-  .fines-toolbar {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .fines-search {
-    width: 100%;
-  }
-
-  .topbar {
-    flex-wrap: wrap;
-  }
-
-  .topbar-search {
-    order: 3;
-    width: 100%;
-    margin-top: 10px;
-  }
-}
-
-@media (max-width: 520px) {
-  .student-fines-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .fines-filter-tabs {
-    gap: 4px;
-  }
-
-  .fines-tab {
-    padding: 6px 12px;
-    font-size: 11px;
-  }
-
-  .topbar-search {
-    min-height: 40px;
-    padding: 0 12px;
-    border-radius: 14px;
-  }
-
-  .topbar-search input {
-    height: 38px;
-    font-size: 13px;
-  }
-
-  .total-summary-fines {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-/* ── In-card search bar (replaces topbar search on fines page) ── */
+/* ── In-card search bar ──────────────────────────────────────── */
 .fines-search-bar {
   position: relative;
   display: flex;
@@ -657,64 +539,91 @@ a.btn-fines.btn-fines-success:hover {
   margin-bottom: 18px;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
-
 .fines-search-bar:focus-within {
   border-color: rgba(201, 151, 58, 0.65);
   box-shadow: 0 0 0 3px rgba(201, 151, 58, 0.12), 0 2px 8px rgba(15, 23, 42, 0.07);
 }
-
-.fines-search-bar svg {
-  flex: 0 0 auto;
-  width: 15px;
-  height: 15px;
-  color: var(--gold, #c9973a);
-  stroke-width: 2.4;
-}
-
+.fines-search-bar svg  { flex: 0 0 auto; width: 15px; height: 15px; color: var(--gold, #c9973a); stroke-width: 2.4; }
 .fines-search-bar input {
-  flex: 1;
-  min-width: 0;
-  height: 40px;
-  color: #1f2937;
-  background: transparent;
-  border: 0;
-  outline: 0;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 400;
+  flex: 1; min-width: 0; height: 40px;
+  color: #1f2937; background: transparent; border: 0; outline: 0;
+  font-family: inherit; font-size: 13px; font-weight: 400;
 }
-
-.fines-search-bar input::placeholder {
-  color: #98a2b3;
-  font-weight: 400;
-}
+.fines-search-bar input::placeholder { color: #98a2b3; font-weight: 400; }
 
 .fines-search-clear {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: #e5e7eb;
-  color: #6b7280;
-  text-decoration: none;
-  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #e5e7eb; color: #6b7280; text-decoration: none; flex-shrink: 0;
   transition: background 0.15s ease, color 0.15s ease;
 }
+.fines-search-clear:hover { background: #d1d5db; color: #1f2937; }
 
-.fines-search-clear:hover {
-  background: #d1d5db;
-  color: #1f2937;
+/* ── Topbar search (global) ──────────────────────────────────── */
+.topbar-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: min(420px, 100%);
+  min-height: 42px;
+  padding: 0 14px;
+  gap: 10px;
+  color: #8b96aa;
+  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96)), #fff;
+  border: 1px solid rgba(201,151,58,0.28);
+  border-radius: 999px;
+  box-shadow: 0 10px 24px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.9);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+.topbar-search::before {
+  content: ""; position: absolute; inset: -1px; z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(201,151,58,0.38), rgba(232,194,106,0.08));
+  opacity: 0; transition: opacity 0.2s ease;
+}
+.topbar-search:focus-within {
+  border-color: rgba(201,151,58,0.72);
+  box-shadow: 0 14px 32px rgba(15,23,42,0.12), 0 0 0 4px rgba(201,151,58,0.14);
+  transform: translateY(-1px);
+}
+.topbar-search:focus-within::before { opacity: 1; }
+.topbar-search svg { flex: 0 0 auto; width: 16px; height: 16px; color: var(--gold, #c9973a); stroke-width: 2.4; }
+.topbar-search input {
+  width: 100%; min-width: 0; height: 40px;
+  color: #1f2937; background: transparent; border: 0; outline: 0;
+  font-family: inherit; font-size: 14px; font-weight: 500;
+}
+.topbar-search input::placeholder { color: #98a2b3; font-weight: 400; }
+
+/* ── View link button ────────────────────────────────────────── */
+a.btn-fines.btn-fines-success { display: inline-block; }
+a.btn-fines.btn-fines-success:hover { background: #1e7e34; transform: translateY(-1px); color: #fff; }
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 1200px) {
+  .stats-fines-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 1024px) {
+  .stats-fines-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .stats-fines-grid     { grid-template-columns: 1fr; }
+  .student-fines-details { gap: 5px; }
+  .fines-toolbar        { flex-direction: column; align-items: flex-start; }
+  .topbar               { flex-wrap: wrap; }
+  .topbar-search        { order: 3; width: 100%; margin-top: 10px; }
 }
 
 @media (max-width: 520px) {
-  .fines-search-bar {
-    min-height: 40px;
-    padding: 0 12px;
-  }
-
-  .fines-search-bar input {
-    font-size: 12px;
-  }
+  .student-fines-header { flex-direction: column; align-items: flex-start; }
+  .fines-filter-tabs    { gap: 4px; }
+  .fines-tab            { padding: 6px 12px; font-size: 11px; }
+  .topbar-search        { min-height: 40px; padding: 0 12px; border-radius: 14px; }
+  .topbar-search input  { height: 38px; font-size: 13px; }
+  .total-summary-fines  { flex-direction: column; align-items: flex-start; }
+  .fines-search-bar     { min-height: 40px; padding: 0 12px; }
+  .fines-search-bar input { font-size: 12px; }
+  .prq-header           { flex-direction: column; align-items: flex-start; gap: 8px; }
 }

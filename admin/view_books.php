@@ -1,10 +1,24 @@
 <?php
+// ============================================================
+// admin/view_books.php — DB-powered (UI unchanged)
+// ============================================================
 session_start();
-require 'library_data.php';
+require_once __DIR__ . '/library_data.php';
+require_once __DIR__ . '/../classes/Book.php';
 
-$pending_count = count(array_filter($_SESSION['borrow_requests'], function ($req) {
-  return $req['status'] === 'pending';
-}));
+// Session guard
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
+    header('Location: ../login/login.php');
+    exit;
+}
+
+$pending_count = pending_request_count();
+
+if (!function_exists('format_book_id')) {
+  function format_book_id($id) {
+    return str_pad((string)(int)$id, 2, '0', STR_PAD_LEFT);
+  }
+}
 
 $genres = [
   'All',
@@ -16,42 +30,38 @@ $genres = [
   'Mathematics'
 ];
 
-function format_book_id($id) {
-  return str_pad((string)$id, 2, '0', STR_PAD_LEFT);
-}
-
 $selected_genre = $_GET['genre'] ?? 'All';
-$search_query = strtolower(trim($_GET['q'] ?? ''));
+$search_query   = strtolower(trim($_GET['q'] ?? ''));
 
-$per_page = 12;
+$per_page         = 12;
 $current_page_num = max(1, (int)($_GET['page'] ?? 1));
 
-$filtered = array_values(array_filter($_SESSION['books'], function ($book) use ($selected_genre, $search_query) {
-  $matches_genre =
-    $selected_genre === 'All' ||
-    $book['genre'] === $selected_genre;
+// ── Fetch + filter from DB ──
+$db   = new Database();
+$book = new Book($db->getConnection());
 
-  $formatted_id = format_book_id($book['id']);
+// Use the Book class search (handles search + category)
+$all_db_books = $book->getAll($search_query, $selected_genre);
 
-  $book_text = strtolower(
-    $book['id'] . ' ' .
-    $formatted_id . ' ' .
-    $book['title'] . ' ' .
-    $book['author'] . ' ' .
-    $book['genre']
-  );
+// Map DB row → UI shape (genre, copies, available, color)
+$colors = ['color-a','color-b','color-c','color-d','color-e'];
+$filtered = [];
+foreach ($all_db_books as $i => $b) {
+  $filtered[] = [
+    'id'        => (int)$b['id'],
+    'title'     => $b['title'],
+    'author'    => $b['author'],
+    'genre'     => $b['category'],
+    'copies'    => (int)$b['total_copies'],
+    'available' => (int)$b['copies_available'],
+    'color'     => $colors[$i % count($colors)],
+  ];
+}
 
-  $matches_search =
-    $search_query === '' ||
-    strpos($book_text, $search_query) !== false;
-
-  return $matches_genre && $matches_search;
-}));
-
-$total = count($filtered);
-$total_pages = max(1, ceil($total / $per_page));
-$offset = ($current_page_num - 1) * $per_page;
-$books = array_slice($filtered, $offset, $per_page);
+$total       = count($filtered);
+$total_pages = max(1, (int)ceil($total / $per_page));
+$offset      = ($current_page_num - 1) * $per_page;
+$books       = array_slice($filtered, $offset, $per_page);
 ?>
 
 <!DOCTYPE html>

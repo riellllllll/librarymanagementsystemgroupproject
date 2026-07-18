@@ -1,149 +1,92 @@
 <?php
-// borrowed_books.php - Admin Borrowed Books Management
+// ============================================================
+// admin/borrowed_books.php — DB-powered (UI unchanged)
+// ============================================================
 session_start();
-require 'library_data.php';
+require_once __DIR__ . '/library_data.php';
+require_once __DIR__ . '/../classes/BorrowRecord.php';
 
-if (!isset($_SESSION['archived_books'])) {
-  $_SESSION['archived_books'] = [];
+// Session guard
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
+    header('Location: ../login/login.php');
+    exit;
 }
 
-$pending_count = count(array_filter($_SESSION['borrow_requests'], function ($req) {
-  return $req['status'] === 'pending';
-}));
+$pending_count = pending_request_count();
 
-// Mock data for borrowed books with simplified IDs
-$borrowed_books_data = [
-    [
-        'id' => 1,
-        'book_id' => '01',
-        'book_title' => 'The Great Gatsby',
-        'student_id' => '101',
-        'student_name' => 'Emma Watson',
-        'student_class' => 'Grade 11-A',
-        'borrow_date' => '2026-05-01',
-        'due_date' => '2026-05-16',
-        'return_date' => null,
-        'status' => 'borrowed',
-        'fine' => 45.00
-    ],
-    [
-        'id' => 2,
-        'book_id' => '02',
-        'book_title' => 'Sapiens',
-        'student_id' => '101',
-        'student_name' => 'Emma Watson',
-        'student_class' => 'Grade 11-A',
-        'borrow_date' => '2026-05-10',
-        'due_date' => '2026-05-25',
-        'return_date' => null,
-        'status' => 'borrowed',
-        'fine' => 0.00
-    ],
-    [
-        'id' => 3,
-        'book_id' => '03',
-        'book_title' => 'Deep Work',
-        'student_id' => '102',
-        'student_name' => 'James Carter',
-        'student_class' => 'Grade 10-B',
-        'borrow_date' => '2026-04-18',
-        'due_date' => '2026-05-03',
-        'return_date' => null,
-        'status' => 'overdue',
-        'fine' => 110.00
-    ],
-    [
-        'id' => 4,
-        'book_id' => '04',
-        'book_title' => 'Atomic Habits',
-        'student_id' => '102',
-        'student_name' => 'James Carter',
-        'student_class' => 'Grade 10-B',
-        'borrow_date' => '2026-05-12',
-        'due_date' => '2026-05-27',
-        'return_date' => null,
-        'status' => 'borrowed',
-        'fine' => 0.00
-    ],
-    [
-        'id' => 5,
-        'book_id' => '05',
-        'book_title' => 'Dune',
-        'student_id' => '103',
-        'student_name' => 'Lina Zhang',
-        'student_class' => 'Grade 12-C',
-        'borrow_date' => '2026-03-01',
-        'due_date' => '2026-03-16',
-        'return_date' => null,
-        'status' => 'overdue',
-        'fine' => 350.00
-    ],
-    [
-        'id' => 6,
-        'book_id' => '06',
-        'book_title' => 'The Hobbit',
-        'student_id' => '104',
-        'student_name' => 'Oliver Chen',
-        'student_class' => 'Grade 9-D',
-        'borrow_date' => '2026-04-01',
-        'due_date' => '2026-04-16',
-        'return_date' => '2026-04-22',
-        'status' => 'returned',
-        'fine' => 30.00
-    ],
-    [
-        'id' => 7,
-        'book_id' => '07',
-        'book_title' => 'To Kill a Mockingbird',
-        'student_id' => '104',
-        'student_name' => 'Oliver Chen',
-        'student_class' => 'Grade 9-D',
-        'borrow_date' => '2026-05-12',
-        'due_date' => '2026-05-27',
-        'return_date' => null,
-        'status' => 'borrowed',
-        'fine' => 0.00
-    ]
-];
+$db     = new Database();
+$borrow = new BorrowRecord($db->getConnection());
+$borrow->updateOverdueStatuses();
+
+// Map DB → UI status
+function _map_status(string $db_status): string {
+    return match($db_status) {
+        'active'         => 'borrowed',
+        'overdue'        => 'overdue',
+        'pending_return' => 'borrowed',
+        'returned'       => 'returned',
+        default          => 'borrowed',
+    };
+}
+
+// ── Load all records from DB ──
+$db_rows = $borrow->getAll();
+
+// Build the same $borrowed_books_data shape the UI expects
+$borrowed_books_data = [];
+foreach ($db_rows as $r) {
+    $borrowed_books_data[] = [
+        'id'            => (int)$r['id'],
+        'book_id'       => str_pad((string)$r['book_id'], 2, '0', STR_PAD_LEFT),
+        'book_title'    => $r['book_title'],
+        'student_id'    => $r['student_number'],
+        'student_name'  => $r['student_name'],
+        'student_class' => $r['student_number'],  // no "class" column; show student number instead
+        'borrow_date'   => $r['borrow_date'],
+        'due_date'      => $r['due_date'],
+        'return_date'   => $r['return_date'],
+        'status'        => _map_status($r['status']),
+        'fine'          => 0.00,  // shown in view_fines, not here
+    ];
+}
 
 // Status filter options
 $status_options = [
-    'all' => 'All Books',
+    'all'      => 'All Books',
     'borrowed' => 'Borrowed',
-    'overdue' => 'Overdue',
+    'overdue'  => 'Overdue',
     'returned' => 'Returned'
 ];
 
 $selected_status = $_GET['status'] ?? 'all';
-$search_query = strtolower(trim($_GET['q'] ?? ''));
+$search_query    = strtolower(trim($_GET['q'] ?? ''));
 
-// Filter borrowed books
+// Filter
 $filtered = array_values(array_filter($borrowed_books_data, function ($book) use ($selected_status, $search_query) {
     $matches_status = $selected_status === 'all' || $book['status'] === $selected_status;
-    
+
     $book_text = strtolower(
         $book['book_id'] . ' ' .
         $book['book_title'] . ' ' .
         $book['student_name'] . ' ' .
         $book['student_id']
     );
-    
+
     $matches_search = $search_query === '' || strpos($book_text, $search_query) !== false;
-    
     return $matches_status && $matches_search;
 }));
 
 $total = count($filtered);
 $books = $filtered;
 
-// Calculate statistics
+// Stats from full set
 $total_borrowed = 0;
-$overdue_count = 0;
+$overdue_count  = 0;
 $returned_count = 0;
 
 foreach ($borrowed_books_data as $book) {
     if ($book['status'] !== 'returned') $total_borrowed++;
-    if ($book['status'] === 'overdue') $overdue_count++;
+    if ($book['status'] === 'overdue')  $overdue_count++;
     if ($book['status'] === 'returned') $returned_count++;
 }
 ?>
@@ -162,170 +105,7 @@ foreach ($borrowed_books_data as $book) {
   <link rel="stylesheet" href="../assets/style.css">
   <link rel="stylesheet" href="../assets/adminStyle.css">
   
-  <style>
-    .data-table td,
-    .data-table th {
-        padding: 10px 12px;
-        font-size: 13px;
-        text-align: left;
-        vertical-align: middle;
-    }
-    
-    /* Center align specific columns */
-    .data-table td:nth-child(1),
-    .data-table th:nth-child(1) {
-        text-align: center;
-        font-weight: 600;
-    }
-    
-    .data-table td:nth-child(4),
-    .data-table th:nth-child(4) {
-        text-align: center;
-    }
-    
-    .data-table td:nth-child(7),
-    .data-table th:nth-child(7) {
-        text-align: center;
-    }
-    
-    /* Date columns - consistent width */
-    .data-table td:nth-child(5),
-    .data-table th:nth-child(5),
-    .data-table td:nth-child(6),
-    .data-table th:nth-child(6) {
-        white-space: nowrap;
-        text-align: center;
-    }
-    
-    .returned-check {
-        color: #28a745;
-        font-size: 14px;
-        font-weight: bold;
-    }
-    
-    .status-badge-borrowed {
-        background: #f0f0f0;
-        color: #333333;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 11px;
-        font-weight: 600;
-        display: inline-block;
-        text-align: center;
-        min-width: 80px;
-    }
-    
-    .status-badge-overdue {
-        background: #f8d7da;
-        color: #dc3545;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 11px;
-        font-weight: 600;
-        display: inline-block;
-        text-align: center;
-        min-width: 80px;
-    }
-    
-    .status-badge-returned {
-        background: #d4edda;
-        color: #28a745;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 11px;
-        font-weight: 600;
-        display: inline-block;
-        text-align: center;
-        min-width: 80px;
-    }
-
-    /* Search bar styling */
-    .topbar-search {
-      position: relative;
-      display: flex;
-      align-items: center;
-      width: min(420px, 100%);
-      min-height: 42px;
-      padding: 0 14px;
-      gap: 10px;
-      color: #8b96aa;
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)), #ffffff;
-      border: 1px solid rgba(201, 151, 58, 0.28);
-      border-radius: 999px;
-      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
-      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-    }
-
-    .topbar-search::before {
-      content: "";
-      position: absolute;
-      inset: -1px;
-      z-index: -1;
-      border-radius: inherit;
-      background: linear-gradient(135deg, rgba(201, 151, 58, 0.38), rgba(232, 194, 106, 0.08));
-      opacity: 0;
-      transition: opacity 0.2s ease;
-    }
-
-    .topbar-search:focus-within {
-      border-color: rgba(201, 151, 58, 0.72);
-      box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12), 0 0 0 4px rgba(201, 151, 58, 0.14);
-      transform: translateY(-1px);
-    }
-
-    .topbar-search:focus-within::before {
-      opacity: 1;
-    }
-
-    .topbar-search svg {
-      flex: 0 0 auto;
-      width: 16px;
-      height: 16px;
-      color: #c9973a;
-      stroke-width: 2.4;
-    }
-
-    .topbar-search input {
-      width: 100%;
-      min-width: 0;
-      height: 40px;
-      color: #1f2937;
-      background: transparent;
-      border: 0;
-      outline: 0;
-      font-family: inherit;
-      font-size: 14px;
-      font-weight: 500;
-    }
-
-    .topbar-search input::placeholder {
-      color: #98a2b3;
-      font-weight: 400;
-    }
-
-    @media (max-width: 760px) {
-      .topbar {
-        flex-wrap: wrap;
-      }
-      .topbar-search {
-        order: 3;
-        width: 100%;
-        margin-top: 10px;
-      }
-    }
-
-    @media (max-width: 520px) {
-      .topbar-search {
-        min-height: 40px;
-        padding: 0 12px;
-        border-radius: 14px;
-      }
-      .topbar-search input {
-        height: 38px;
-        font-size: 13px;
-      }
-    }
-  </style>
+  
 </head>
 
 <body>
