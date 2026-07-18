@@ -27,7 +27,6 @@ CREATE TABLE users (
   full_name       VARCHAR(180)    NOT NULL,
   email           VARCHAR(120)    NOT NULL,
   password        VARCHAR(255)    NOT NULL,
-  dob             DATE            DEFAULT NULL,
   gender          ENUM('Male','Female','Prefer not to say') DEFAULT NULL,
   course          VARCHAR(80)     DEFAULT NULL,
   year_level      VARCHAR(20)     DEFAULT NULL,

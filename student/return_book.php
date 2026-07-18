@@ -71,6 +71,8 @@ foreach ($all_rows as $r) {
         'is_pending'   => $is_pending,
         'days_late'    => (int)$days_late,
         'fine_per_day' => 5,
+        'paid_fine'    => (float)($r['paid_fine']   ?? 0),
+        'unpaid_fine'  => (float)($r['unpaid_fine'] ?? 0),
     ];
 }
 
@@ -120,6 +122,11 @@ $overdue_books = array_filter($borrowed_books, fn($b) => $b['is_overdue']);
     </div>
 
     <?php foreach ($overdue_books as $ob): ?>
+      <?php
+        $total_fine_owed   = $ob['days_late'] * $ob['fine_per_day'];
+        $remaining_unpaid  = max(0, $total_fine_owed - $ob['paid_fine']);
+        $has_paid_already  = $ob['paid_fine'] > 0;
+      ?>
       <div class="alert alert-rust" style="margin-bottom:12px;">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
@@ -128,7 +135,13 @@ $overdue_books = array_filter($borrowed_books, fn($b) => $b['is_overdue']);
           <strong>Overdue notice:</strong>
           "<?= htmlspecialchars($ob['title']) ?>" was due on <?= date('M j, Y', strtotime($ob['due_date'])) ?>
           (<?= $ob['days_late'] ?> day<?= $ob['days_late'] !== 1 ? 's' : '' ?> overdue).
-          A fine of ₱<?= $ob['fine_per_day'] ?>/day will be applied upon return.
+          <?php if ($has_paid_already && $remaining_unpaid <= 0): ?>
+            You've already paid ₱<?= number_format($ob['paid_fine'], 2) ?> in fines for this book.
+          <?php elseif ($has_paid_already && $remaining_unpaid > 0): ?>
+            You've paid ₱<?= number_format($ob['paid_fine'], 2) ?> so far. ₱<?= number_format($remaining_unpaid, 2) ?> remaining will be applied upon return.
+          <?php else: ?>
+            A fine of ₱<?= $ob['fine_per_day'] ?>/day will be applied upon return.
+          <?php endif; ?>
         </span>
       </div>
     <?php endforeach; ?>
@@ -157,7 +170,9 @@ $overdue_books = array_filter($borrowed_books, fn($b) => $b['is_overdue']);
                 <?php
                   $overdue_cls = $book['is_overdue'] ? ' overdue' : '';
                   $pending_style = $book['is_pending'] ? 'opacity:0.55;cursor:not-allowed;' : '';
-                  $fine_total  = $book['days_late'] * $book['fine_per_day'];
+                  // The fine that's actually still owed (excludes already-paid amounts)
+                  $total_owed     = $book['days_late'] * $book['fine_per_day'];
+                  $remaining_fine = max(0, $total_owed - ($book['paid_fine'] ?? 0));
                 ?>
                 <div class="return-book-item<?= $overdue_cls ?>"
                      id="item-<?= $book['id'] ?>"
@@ -170,6 +185,8 @@ $overdue_books = array_filter($borrowed_books, fn($b) => $b['is_overdue']);
                      data-pending="<?= $book['is_pending'] ? 'true' : 'false' ?>"
                      data-fine="<?= $book['fine_per_day'] ?>"
                      data-days-late="<?= $book['days_late'] ?>"
+                     data-paid-fine="<?= (float)($book['paid_fine'] ?? 0) ?>"
+                     data-remaining-fine="<?= $remaining_fine ?>"
                      style="<?= $pending_style ?>">
                   <div class="return-radio"></div>
                   <div class="return-spine">📖</div>
@@ -209,7 +226,11 @@ $overdue_books = array_filter($borrowed_books, fn($b) => $b['is_overdue']);
                       </form>
                     <?php elseif ($book['is_overdue']): ?>
                       <span class="badge badge-rust">Overdue</span>
-                      <span style="font-size:0.75rem;color:var(--rust);margin-top:4px;display:block;">+₱<?= $fine_total ?> fine</span>
+                      <?php if ($remaining_fine > 0): ?>
+                        <span style="font-size:0.75rem;color:var(--rust);margin-top:4px;display:block;">+₱<?= $remaining_fine ?> fine</span>
+                      <?php else: ?>
+                        <span style="font-size:0.72rem;color:#16a34a;margin-top:4px;display:block;font-weight:600;">✓ Fine paid</span>
+                      <?php endif; ?>
                     <?php else: ?>
                       <span class="badge badge-sage">On Time</span>
                     <?php endif; ?>
@@ -363,7 +384,9 @@ $overdue_books = array_filter($borrowed_books, fn($b) => $b['is_overdue']);
   function updateConfirmPanel(item) {
     const isOverdue = item.dataset.overdue === 'true';
     const fine      = parseInt(item.dataset.fine);
-    const daysLate  = parseInt(item.dataset.daysLate || '0');
+    const daysLate  = parseInt(item.dataset.daysLate     || '0');
+    const paidFine  = parseFloat(item.dataset.paidFine   || '0');
+    const remaining = parseFloat(item.dataset.remainingFine || '0');
 
     document.getElementById('cp-title').textContent    = item.dataset.title;
     document.getElementById('cp-author').textContent   = item.dataset.author;
@@ -376,7 +399,18 @@ $overdue_books = array_filter($borrowed_books, fn($b) => $b['is_overdue']);
     const fineRow = document.getElementById('cp-fine-row');
     if (isOverdue && fine > 0) {
       fineRow.style.display = 'flex';
-      document.getElementById('cp-fine').textContent = '₱' + fine + '/day (₱' + (fine * daysLate) + ' total so far)';
+      let msg;
+      if (remaining > 0 && paidFine > 0) {
+        // Partially paid — show what's left
+        msg = '₱' + fine + '/day (₱' + remaining.toFixed(0) + ' remaining; ₱' + paidFine.toFixed(0) + ' paid)';
+      } else if (paidFine > 0 && remaining <= 0) {
+        // Fully paid
+        msg = '₱' + paidFine.toFixed(0) + ' — already paid ✓';
+      } else {
+        // Nothing paid yet
+        msg = '₱' + fine + '/day (₱' + (fine * daysLate) + ' total)';
+      }
+      document.getElementById('cp-fine').textContent = msg;
     } else {
       fineRow.style.display = 'none';
     }
@@ -420,7 +454,9 @@ $overdue_books = array_filter($borrowed_books, fn($b) => $b['is_overdue']);
     if (!selectedItem) return;
     const isOverdue = selectedItem.dataset.overdue === 'true';
     const fine      = parseInt(selectedItem.dataset.fine);
-    const daysLate  = parseInt(selectedItem.dataset.daysLate || '0');
+    const daysLate  = parseInt(selectedItem.dataset.daysLate     || '0');
+    const paidFine  = parseFloat(selectedItem.dataset.paidFine   || '0');
+    const remaining = parseFloat(selectedItem.dataset.remainingFine || '0');
     const today     = new Date().toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
 
     // Build receipt HTML for modal display
@@ -434,11 +470,22 @@ $overdue_books = array_filter($borrowed_books, fn($b) => $b['is_overdue']);
     `;
     if (isOverdue) {
       lines += `<div class="receipt-line"><span class="rl-label">Fine (per day)</span><span style="color:var(--rust)">₱${fine}</span></div>`;
+      if (paidFine > 0) {
+        lines += `<div class="receipt-line"><span class="rl-label">Already Paid</span><span style="color:#16a34a">₱${paidFine.toFixed(0)} ✓</span></div>`;
+      }
     }
 
     const totalDiv = document.createElement('div');
-    totalDiv.className = 'receipt-total' + (isOverdue ? '' : ' no-fine');
-    totalDiv.innerHTML = `<span>Total Fine Due</span><span>${isOverdue ? '₱' + (fine * daysLate) + ' (to be settled)' : 'No fine — returned on time!'}</span>`;
+    totalDiv.className = 'receipt-total' + (isOverdue && remaining > 0 ? '' : ' no-fine');
+    let totalText;
+    if (!isOverdue) {
+      totalText = 'No fine — returned on time!';
+    } else if (remaining > 0) {
+      totalText = '₱' + remaining.toFixed(0) + ' (to be settled)';
+    } else {
+      totalText = 'No remaining fine — already paid!';
+    }
+    totalDiv.innerHTML = `<span>Total Fine Due</span><span>${totalText}</span>`;
 
     const receiptEl = document.getElementById('receiptLines');
     receiptEl.innerHTML = lines;
