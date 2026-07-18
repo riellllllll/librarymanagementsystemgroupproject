@@ -213,7 +213,10 @@ foreach ($db_students as $s) {
 <link rel="stylesheet" href="../assets/student.css">
 <link rel="stylesheet" href="../assets/managestudent.css">
 <link rel="stylesheet" href="../assets/adminStyle.css">
+<<<<<<< HEAD
 <script src="../assets/vendor/qrcode.min.js"></script>
+=======
+>>>>>>> 1de9f7e7517f0bb006dcf5075b179cd9bc32301c
 <style>
   .ms-sort-wrap {
     position: relative;
@@ -249,6 +252,7 @@ foreach ($db_students as $s) {
     pointer-events: none;
     opacity: 0.6;
   }
+<<<<<<< HEAD
 
   /* ════════════════════════════════════════════
      ADD STUDENT VIEW — fills the content area only;
@@ -548,6 +552,8 @@ foreach ($db_students as $s) {
     outline: 2px solid var(--gold, #c9973a);
     outline-offset: 1px;
   }
+=======
+>>>>>>> 1de9f7e7517f0bb006dcf5075b179cd9bc32301c
 </style>
 </head>
 <body>
@@ -1714,7 +1720,10 @@ document.addEventListener('keydown', function(e) {
     closeViewModal();
     closeEditModal();
     closeRemoveModal();
+<<<<<<< HEAD
     closeQrModal();
+=======
+>>>>>>> 1de9f7e7517f0bb006dcf5075b179cd9bc32301c
     closeFilterPanel();
   }
 });
@@ -1860,11 +1869,14 @@ document.getElementById('filterDoneBtn').addEventListener('click', closeFilterPa
 document.getElementById('filterPanelClose').addEventListener('click', closeFilterPanel);
 filterBackdrop.addEventListener('click', closeFilterPanel);
 
+<<<<<<< HEAD
 // ── Pagination state ──
 const studentsPerPage = 10;
 let studentsCurrentPage = 1;
 let studentsFilteredRows = [];
 
+=======
+>>>>>>> 1de9f7e7517f0bb006dcf5075b179cd9bc32301c
 function applyStudentFilters() {
   const term      = document.getElementById('searchStudents').value.toLowerCase();
   const course    = studentFilterState.course; // array
@@ -1873,9 +1885,16 @@ function applyStudentFilters() {
   const borrowed  = studentFilterState.borrowed;
   const fines     = studentFilterState.fines;
 
+<<<<<<< HEAD
   const rows = Array.from(document.querySelectorAll('#studentsTable tbody tr'));
 
   studentsFilteredRows = rows.filter(function(row) {
+=======
+  const rows = document.querySelectorAll('#studentsTable tbody tr');
+  let visibleCount = 0;
+
+  rows.forEach(function(row) {
+>>>>>>> 1de9f7e7517f0bb006dcf5075b179cd9bc32301c
     const text       = row.textContent.toLowerCase();
     const rCourse    = row.dataset.course || '';
     const rYear      = row.dataset.year || '';
@@ -1883,6 +1902,7 @@ function applyStudentFilters() {
     const rBorrowed  = parseInt(row.dataset.borrowed, 10) || 0;
     const rFines     = parseFloat(row.dataset.fines) || 0;
 
+<<<<<<< HEAD
     if (term && !text.includes(term))               return false;
     if (course.length && !course.includes(rCourse)) return false;
     if (year.length && !year.includes(rYear))        return false;
@@ -1892,10 +1912,25 @@ function applyStudentFilters() {
     if (fines === 'has'  && rFines <= 0)             return false;
     if (fines === 'none' && rFines > 0)              return false;
     return true;
+=======
+    let visible = true;
+    if (term && !text.includes(term))               visible = false;
+    if (course.length && !course.includes(rCourse)) visible = false;
+    if (year.length && !year.includes(rYear))        visible = false;
+    if (status && rStatus !== status)           visible = false;
+    if (borrowed === 'has'  && rBorrowed <= 0)  visible = false;
+    if (borrowed === 'none' && rBorrowed > 0)   visible = false;
+    if (fines === 'has'  && rFines <= 0)        visible = false;
+    if (fines === 'none' && rFines > 0)         visible = false;
+
+    row.style.display = visible ? '' : 'none';
+    if (visible) visibleCount++;
+>>>>>>> 1de9f7e7517f0bb006dcf5075b179cd9bc32301c
   });
 
   const countEl = document.getElementById('filterResultCount');
   const totalRows = rows.length;
+<<<<<<< HEAD
   countEl.textContent = (studentsFilteredRows.length === totalRows)
     ? ''
     : `Showing ${studentsFilteredRows.length} of ${totalRows}`;
@@ -1955,6 +1990,11 @@ function goToStudentsPage(page) {
   if (page < 1 || page > totalPages) return;
   studentsCurrentPage = page;
   renderStudentsPage();
+=======
+  countEl.textContent = (visibleCount === totalRows)
+    ? ''
+    : `Showing ${visibleCount} of ${totalRows}`;
+>>>>>>> 1de9f7e7517f0bb006dcf5075b179cd9bc32301c
 }
 
 document.getElementById('searchStudents').addEventListener('input', applyStudentFilters);
@@ -1989,19 +2029,25 @@ function sortStudentsTable(sortVal) {
   });
 
   rows.forEach(function(row) { tbody.appendChild(row); });
+<<<<<<< HEAD
 
   applyStudentFilters();
+=======
+>>>>>>> 1de9f7e7517f0bb006dcf5075b179cd9bc32301c
 }
 
 document.getElementById('sortStudents').addEventListener('change', function() {
   sortStudentsTable(this.value);
 });
 
+<<<<<<< HEAD
 // Run filters once on page load so pagination is active from the start
 // (only 10 rows shown, Next button works) even before the user touches
 // search/filters/sort.
 applyStudentFilters();
 
+=======
+>>>>>>> 1de9f7e7517f0bb006dcf5075b179cd9bc32301c
 document.getElementById('clearFiltersBtn').addEventListener('click', function() {
   document.getElementById('searchStudents').value = '';
   Object.keys(studentFilterState).forEach(function(group) {

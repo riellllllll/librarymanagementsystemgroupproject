@@ -22,15 +22,19 @@ function load_fines_data(mysqli $conn): array {
     // Full history: every fine record that has ever been created is kept and
     // shown here — nothing is collapsed into a single "representative" row
     // per borrow anymore, so paid/rejected/superseded fines stay on record.
+<<<<<<< HEAD
     //
     // Starts from `users` (LEFT JOIN out to borrows/fines/books) instead of
     // starting from `fines`, so every student shows up in the list — not
     // just the ones who happen to have a fine on record.
+=======
+>>>>>>> 1de9f7e7517f0bb006dcf5075b179cd9bc32301c
     $sql = "
         SELECT u.id AS uid, u.student_number, u.full_name, u.course, u.year_level, u.email,
                f.id AS fine_id, f.amount, f.paid_status, f.payment_method, f.payment_submitted_at, f.created_at,
                br.id AS borrow_id, br.borrow_date, br.due_date, br.return_date,
                b.id AS book_id, b.title AS book_title,
+<<<<<<< HEAD
                CASE WHEN br.id IS NOT NULL
                     THEN GREATEST(0, DATEDIFF(COALESCE(br.return_date, CURDATE()), br.due_date))
                     ELSE NULL END AS days_overdue
@@ -39,6 +43,13 @@ function load_fines_data(mysqli $conn): array {
         LEFT JOIN fines f ON f.borrow_id = br.id
         LEFT JOIN books b ON b.id = br.book_id
         WHERE u.role = 'student'
+=======
+               GREATEST(0, DATEDIFF(COALESCE(br.return_date, CURDATE()), br.due_date)) AS days_overdue
+        FROM fines f
+        JOIN borrow_records br ON br.id = f.borrow_id
+        JOIN books b ON b.id = br.book_id
+        JOIN users u ON u.id = br.user_id
+>>>>>>> 1de9f7e7517f0bb006dcf5075b179cd9bc32301c
         ORDER BY u.full_name ASC, f.created_at DESC
     ";
     $res = $conn->query($sql);
