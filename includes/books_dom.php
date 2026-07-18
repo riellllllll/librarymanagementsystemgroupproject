@@ -78,6 +78,100 @@ function export_students_to_xml(mysqli $conn): string
 }
 
 // ════════════════════════════════════════════════════════════
+// IMPORT — Students (mirrors export_students_to_xml's shape)
+//    Reuses User::addStudent() so imported students get the same
+//    password hashing + duplicate checks as the "Add Student" form.
+//    Returns ['inserted' => int, 'skipped' => int, 'errors' => array]
+// ════════════════════════════════════════════════════════════
+function import_students_from_xml(mysqli $conn, string $xmlFilePath): array
+{
+    require_once __DIR__ . '/../classes/User.php';
+
+    $report = ['inserted' => 0, 'skipped' => 0, 'errors' => []];
+
+    if (!file_exists($xmlFilePath)) {
+        $report['errors'][] = 'XML file not found.';
+        return $report;
+    }
+
+    $dom = new DOMDocument();
+    $dom->preserveWhiteSpace = false;
+
+    libxml_use_internal_errors(true);
+    if (!$dom->load($xmlFilePath)) {
+        foreach (libxml_get_errors() as $e) {
+            $report['errors'][] = trim($e->message);
+        }
+        libxml_clear_errors();
+        $report['errors'][] = 'Invalid or malformed XML file.';
+        return $report;
+    }
+    libxml_clear_errors();
+
+    $studentNodes = $dom->getElementsByTagName('student');
+
+    if ($studentNodes->length === 0) {
+        $report['errors'][] = 'No <student> elements found in the XML.';
+        return $report;
+    }
+
+    $usr = new User($conn);
+
+    // Imported students have no password in the XML (by design — passwords
+    // are never exported), so everyone gets this default and should change
+    // it on first login, same as accounts created via "Add Student".
+    $default_password = 'CvSU@2026';
+
+    foreach ($studentNodes as $node) {
+        $student_number = dom_value($node, 'student_number') ?: dom_value($node, 'id_number');
+        $email          = dom_value($node, 'email');
+
+        // Prefer explicit first_name/last_name tags; fall back to splitting
+        // a combined "name"/"full_name" tag (that's what our own export produces).
+        $first_name = dom_value($node, 'first_name');
+        $last_name  = dom_value($node, 'last_name');
+        if ($first_name === '' && $last_name === '') {
+            $full  = dom_value($node, 'name') ?: dom_value($node, 'full_name');
+            $parts = preg_split('/\s+/', trim($full), 2);
+            $first_name = $parts[0] ?? '';
+            $last_name  = $parts[1] ?? '';
+        }
+
+        $course     = dom_value($node, 'course');
+        $year_level = dom_value($node, 'year_level') ?: dom_value($node, 'year');
+
+        if ($student_number === '' || $email === '' || $first_name === '') {
+            $report['skipped']++;
+            $report['errors'][] = 'Skipped a student with missing student_number/email/name.';
+            continue;
+        }
+
+        $data = [
+            'student_number' => $student_number,
+            'first_name'     => $first_name,
+            'last_name'      => $last_name,
+            'email'          => strtolower($email),
+            'course'         => $course,
+            'year_level'     => $year_level,
+            'password'       => $default_password,
+        ];
+
+        if ($usr->addStudent($data)) {
+            $report['inserted']++;
+        } else {
+            $report['skipped']++;
+            $report['errors'][] = 'Skipped "' . htmlspecialchars($student_number) . '" — student number or email already exists.';
+        }
+    }
+
+    if ($report['inserted'] > 0) {
+        $report['errors'][] = 'Imported students were given the default password "' . $default_password . '" — ask them to change it after logging in.';
+    }
+
+    return $report;
+}
+
+// ════════════════════════════════════════════════════════════
 // B. XML IMPORT — Parse an uploaded XML file and INSERT into DB
 //    Uses DOMDocument->load() + getElementsByTagName()
 //    Returns ['inserted' => int, 'skipped' => int, 'errors' => array]
