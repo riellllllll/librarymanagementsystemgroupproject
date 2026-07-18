@@ -1,11 +1,25 @@
+/* ============================================================
+   issue_book.css — Issue Book page enhancements
+   ============================================================ */
+
 .issue-book-page .issue-book-stats {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.issue-book-page .stat-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.issue-book-page .stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(15, 22, 35, 0.1), 0 0 0 1px rgba(201, 151, 58, 0.1);
 }
 
 .issue-book-page .issue-book-card {
   margin-bottom: 24px;
 }
 
+/* ── Issue form ── */
 .issue-book-page .issue-book-form-actions {
   display: flex;
   align-items: center;
@@ -13,6 +27,92 @@
   margin-top: 4px;
 }
 
+.issue-book-page .field-grid .field {
+  margin-bottom: 20px;
+}
+
+.issue-book-page .input-wrap input:hover {
+  border-color: rgba(201, 151, 58, 0.5);
+}
+
+.issue-book-page .btn-primary,
+.issue-book-page .btn-outline {
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+/* ── Records toolbar ── */
+.issue-book-record-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.issue-book-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.issue-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.issue-search-wrap svg {
+  position: absolute;
+  left: 12px;
+  color: #aab4cc;
+  pointer-events: none;
+}
+
+.issue-search-wrap input {
+  width: 230px;
+  background: var(--input-bg, #f0f3fa);
+  border: 1.5px solid var(--border, #dde3ef);
+  border-radius: 10px;
+  padding: 9px 12px 9px 34px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  color: var(--ink, #0f1623);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.issue-search-wrap input:focus {
+  border-color: var(--gold, #c9973a);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(201, 151, 58, 0.12);
+}
+
+.issue-book-filters select {
+  background: var(--input-bg, #f0f3fa);
+  border: 1.5px solid var(--border, #dde3ef);
+  border-radius: 10px;
+  padding: 9px 30px 9px 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+  color: var(--ink, #0f1623);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23aab4cc' stroke-width='2'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.issue-book-filters select:focus {
+  border-color: var(--gold, #c9973a);
+  box-shadow: 0 0 0 3px rgba(201, 151, 58, 0.12);
+}
+
+/* ── Table ── */
 .issue-book-page .issue-book-table-actions {
   display: flex;
   align-items: center;
@@ -30,10 +130,45 @@
   min-width: 900px;
 }
 
+.issue-book-page .table-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--card-bg, #ffffff);
+}
+
+.issue-book-page .table-wrap tbody tr {
+  transition: background 0.15s ease;
+}
+
+.issue-book-page .table-wrap tbody tr:nth-child(even) {
+  background: rgba(240, 243, 250, 0.35);
+}
+
+.issue-book-page .table-wrap tbody tr:hover {
+  background: rgba(201, 151, 58, 0.06);
+}
+
+.issue-book-page .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.issue-book-page .badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
 .issue-book-page .empty-state {
   padding: 34px 20px;
 }
 
+/* ── Responsive ── */
 @media (max-width: 1100px) {
   .issue-book-page .issue-book-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -48,6 +183,21 @@
 
   .issue-book-page .issue-book-form-actions .btn-primary,
   .issue-book-page .issue-book-form-actions .btn-outline {
+    width: 100%;
+  }
+
+  .issue-book-record-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .issue-book-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .issue-search-wrap input,
+  .issue-book-filters select {
     width: 100%;
   }
 }

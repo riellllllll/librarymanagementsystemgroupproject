@@ -11,6 +11,7 @@ require_once __DIR__ . '/../classes/Fine.php';
 $usr        = new User($conn);
 $borrowObj  = new BorrowRecord($conn);
 $fineObj    = new Fine($conn);
+$usr->backfillQrTokens();
 
 // ── Flash messages ──
 $success_msg = $_SESSION['flash_success'] ?? '';
@@ -66,6 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // ── Load student data from DB ──
 $me = $usr->getStudentById($student_id);
+$qr_token = $me['qr_token'] ?? '';
 
 $student = [
     'id'           => $me['student_number'] ?? '',
@@ -123,7 +125,15 @@ $has_fines = $stats['unpaid_fines'] > 0;
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/student.css">
   <link rel="stylesheet" href="../assets/profile.css">
+  <script src="../assets/vendor/qrcode.min.js"></script>
   <style>
+    .profile-qr-modal { display:none; position:fixed; inset:0; z-index:1000; background:rgba(20,24,34,.55); align-items:center; justify-content:center; padding:20px; }
+    .profile-qr-modal.open { display:flex; }
+    .profile-qr-dialog { width:min(360px,100%); background:#fff; border-radius:18px; padding:24px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.25); position:relative; }
+    .profile-qr-close { position:absolute; right:14px; top:10px; border:0; background:transparent; font-size:1.6rem; color:#6b7280; cursor:pointer; }
+    .profile-qr-box { width:220px; height:220px; margin:18px auto; padding:10px; border:1px solid #e5e7eb; border-radius:12px; background:#fff; }
+    .profile-qr-box canvas, .profile-qr-box img { width:100% !important; height:100% !important; }
+    .profile-qr-download { display:inline-flex; align-items:center; justify-content:center; gap:8px; border:0; border-radius:9px; background:var(--gold); color:#fff; padding:11px 16px; font:600 .85rem Inter,sans-serif; cursor:pointer; }
     /* Eye toggle button inside password input */
     .input-wrap { position: relative; }
     .pw-eye-btn {
@@ -246,6 +256,13 @@ $has_fines = $stats['unpaid_fines'] > 0;
           </div>
         </div>
         <div class="profile-hero-actions">
+          <button class="btn-edit-toggle" type="button" onclick="openQrModal()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+              <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+            </svg>
+            My QR Code
+          </button>
           <button class="btn-edit-toggle" id="editToggleBtn" onclick="toggleEdit()">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -538,7 +555,55 @@ $has_fines = $stats['unpaid_fines'] > 0;
 
 <div class="toast" id="toast"></div>
 
+<div class="profile-qr-modal" id="profileQrModal" role="dialog" aria-modal="true" aria-labelledby="profileQrTitle">
+  <div class="profile-qr-dialog">
+    <button class="profile-qr-close" type="button" onclick="closeQrModal()" aria-label="Close QR code">&times;</button>
+    <h3 id="profileQrTitle" style="margin:0;color:var(--ink);">My Library QR Code</h3>
+    <p style="margin:7px 0 0;color:var(--muted);font-size:.82rem;">Show this code at the library attendance desk.</p>
+    <div class="profile-qr-box" id="profileQrBox" aria-label="Student attendance QR code"></div>
+    <div style="font-weight:700;color:var(--ink);"><?= htmlspecialchars($full_name) ?></div>
+    <div style="font-size:.78rem;color:var(--muted);margin:3px 0 18px;">Student ID: <?= htmlspecialchars($student['id']) ?></div>
+    <button class="profile-qr-download" type="button" onclick="downloadProfileQr()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download QR Code
+    </button>
+  </div>
+</div>
+
 <script>
+  const profileQrToken = <?= json_encode($qr_token) ?>;
+  let profileQrRendered = false;
+
+  function openQrModal() {
+    document.getElementById('profileQrModal').classList.add('open');
+    if (!profileQrRendered && profileQrToken && window.QRCode) {
+      new QRCode(document.getElementById('profileQrBox'), {
+        text: profileQrToken,
+        width: 220,
+        height: 220,
+        correctLevel: QRCode.CorrectLevel.H
+      });
+      profileQrRendered = true;
+    }
+  }
+
+  function closeQrModal() {
+    document.getElementById('profileQrModal').classList.remove('open');
+  }
+
+  function downloadProfileQr() {
+    const canvas = document.querySelector('#profileQrBox canvas');
+    const image = document.querySelector('#profileQrBox img');
+    const link = document.createElement('a');
+    link.download = 'library-qr-<?= htmlspecialchars(preg_replace('/[^A-Za-z0-9_-]/', '_', $student['id'])) ?>.png';
+    link.href = canvas ? canvas.toDataURL('image/png') : (image ? image.src : '');
+    if (link.href) link.click();
+  }
+
+  document.getElementById('profileQrModal').addEventListener('click', event => {
+    if (event.target.id === 'profileQrModal') closeQrModal();
+  });
+
   /* ── Mobile sidebar toggle ── */
   function checkMobile() {
     const t = document.getElementById('menuToggle');

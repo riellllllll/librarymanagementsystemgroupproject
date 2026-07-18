@@ -1,4 +1,15 @@
 
+-- ============================================================
+-- MIGRATION for existing databases (skip if running this file fresh)
+-- If you already ran this file before and have data in `users`,
+-- run this instead of recreating the table:
+--
+--   ALTER TABLE users
+--     ADD COLUMN qr_token VARCHAR(64) DEFAULT NULL AFTER status,
+--     ADD CONSTRAINT uq_users_qr UNIQUE KEY (qr_token);
+--
+-- ============================================================
+
 CREATE DATABASE library_db
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
@@ -22,11 +33,13 @@ CREATE TABLE users (
   year_level      VARCHAR(20)     DEFAULT NULL,
   phone           VARCHAR(20)     DEFAULT NULL,
   status          ENUM('active','inactive') NOT NULL DEFAULT 'active',
+  qr_token        VARCHAR(64)     DEFAULT NULL,
   created_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   CONSTRAINT uq_users_email   UNIQUE KEY  (email),
   CONSTRAINT uq_users_sno     UNIQUE KEY  (student_number),
-  CONSTRAINT uq_users_uname   UNIQUE KEY  (username)
+  CONSTRAINT uq_users_uname   UNIQUE KEY  (username),
+  CONSTRAINT uq_users_qr      UNIQUE KEY  (qr_token)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE books (
@@ -100,6 +113,22 @@ CREATE TABLE notifications (
   created_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   CONSTRAINT fk_notif_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- One attendance entry per student per day. The Attendance page also creates
+-- this table automatically for existing installations.
+CREATE TABLE student_attendance (
+  id              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  student_id      INT UNSIGNED NOT NULL,
+  attendance_date DATE NOT NULL,
+  time_in         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  recorded_by     INT UNSIGNED DEFAULT NULL,
+  entry_method    VARCHAR(20) NOT NULL DEFAULT 'student_id',
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_attendance_student_date (student_id, attendance_date),
+  KEY idx_attendance_time_in (time_in),
+  CONSTRAINT fk_attendance_student FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_attendance_admin FOREIGN KEY (recorded_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO books (title, author, category, total_copies, copies_available) VALUES
