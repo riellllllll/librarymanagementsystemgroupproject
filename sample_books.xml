@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<books>
+  <book>
+    <title>The Art of Computer Programming</title>
+    <author>Donald Knuth</author>
+    <category>Technology</category>
+    <total_copies>2</total_copies>
+    <copies_available>2</copies_available>
+  </book>
+  <book>
+    <title>Refactoring</title>
+    <author>Martin Fowler</author>
+    <category>Technology</category>
+    <total_copies>3</total_copies>
+    <copies_available>3</copies_available>
+  </book>
+  <book>
+    <title>The Mythical Man-Month</title>
+    <author>Frederick Brooks</author>
+    <category>Technology</category>
+    <total_copies>2</total_copies>
+    <copies_available>2</copies_available>
+  </book>
+</books>

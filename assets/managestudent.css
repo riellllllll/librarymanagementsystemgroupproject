@@ -1,8 +1,3 @@
-/* ============================================================
-   managestudent.css — CvSU Library Management System
-   Manage Students Page Specific Styles
-   Extends student.css design tokens & components
-   ============================================================ */
 
 /* ════════════════════════════════════════════
    ACTION BAR (Search + Add Button)
@@ -399,4 +394,108 @@
   .ms-modal-actions .btn-danger {
     width: 100%;
   }
+}
+
+/* ════════════════════════════════════════════
+   VIEW MODAL STYLES
+   ════════════════════════════════════════════ */
+.ms-view-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ms-view-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold-dk), var(--gold-lt));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Inter', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(201, 151, 58, 0.3);
+}
+
+.ms-view-title-wrap {
+  min-width: 0;
+}
+
+.ms-view-title-wrap .modal-title {
+  margin-bottom: 2px;
+  font-size: 1.15rem;
+}
+
+.ms-view-title-wrap .modal-desc {
+  margin-bottom: 0;
+  font-size: 0.8rem;
+}
+
+.ms-view-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 24px;
+}
+
+.ms-view-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.ms-view-row:hover {
+  background: var(--input-bg);
+}
+
+.ms-view-row:nth-child(even) {
+  background: rgba(240, 243, 250, 0.5);
+}
+
+.ms-view-label {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.ms-view-value {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+/* ════════════════════════════════════════════
+   EDIT MODAL STYLES
+   ════════════════════════════════════════════ */
+#editModal .modal-title {
+  margin-bottom: 4px;
+}
+
+#editModal .modal-desc {
+  margin-bottom: 20px;
+}
+
+#editModal .field {
+  margin-bottom: 14px;
+}
+
+#editModal .field-grid {
+  gap: 0 12px;
+}
+
+#editModal .ms-modal-actions {
+  margin-top: 20px;
+  padding-top: 18px;
 }

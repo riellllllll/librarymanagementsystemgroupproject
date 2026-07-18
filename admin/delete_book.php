@@ -1,53 +1,51 @@
 <?php
+// ============================================================
+// admin/delete_book.php — DB-powered (UI unchanged)
+// ============================================================
 session_start();
-require 'library_data.php';
+require_once __DIR__ . '/library_data.php';
+require_once __DIR__ . '/../classes/Book.php';
 
-if (!isset($_SESSION['archived_books'])) {
-  $_SESSION['archived_books'] = [];
+// Session guard
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
+    header('Location: ../login/login.php');
+    exit;
 }
 
-$pending_count = count(array_filter($_SESSION['borrow_requests'], function ($req) {
-  return $req['status'] === 'pending';
-}));
+$pending_count = pending_request_count();
 
 function format_book_id($id) {
   return str_pad((string)$id, 2, '0', STR_PAD_LEFT);
 }
 
+$db   = new Database();
+$book = new Book($db->getConnection());
+
 $book_id = (int)($_GET['id'] ?? $_POST['book_id'] ?? 0);
+$db_book = $book_id ? $book->getById($book_id) : false;
 
+// Map DB row → UI shape
 $selected_book = null;
-
-foreach ($_SESSION['books'] as $book) {
-  if ((int)$book['id'] === $book_id) {
-    $selected_book = $book;
-    break;
-  }
+if ($db_book) {
+  $selected_book = [
+    'id'     => (int)$db_book['id'],
+    'title'  => $db_book['title'],
+    'author' => $db_book['author'],
+    'genre'  => $db_book['category'],
+    'copies' => (int)$db_book['total_copies'],
+  ];
 }
 
+$error = '';
+
+// ── Handle POST (Move to archive) ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selected_book) {
-  foreach ($_SESSION['books'] as $index => $book) {
-    if ((int)$book['id'] === $book_id) {
-      $already_archived = false;
-
-      foreach ($_SESSION['archived_books'] as $archived_book) {
-        if ((int)$archived_book['id'] === $book_id) {
-          $already_archived = true;
-          break;
-        }
-      }
-
-      if (!$already_archived) {
-        $_SESSION['archived_books'][] = $book;
-      }
-
-      unset($_SESSION['books'][$index]);
-      $_SESSION['books'] = array_values($_SESSION['books']);
-
-      header('Location: archive_books.php?deleted=1');
-      exit;
-    }
+  $result = $book->archive($book_id);
+  if ($result === true) {
+    header('Location: archive_books.php?deleted=1');
+    exit;
   }
+  $error = is_string($result) ? $result : 'Failed to archive book.';
 }
 ?>
 
@@ -114,6 +112,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $selected_book) {
         <div class="card-title">
           Delete Confirmation
         </div>
+
+        <?php if (!empty($error)): ?>
+          <div class="alert alert-rust" style="margin-bottom:16px;">
+            <?= htmlspecialchars($error) ?>
+          </div>
+        <?php endif; ?>
 
         <?php if ($selected_book): ?>
 

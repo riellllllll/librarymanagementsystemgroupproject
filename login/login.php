@@ -1,94 +1,161 @@
 <?php
 // ============================================================
-// login.php — CvSU Library Login & Registration
+// login/login.php — CvSU Library Login & Registration
 // ============================================================
 session_start();
 
-// ── Guard: redirect if already logged in ─────────────────────
-// TODO: uncomment once DB + OOP classes are connected
-// if (isset($_SESSION['user_id'])) {
-//     $redirect = ($_SESSION['role'] === 'admin')
-//         ? 'admin/dashboard.php'
-//         : 'student/dashboard.php';
-//     header('Location: ' . $redirect);
-//     exit;
-// }
+// ── Load OOP classes ─────────────────────────────────────────
+require_once __DIR__ . '/../config/Database.php';
+require_once __DIR__ . '/../classes/User.php';
 
-// ── TODO: Require OOP classes (create these files first) ─────
-// require_once 'includes/Database.php';   // class Database
-// require_once 'includes/User.php';       // class User
+// ── Guard: redirect if already logged in ─────────────────────
+if (isset($_SESSION['user_id'])) {
+    $redirect = ($_SESSION['role'] === 'admin')
+        ? '../admin/dashboard.php'
+        : '../student/dashboard.php';
+    header('Location: ' . $redirect);
+    exit;
+}
+
+// Safe defaults
+$login_error = null;
+$admin_error = null;
+$reg_success = false;
+$reg_error   = null;
+$active_tab  = 'student'; // which tab to show on page load
+
+// ── Helper: preserve form input values after failed submit ──
+function old_val(string $field): string {
+    return htmlspecialchars(trim($_POST[$field] ?? ''), ENT_QUOTES);
+}
+function old_selected(string $field, string $option): string {
+    return (trim($_POST[$field] ?? '') === $option) ? 'selected' : '';
+}
+function old_checked(string $field): string {
+    return !empty($_POST[$field]) ? 'checked' : '';
+}
 
 // ── Handle Student Login ──────────────────────────────────────
-// TODO: uncomment when DB is ready
-// if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['login_type'] ?? '') === 'student') {
-//     $db     = new Database();
-//     $user   = new User($db->getConnection());
-//     $result = $user->loginStudent(
-//         trim($_POST['student_number']),
-//         $_POST['password']
-//     );
-//     if ($result) {
-//         $_SESSION['user_id']        = $result['id'];
-//         $_SESSION['student_name']   = $result['full_name'];
-//         $_SESSION['student_id']     = $result['student_number'];
-//         $_SESSION['role']           = 'student';
-//         $_SESSION['active_borrows'] = (int)$result['active_borrows'];
-//         $_SESSION['has_fines']      = (bool)$result['has_fines'];
-//         header('Location: student/dashboard.php');
-//         exit;
-//     }
-//     $login_error = 'Invalid student number or password.';
-// }
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['login_type'] ?? '') === 'student') {
+    $active_tab = 'student';
+    $db         = new Database();
+    $conn       = $db->getConnection();
+
+    if (!$conn) {
+        $login_error = 'Database connection failed. Please contact the administrator.';
+    } else {
+        $user   = new User($conn);
+        $result = $user->loginStudent(
+            trim($_POST['student_number'] ?? ''),
+            $_POST['password'] ?? ''
+        );
+        if ($result) {
+            $_SESSION['user_id']        = $result['id'];
+            $_SESSION['student_name']   = $result['full_name'];
+            $_SESSION['student_id']     = $result['student_number'];
+            $_SESSION['role']           = 'student';
+            $_SESSION['active_borrows'] = (int)$result['active_borrows'];
+            $_SESSION['has_fines']      = (bool)$result['has_fines'];
+            header('Location: ../student/dashboard.php');
+            exit;
+        }
+        $login_error = 'Invalid student number or password.';
+    }
+}
 
 // ── Handle Admin Login ────────────────────────────────────────
-// TODO: uncomment when DB is ready
-// if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['login_type'] ?? '') === 'admin') {
-//     $db     = new Database();
-//     $user   = new User($db->getConnection());
-//     $result = $user->loginAdmin(
-//         trim($_POST['username']),
-//         $_POST['password']
-//     );
-//     if ($result) {
-//         $_SESSION['user_id']  = $result['id'];
-//         $_SESSION['username'] = $result['username'];
-//         $_SESSION['role']     = 'admin';
-//         header('Location: admin/dashboard.php');
-//         exit;
-//     }
-//     $admin_error = 'Invalid username or password.';
-// }
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['login_type'] ?? '') === 'admin') {
+    $active_tab = 'admin';
+    $db         = new Database();
+    $conn       = $db->getConnection();
+
+    if (!$conn) {
+        $admin_error = 'Database connection failed. Please contact the administrator.';
+    } else {
+        $user   = new User($conn);
+        $result = $user->loginAdmin(
+            trim($_POST['username'] ?? ''),
+            $_POST['password'] ?? ''
+        );
+        if ($result) {
+            $_SESSION['user_id']      = $result['id'];
+            $_SESSION['username']     = $result['username'];
+            $_SESSION['admin_name']   = $result['full_name'];
+            $_SESSION['role']         = 'admin';
+            header('Location: ../admin/dashboard.php');
+            exit;
+        }
+        $admin_error = 'Invalid username or password.';
+    }
+}
 
 // ── Handle Registration ───────────────────────────────────────
-// TODO: uncomment when DB is ready
-// if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['login_type'] ?? '') === 'register') {
-//     $db   = new Database();
-//     $user = new User($db->getConnection());
-//     $data = [
-//         'first_name'     => trim($_POST['first_name']),
-//         'last_name'      => trim($_POST['last_name']),
-//         'middle_name'    => trim($_POST['middle_name'] ?? ''),
-//         'dob'            => $_POST['dob'],
-//         'gender'         => $_POST['gender'],
-//         'student_number' => trim($_POST['student_number']),
-//         'course'         => $_POST['course'],
-//         'year_level'     => $_POST['year_level'],
-//         'email'          => strtolower(trim($_POST['email'])),
-//         'phone'          => trim($_POST['phone'] ?? ''),
-//         'password'       => password_hash($_POST['password'], PASSWORD_DEFAULT),
-//     ];
-//     if ($user->register($data)) {
-//         $reg_success = true;
-//     } else {
-//         $reg_error = 'Registration failed. Student number or email may already be in use.';
-//     }
-// }
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['login_type'] ?? '') === 'register') {
+    $active_tab = 'register';
 
-// Safe defaults so PHP doesn't throw undefined-variable notices
-$login_error = $login_error ?? null;
-$admin_error = $admin_error ?? null;
-$reg_success = $reg_success ?? false;
-$reg_error   = $reg_error   ?? null;
+    // ── Server-side terms check (can't be bypassed by disabling JS) ──
+    if (empty($_POST['terms'])) {
+        $reg_error = 'You must agree to the Terms of Service to register.';
+    } else {
+        // ── Server-side field validation ──────────────────────────────
+        $first_name     = trim($_POST['first_name']     ?? '');
+        $last_name      = trim($_POST['last_name']      ?? '');
+        $gender         = trim($_POST['gender']          ?? '');
+        $student_number = trim($_POST['student_number']  ?? '');
+        $course         = trim($_POST['course']          ?? '');
+        $year_level     = trim($_POST['year_level']      ?? '');
+        $email          = strtolower(trim($_POST['email'] ?? ''));
+        $password       = $_POST['password']             ?? '';
+        $confirm_pw     = $_POST['confirm_password']     ?? '';
+
+        if (empty($first_name)) {
+            $reg_error = 'First name is required.';
+        } elseif (empty($last_name)) {
+            $reg_error = 'Last name is required.';
+        } elseif (empty($gender)) {
+            $reg_error = 'Please select your gender.';
+        } elseif (!preg_match('/^\d{3,12}$/', $student_number)) {
+            $reg_error = 'Student number must be digits only (3–12 digits).';
+        } elseif (empty($course)) {
+            $reg_error = 'Please select your course.';
+        } elseif (empty($year_level)) {
+            $reg_error = 'Please select your year level.';
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $reg_error = 'Enter a valid email address.';
+        } elseif (strlen($password) < 8) {
+            $reg_error = 'Password must be at least 8 characters.';
+        } elseif ($password !== $confirm_pw) {
+            $reg_error = 'Passwords do not match.';
+        } else {
+            $db   = new Database();
+            $conn = $db->getConnection();
+
+            if (!$conn) {
+                $reg_error = 'Database connection failed. Please contact the administrator.';
+            } else {
+                $user = new User($conn);
+                $data = [
+                    'first_name'     => $first_name,
+                    'last_name'      => $last_name,
+                    'middle_name'    => trim($_POST['middle_name'] ?? ''),
+                    'gender'         => $gender,
+                    'student_number' => $student_number,
+                    'course'         => $course,
+                    'year_level'     => $year_level,
+                    'email'          => $email,
+                    'phone'          => trim($_POST['phone'] ?? ''),
+                    'password'       => password_hash($password, PASSWORD_DEFAULT),
+                ];
+
+                if ($user->register($data)) {
+                    $reg_success = true;
+                } else {
+                    $reg_error = 'Registration failed. Student number or email may already be in use.';
+                }
+            }
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -98,605 +165,7 @@ $reg_error   = $reg_error   ?? null;
 <title>CvSU — Library Management System</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --ink:       #1a1208;
-    --parchment: #f5efe3;
-    --cream:     #faf7f0;
-    --gold:      #c9973a;
-    --gold-lt:   #e8c26a;
-    --rust:      #8b3a2a;
-    --sage:      #4a6050;
-    --shadow:    rgba(26,18,8,0.18);
-    --card-bg:   rgba(250,247,240,0.97);
-  }
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  html {
-    overflow-y: auto;
-  }
-
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--ink);
-    min-height: 100vh;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    overflow-x: hidden;
-    overflow-y: auto;
-    position: relative;
-    padding: 40px 16px;
-  }
-
-  /* ── Background texture ── */
-  body::before {
-    content: '';
-    position: fixed; inset: 0;
-    background:
-      radial-gradient(ellipse 80% 60% at 20% 30%, #2e1f0a 0%, transparent 60%),
-      radial-gradient(ellipse 70% 80% at 80% 70%, #1a2a1a 0%, transparent 60%),
-      linear-gradient(135deg, #1a1208 0%, #0f0d08 100%);
-    z-index: 0;
-  }
-  body::after {
-    content: '';
-    position: fixed; inset: 0;
-    background-image:
-      repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(201,151,58,0.03) 40px, rgba(201,151,58,0.03) 41px),
-      repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(201,151,58,0.03) 40px, rgba(201,151,58,0.03) 41px);
-    z-index: 0;
-  }
-
-  /* ── Decorative floating books ── */
-  .bg-books {
-    position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
-  }
-  .book-spine {
-    position: absolute;
-    border-radius: 3px 1px 1px 3px;
-    opacity: 0.07;
-    animation: float-book linear infinite;
-  }
-  @keyframes float-book {
-    0%   { transform: translateY(110vh) rotate(var(--r)); opacity: 0; }
-    10%  { opacity: 0.07; }
-    90%  { opacity: 0.07; }
-    100% { transform: translateY(-20vh) rotate(var(--r)); opacity: 0; }
-  }
-
-  /* ── Main wrapper ── */
-  .stage {
-    position: relative; z-index: 10;
-    width: 100%; max-width: 900px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0;
-    animation: stage-in 0.9s cubic-bezier(0.22,1,0.36,1) both;
-  }
-  @keyframes stage-in {
-    from { opacity: 0; transform: translateY(30px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  /* ── Header ── */
-  .header {
-    text-align: center;
-    margin-bottom: 28px;
-  }
-  .logo-mark {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    margin-bottom: 10px;
-  }
-  .logo-icon {
-    width: 48px; height: 48px;
-    position: relative;
-  }
-  .logo-icon svg { width: 100%; height: 100%; }
-  .header h1 {
-    font-family: 'Playfair Display', serif;
-    font-size: clamp(2rem, 5vw, 2.8rem);
-    color: var(--parchment);
-    letter-spacing: 0.04em;
-    line-height: 1;
-  }
-  .header h1 em {
-    color: var(--gold);
-    font-style: italic;
-  }
-  .header p {
-    font-size: 0.78rem;
-    letter-spacing: 0.25em;
-    text-transform: uppercase;
-    color: rgba(245,239,227,0.45);
-    margin-top: 6px;
-  }
-  .gold-rule {
-    display: flex; align-items: center; gap: 10px;
-    margin: 12px auto 0; width: fit-content;
-  }
-  .gold-rule span { width: 60px; height: 1px; background: var(--gold); opacity: 0.5; }
-  .gold-rule i { color: var(--gold); font-style: normal; font-size: 0.75rem; }
-
-  /* ── Tab switcher ── */
-  .tab-bar {
-    display: flex;
-    background: rgba(26,18,8,0.6);
-    border: 1px solid rgba(201,151,58,0.2);
-    border-radius: 50px;
-    padding: 4px;
-    margin-bottom: 24px;
-    backdrop-filter: blur(12px);
-    gap: 4px;
-  }
-  .tab-btn {
-    background: transparent;
-    border: none; cursor: pointer;
-    padding: 9px 28px;
-    border-radius: 46px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.82rem;
-    font-weight: 500;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: rgba(245,239,227,0.5);
-    transition: all 0.3s ease;
-    position: relative;
-    white-space: nowrap;
-  }
-  .tab-btn.active {
-    background: var(--gold);
-    color: var(--ink);
-    box-shadow: 0 4px 20px rgba(201,151,58,0.4);
-  }
-  .tab-btn:hover:not(.active) { color: var(--parchment); }
-
-  /* ── Card ── */
-  .card {
-    background: var(--card-bg);
-    border-radius: 20px;
-    box-shadow:
-      0 40px 80px rgba(0,0,0,0.5),
-      0 0 0 1px rgba(201,151,58,0.15),
-      inset 0 1px 0 rgba(255,255,255,0.8);
-    width: 100%;
-    max-width: 480px;
-    overflow: hidden;
-    position: relative;
-  }
-  .card::before {
-    content: '';
-    position: absolute; top: 0; left: 0; right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, var(--gold), var(--gold-lt), var(--gold));
-  }
-
-  /* ── Panel ── */
-  .panel {
-    display: none;
-    padding: 40px 44px;
-    animation: panel-in 0.4s ease both;
-  }
-  .panel.active { display: block; }
-  @keyframes panel-in {
-    from { opacity: 0; transform: translateX(12px); }
-    to   { opacity: 1; transform: translateX(0); }
-  }
-
-  /* ── Panel header ── */
-  .panel-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.55rem;
-    color: var(--ink);
-    margin-bottom: 4px;
-    line-height: 1.2;
-  }
-  .panel-sub {
-    font-size: 0.82rem;
-    color: #7a6e5e;
-    margin-bottom: 28px;
-    line-height: 1.5;
-  }
-
-  /* ── Form fields ── */
-  .field {
-    margin-bottom: 18px;
-    position: relative;
-  }
-  .field label {
-    display: block;
-    font-size: 0.72rem;
-    font-weight: 500;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #7a6e5e;
-    margin-bottom: 7px;
-  }
-  .field label span { color: var(--rust); }
-
-  .input-wrap {
-    position: relative;
-    display: flex;
-    align-items: center;
-  }
-  .input-wrap .ico {
-    position: absolute; left: 14px;
-    color: #b0a898;
-    pointer-events: none;
-    display: flex;
-    transition: color 0.2s;
-  }
-  .input-wrap input,
-  .input-wrap select {
-    width: 100%;
-    background: #f0ebe0;
-    border: 1.5px solid #ddd5c5;
-    border-radius: 10px;
-    padding: 11px 14px 11px 42px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.9rem;
-    color: var(--ink);
-    outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
-    -webkit-appearance: none;
-  }
-  .input-wrap select { padding-right: 36px; }
-  .input-wrap select + .select-arrow {
-    position: absolute; right: 12px;
-    color: #b0a898; pointer-events: none;
-  }
-  .input-wrap input:focus,
-  .input-wrap select:focus {
-    border-color: var(--gold);
-    background: #fff;
-    box-shadow: 0 0 0 3px rgba(201,151,58,0.15);
-  }
-  .input-wrap input:focus ~ .ico,
-  .input-wrap input:focus + .ico { color: var(--gold); }
-  .input-wrap input.error { border-color: var(--rust); }
-
-  /* password toggle */
-  .pw-toggle {
-    position: absolute; right: 12px;
-    background: none; border: none;
-    cursor: pointer; color: #b0a898;
-    display: flex; padding: 4px;
-    transition: color 0.2s;
-  }
-  .pw-toggle:hover { color: var(--gold); }
-
-  /* two-col grid */
-  .field-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0 14px;
-  }
-
-  /* ── Helpers ── */
-  .field-hint {
-    font-size: 0.73rem;
-    color: #9a8e7e;
-    margin-top: 5px;
-  }
-  .field-err {
-    font-size: 0.73rem;
-    color: var(--rust);
-    margin-top: 5px;
-    display: none;
-  }
-  .field.has-error .field-err { display: block; }
-  .field.has-error input { border-color: var(--rust); }
-
-  /* ── PHP error banner ── */
-  .php-error {
-    background: #fdf0ed;
-    border: 1px solid #e8a898;
-    border-radius: 10px;
-    padding: 11px 14px;
-    margin-bottom: 20px;
-    font-size: 0.82rem;
-    color: var(--rust);
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
-
-  /* ── Password strength ── */
-  .strength-wrap { margin-top: 8px; }
-  .strength-bars {
-    display: flex; gap: 4px; margin-bottom: 4px;
-  }
-  .strength-bar {
-    flex: 1; height: 3px; border-radius: 2px;
-    background: #ddd5c5;
-    transition: background 0.3s;
-  }
-  .strength-label {
-    font-size: 0.7rem; color: #9a8e7e;
-  }
-
-  /* ── Submit button ── */
-  .btn-submit {
-    width: 100%;
-    background: linear-gradient(135deg, #c9973a, #e8c26a);
-    border: none;
-    border-radius: 10px;
-    padding: 13px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.88rem;
-    font-weight: 500;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--ink);
-    cursor: pointer;
-    margin-top: 8px;
-    position: relative;
-    overflow: hidden;
-    transition: transform 0.15s, box-shadow 0.2s;
-    box-shadow: 0 4px 20px rgba(201,151,58,0.35);
-  }
-  .btn-submit:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 28px rgba(201,151,58,0.5);
-  }
-  .btn-submit:active { transform: translateY(0); }
-  .btn-submit::after {
-    content: '';
-    position: absolute; inset: 0;
-    background: rgba(255,255,255,0);
-    transition: background 0.15s;
-  }
-  .btn-submit:hover::after { background: rgba(255,255,255,0.1); }
-  .btn-submit.loading {
-    pointer-events: none; color: transparent;
-  }
-  .btn-submit.loading::before {
-    content: '';
-    position: absolute;
-    width: 18px; height: 18px;
-    border: 2px solid rgba(26,18,8,0.3);
-    border-top-color: var(--ink);
-    border-radius: 50%;
-    top: 50%; left: 50%;
-    transform: translate(-50%,-50%);
-    animation: spin 0.7s linear infinite;
-  }
-  @keyframes spin { to { transform: translate(-50%,-50%) rotate(360deg); } }
-
-  /* ── Links ── */
-  .link-row {
-    text-align: center;
-    margin-top: 18px;
-    font-size: 0.8rem;
-    color: #9a8e7e;
-  }
-  .link-row a {
-    color: var(--gold);
-    text-decoration: none;
-    font-weight: 500;
-    transition: color 0.2s;
-  }
-  .link-row a:hover { color: var(--rust); text-decoration: underline; }
-
-  /* ── Divider ── */
-  .divider {
-    display: flex; align-items: center; gap: 10px;
-    margin: 20px 0;
-  }
-  .divider hr { flex: 1; border: none; border-top: 1px solid #ddd5c5; }
-  .divider span { font-size: 0.72rem; color: #b0a898; letter-spacing: 0.08em; white-space: nowrap; }
-
-  /* ── Section divider within register ── */
-  .section-head {
-    font-size: 0.7rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: #b0a898;
-    margin: 22px 0 14px;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .section-head::after { content: ''; flex: 1; height: 1px; background: #e0d8cc; }
-
-  /* ── Toast ── */
-  .toast {
-    position: fixed;
-    bottom: 30px; left: 50%;
-    transform: translateX(-50%) translateY(20px);
-    background: var(--ink);
-    color: var(--parchment);
-    padding: 12px 24px;
-    border-radius: 50px;
-    font-size: 0.82rem;
-    border: 1px solid rgba(201,151,58,0.3);
-    opacity: 0;
-    transition: all 0.4s cubic-bezier(0.22,1,0.36,1);
-    z-index: 999;
-    pointer-events: none;
-    white-space: nowrap;
-  }
-  .toast.show {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-  .toast.success { border-color: var(--sage); color: #a8d5b0; }
-  .toast.error   { border-color: var(--rust); color: #e8a090; }
-
-  /* ── Success overlay ── */
-  .success-overlay {
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 50px 44px;
-    text-align: center;
-    animation: panel-in 0.4s ease both;
-  }
-  .success-overlay.show { display: flex; }
-  .check-circle {
-    width: 72px; height: 72px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--sage), #6a8a70);
-    display: flex; align-items: center; justify-content: center;
-    margin-bottom: 18px;
-    box-shadow: 0 8px 24px rgba(74,96,80,0.35);
-    animation: pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both 0.1s;
-  }
-  @keyframes pop {
-    from { transform: scale(0.5); opacity: 0; }
-    to   { transform: scale(1); opacity: 1; }
-  }
-  .success-overlay h2 {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.4rem;
-    color: var(--ink);
-    margin-bottom: 8px;
-  }
-  .success-overlay p {
-    font-size: 0.85rem;
-    color: #7a6e5e;
-    line-height: 1.6;
-    margin-bottom: 24px;
-  }
-
-  /* terms checkbox */
-  .check-field {
-    display: flex; align-items: flex-start; gap: 10px;
-    margin-top: 6px;
-  }
-  .check-field input[type="checkbox"] {
-    width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px;
-    accent-color: var(--gold);
-    cursor: pointer;
-  }
-  .check-field label {
-    font-size: 0.78rem;
-    color: #7a6e5e;
-    line-height: 1.5;
-    cursor: pointer;
-  }
-  .check-field label a { color: var(--gold); text-decoration: none; }
-
-  /* ── Forgot Password Modal ── */
-  .modal-backdrop {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(10,8,4,0.75);
-    backdrop-filter: blur(4px);
-    z-index: 100;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-  }
-  .modal-backdrop.open { display: flex; }
-
-  .modal {
-    background: var(--card-bg);
-    border-radius: 18px;
-    width: 100%; max-width: 420px;
-    box-shadow: 0 30px 70px rgba(0,0,0,0.5), 0 0 0 1px rgba(201,151,58,0.2);
-    overflow: hidden;
-    animation: modal-in 0.35s cubic-bezier(0.22,1,0.36,1) both;
-    position: relative;
-  }
-  @keyframes modal-in {
-    from { opacity: 0; transform: scale(0.92) translateY(20px); }
-    to   { opacity: 1; transform: scale(1) translateY(0); }
-  }
-  .modal-top {
-    height: 4px;
-    background: linear-gradient(90deg, var(--gold), var(--gold-lt), var(--gold));
-  }
-  .modal-body { padding: 32px 36px 36px; }
-  .modal-close {
-    position: absolute; top: 14px; right: 14px;
-    background: none; border: none; cursor: pointer;
-    color: #b0a898; padding: 6px;
-    border-radius: 50%;
-    transition: background 0.2s, color 0.2s;
-    display: flex;
-  }
-  .modal-close:hover { background: #f0ebe0; color: var(--ink); }
-
-  .modal-step { display: none; }
-  .modal-step.active { display: block; animation: panel-in 0.3s ease both; }
-
-  .modal-icon {
-    width: 52px; height: 52px;
-    border-radius: 14px;
-    background: linear-gradient(135deg, #fdf0dd, #f5e0b8);
-    display: flex; align-items: center; justify-content: center;
-    margin-bottom: 16px;
-    border: 1px solid rgba(201,151,58,0.25);
-  }
-  .modal-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.3rem;
-    color: var(--ink);
-    margin-bottom: 6px;
-  }
-  .modal-desc {
-    font-size: 0.82rem;
-    color: #7a6e5e;
-    line-height: 1.55;
-    margin-bottom: 22px;
-  }
-
-  /* toggle between email / student number */
-  .lookup-toggle {
-    display: flex;
-    background: #f0ebe0;
-    border-radius: 8px;
-    padding: 3px;
-    margin-bottom: 18px;
-    gap: 2px;
-  }
-  .lookup-btn {
-    flex: 1; background: transparent; border: none;
-    padding: 7px 10px; border-radius: 6px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.78rem; font-weight: 500;
-    color: #9a8e7e; cursor: pointer;
-    transition: all 0.2s;
-  }
-  .lookup-btn.active {
-    background: white;
-    color: var(--ink);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-  }
-
-  .sent-circle {
-    width: 64px; height: 64px; border-radius: 50%;
-    background: linear-gradient(135deg, var(--sage), #6a8a70);
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 18px;
-    box-shadow: 0 6px 20px rgba(74,96,80,0.3);
-    animation: pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both 0.05s;
-  }
-  .modal-sent-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.25rem; color: var(--ink);
-    text-align: center; margin-bottom: 8px;
-  }
-  .modal-sent-desc {
-    font-size: 0.82rem; color: #7a6e5e;
-    text-align: center; line-height: 1.6;
-    margin-bottom: 22px;
-  }
-  .highlight-val {
-    font-weight: 500; color: var(--gold);
-  }
-
-  @media (max-width: 520px) {
-    .panel { padding: 32px 24px; }
-    .field-grid { grid-template-columns: 1fr; }
-    .tab-btn { padding: 9px 18px; }
-  }
-</style>
+<link rel="stylesheet" href="../assets/login.css">
 </head>
 <body>
 
@@ -768,7 +237,7 @@ $reg_error   = $reg_error   ?? null;
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             </span>
             <input type="text" id="sno" name="student_number"
-              placeholder="e.g. 202410498"
+              placeholder="e.g. 101"
               autocomplete="username"
               inputmode="numeric"
               maxlength="12"
@@ -902,7 +371,7 @@ $reg_error   = $reg_error   ?? null;
               <label>First Name <span>*</span></label>
               <div class="input-wrap">
                 <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-                <input type="text" id="rfn" name="first_name" placeholder="Juan" />
+                <input type="text" id="rfn" name="first_name" placeholder="Juan" value="<?= old_val('first_name') ?>" />
               </div>
               <div class="field-err">Required.</div>
             </div>
@@ -910,7 +379,7 @@ $reg_error   = $reg_error   ?? null;
               <label>Last Name <span>*</span></label>
               <div class="input-wrap">
                 <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-                <input type="text" id="rln" name="last_name" placeholder="Dela Cruz" />
+                <input type="text" id="rln" name="last_name" placeholder="Dela Cruz" value="<?= old_val('last_name') ?>" />
               </div>
               <div class="field-err">Required.</div>
             </div>
@@ -920,28 +389,20 @@ $reg_error   = $reg_error   ?? null;
             <label>Middle Name</label>
             <div class="input-wrap">
               <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-              <input type="text" id="rmn" name="middle_name" placeholder="Santos (optional)" />
+              <input type="text" id="rmn" name="middle_name" placeholder="Santos (optional)" value="<?= old_val('middle_name') ?>" />
             </div>
           </div>
 
           <div class="field-grid">
-            <div class="field" id="f-rdob">
-              <label>Date of Birth <span>*</span></label>
-              <div class="input-wrap">
-                <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
-                <input type="date" id="rdob" name="dob" style="padding-left:42px;" />
-              </div>
-              <div class="field-err">Required.</div>
-            </div>
             <div class="field" id="f-rgender">
               <label>Gender <span>*</span></label>
               <div class="input-wrap">
                 <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M17 16h-2v2M7 16h2v2"/></svg></span>
                 <select id="rgender" name="gender">
                   <option value="">Select…</option>
-                  <option>Male</option>
-                  <option>Female</option>
-                  <option>Prefer not to say</option>
+                  <option <?= old_selected('gender','Male') ?>>Male</option>
+                  <option <?= old_selected('gender','Female') ?>>Female</option>
+                  <option <?= old_selected('gender','Prefer not to say') ?>>Prefer not to say</option>
                 </select>
                 <span class="select-arrow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></span>
               </div>
@@ -956,9 +417,10 @@ $reg_error   = $reg_error   ?? null;
             <div class="input-wrap">
               <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></span>
               <input type="text" id="rsno" name="student_number"
-                placeholder="e.g. 202410498"
+                placeholder="e.g. 101"
                 inputmode="numeric"
                 maxlength="12"
+                value="<?= old_val('student_number') ?>"
                 oninput="this.value=this.value.replace(/\D/g,'')" />
             </div>
             <div class="field-hint">Numbers only — no dashes</div>
@@ -972,15 +434,14 @@ $reg_error   = $reg_error   ?? null;
                 <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></span>
                 <select id="rcourse" name="course">
                   <option value="">Select…</option>
-                  <option>BS Computer Science</option>
-                  <option>BS Information Technology</option>
-                  <option>BS Education</option>
-                  <option>BS Nursing</option>
-                  <option>BS Engineering</option>
-                  <option>BS Business Administration</option>
-                  <option>BS Accountancy</option>
-                  <option>AB Communication</option>
-                  <option>Other</option>
+                  <option <?= old_selected('course','BS Computer Science') ?>>BS Computer Science</option>
+                  <option <?= old_selected('course','BS Information Technology') ?>>BS Information Technology</option>
+                  <option <?= old_selected('course','BS Education') ?>>BS Education</option>
+                  <option <?= old_selected('course','BS Nursing') ?>>BS Nursing</option>
+                  <option <?= old_selected('course','BS Engineering') ?>>BS Engineering</option>
+                  <option <?= old_selected('course','BS Business Administration') ?>>BS Business Administration</option>
+                  <option <?= old_selected('course','BS Accountancy') ?>>BS Accountancy</option>
+                  <option <?= old_selected('course','AB Communication') ?>>AB Communication</option>
                 </select>
                 <span class="select-arrow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></span>
               </div>
@@ -992,12 +453,10 @@ $reg_error   = $reg_error   ?? null;
                 <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></span>
                 <select id="ryear" name="year_level">
                   <option value="">Select…</option>
-                  <option>1st Year</option>
-                  <option>2nd Year</option>
-                  <option>3rd Year</option>
-                  <option>4th Year</option>
-                  <option>5th Year</option>
-                  <option>Graduate</option>
+                  <option <?= old_selected('year_level','1st Year') ?>>1st Year</option>
+                  <option <?= old_selected('year_level','2nd Year') ?>>2nd Year</option>
+                  <option <?= old_selected('year_level','3rd Year') ?>>3rd Year</option>
+                  <option <?= old_selected('year_level','4th Year') ?>>4th Year</option>
                 </select>
                 <span class="select-arrow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></span>
               </div>
@@ -1011,7 +470,7 @@ $reg_error   = $reg_error   ?? null;
             <label>Email Address <span>*</span></label>
             <div class="input-wrap">
               <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
-              <input type="email" id="remail" name="email" placeholder="juandelacruz@school.edu.ph" />
+              <input type="email" id="remail" name="email" placeholder="juandelacruz@school.edu.ph" value="<?= old_val('email') ?>" />
             </div>
             <div class="field-err">Enter a valid email address.</div>
           </div>
@@ -1020,7 +479,7 @@ $reg_error   = $reg_error   ?? null;
             <label>Contact Number</label>
             <div class="input-wrap">
               <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 9.5a19.79 19.79 0 0 1-3-8.59A2 2 0 0 1 3.62 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
-              <input type="tel" id="rphone" name="phone" placeholder="09XX-XXX-XXXX" />
+              <input type="tel" id="rphone" name="phone" placeholder="09XX-XXX-XXXX" value="<?= old_val('phone') ?>" />
             </div>
           </div>
 
@@ -1064,7 +523,7 @@ $reg_error   = $reg_error   ?? null;
 
           <div class="field">
             <div class="check-field">
-              <input type="checkbox" id="rterms" name="terms" value="1" />
+              <input type="checkbox" id="rterms" name="terms" value="1" <?= old_checked('terms') ?> />
               <label for="rterms">I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a> of the Library Management System.</label>
             </div>
           </div>
@@ -1167,43 +626,27 @@ function validate(fieldId, condition, errMsg){
 }
 
 // ── Student login ──
-// NOTE: e.preventDefault() keeps this frontend-only for now.
-// When your DB + OOP classes are ready, REMOVE the e.preventDefault()
-// line and the setTimeout block — the form will POST to PHP naturally.
 document.getElementById('studentForm').addEventListener('submit', function(e){
-  e.preventDefault(); // ← REMOVE THIS when DB is ready
   const sno = document.getElementById('sno').value.trim();
   const spw = document.getElementById('spw').value;
   let ok = true;
   ok = validate('sno', !!sno, 'Please enter your student number.') && ok;
   ok = validate('spw', !!spw, 'Password cannot be empty.') && ok;
-  if(!ok) return;
+  if(!ok){ e.preventDefault(); return; }
   const btn = this.querySelector('.btn-submit');
   btn.classList.add('loading');
-  // ↓ REMOVE this setTimeout block when DB is ready
-  setTimeout(()=>{
-    btn.classList.remove('loading');
-    showToast('Sign-in successful! Redirecting…','success');
-    // TODO: actual redirect will be handled by PHP header()
-  }, 1600);
 });
 
 // ── Admin login ──
 document.getElementById('adminForm').addEventListener('submit', function(e){
-  e.preventDefault(); // ← REMOVE THIS when DB is ready
   const aun = document.getElementById('aun').value.trim();
   const apw = document.getElementById('apw').value;
   let ok = true;
   ok = validate('aun', !!aun, 'Please enter your username.') && ok;
   ok = validate('apw', !!apw, 'Password cannot be empty.') && ok;
-  if(!ok) return;
+  if(!ok){ e.preventDefault(); return; }
   const btn = this.querySelector('.btn-submit');
   btn.classList.add('loading');
-  // ↓ REMOVE this setTimeout block when DB is ready
-  setTimeout(()=>{
-    btn.classList.remove('loading');
-    showToast('Admin access granted. Welcome!','success');
-  }, 1600);
 });
 
 // ── Forgot Password Modal ──
@@ -1242,7 +685,7 @@ function submitForgot(){
     sentTo = val;
   } else {
     const val = document.getElementById('fpsno').value.trim();
-    ok = validate('fpsno', /^\d{6,12}$/.test(val), 'Please enter a valid student number.');
+    ok = validate('fpsno', /^\d{3,12}$/.test(val), 'Please enter a valid student number.');
     sentTo = val;
   }
   if(!ok) return;
@@ -1261,14 +704,12 @@ document.getElementById('forgotModal').addEventListener('click', function(e){
 
 // ── Register ──
 document.getElementById('registerForm').addEventListener('submit', function(e){
-  e.preventDefault(); // ← REMOVE THIS when DB is ready
   const get = id => document.getElementById(id).value.trim();
   let ok = true;
   ok = validate('rfn',  !!get('rfn'), 'First name is required.') && ok;
   ok = validate('rln',  !!get('rln'), 'Last name is required.') && ok;
-  ok = validate('rdob', !!get('rdob'), 'Date of birth is required.') && ok;
   ok = validate('rgender', !!get('rgender'), 'Please select your gender.') && ok;
-  ok = validate('rsno', /^\d{6,12}$/.test(get('rsno')), 'Student number must be digits only (6–12 digits).') && ok;
+  ok = validate('rsno', /^\d{3,12}$/.test(get('rsno')), 'Student number must be digits only (3-12 digits).') && ok;
   ok = validate('rcourse', !!get('rcourse'), 'Please select your course.') && ok;
   ok = validate('ryear',   !!get('ryear'), 'Please select your year level.') && ok;
   ok = validate('remail',  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(get('remail')), 'Enter a valid email address.') && ok;
@@ -1280,15 +721,9 @@ document.getElementById('registerForm').addEventListener('submit', function(e){
     showToast('Please agree to the Terms of Service.','error');
     ok = false;
   }
-  if(!ok) return;
+  if(!ok){ e.preventDefault(); return; }
   const btn = this.querySelector('.btn-submit');
   btn.classList.add('loading');
-  // ↓ REMOVE this setTimeout block when DB is ready
-  setTimeout(()=>{
-    btn.classList.remove('loading');
-    document.getElementById('regForm').style.display = 'none';
-    document.getElementById('regSuccess').classList.add('show');
-  }, 1800);
 });
 </script>
 
@@ -1325,7 +760,7 @@ document.getElementById('registerForm').addEventListener('submit', function(e){
             <label>Student Number <span>*</span></label>
             <div class="input-wrap">
               <span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></span>
-              <input type="text" id="fpsno" placeholder="e.g. 202410498" inputmode="numeric" maxlength="12" oninput="this.value=this.value.replace(/\D/g,'')" />
+              <input type="text" id="fpsno" placeholder="e.g. 101" inputmode="numeric" maxlength="12" oninput="this.value=this.value.replace(/\D/g,'')" />
             </div>
             <div class="field-err">Please enter your student number.</div>
           </div>
@@ -1353,6 +788,14 @@ document.getElementById('registerForm').addEventListener('submit', function(e){
     </div>
   </div>
 </div>
+
+<?php if ($active_tab !== 'student'): ?>
+<script>
+  document.addEventListener('DOMContentLoaded', function(){
+    switchTab('<?= $active_tab ?>');
+  });
+</script>
+<?php endif; ?>
 
 </body>
 </html>

@@ -1,95 +1,78 @@
 <?php
 // ============================================================
-// return_book.php — CvSU Library Return a Book
+// return_book.php — CvSU Library Return a Book (DB-powered)
 // ============================================================
 session_start();
+require_once __DIR__ . '/../includes/student_auth.php';
+require_once __DIR__ . '/../classes/BorrowRecord.php';
 
+$borrow = new BorrowRecord($conn);
+$borrow->updateOverdueStatuses();
 
-
-// ── Handle return form submission ─────────────────────────────
+// ── Handle POST: submit OR cancel return request ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['borrow_id'])) {
-    $borrow_id = intval($_POST['borrow_id']);
-    $today     = date('Y-m-d');
+    $borrow_id = (int)$_POST['borrow_id'];
+    $action    = $_POST['action'] ?? 'return';
 
-    // TODO: DB operations
-    // require_once '../includes/db_connect.php';
-    //
-    // 1. Verify this borrow belongs to this student and is still active
-    // $stmt = $pdo->prepare("SELECT b.*, bk.title FROM borrows b JOIN books bk ON b.book_id=bk.id
-    //   WHERE b.id=? AND b.student_id=? AND b.status IN ('active','overdue')");
-    // $stmt->execute([$borrow_id, $_SESSION['student_id']]);
-    // $borrow = $stmt->fetch(PDO::FETCH_ASSOC);
-    //
-    // if (!$borrow) { $_SESSION['flash_error'] = 'Invalid borrow record.'; header('Location: return_book.php'); exit; }
-    //
-    // 2. Calculate fine
-    // $due  = new DateTime($borrow['due_date']);
-    // $ret  = new DateTime($today);
-    // $days_late = max(0, $ret->diff($due)->invert ? 0 : $ret->diff($due)->days);
-    // $fine_per_day = 5;
-    // $fine_amount  = $days_late * $fine_per_day;
-    //
-    // 3. Mark book as returned
-    // $upd = $pdo->prepare("UPDATE borrows SET return_date=?, status='returned' WHERE id=?");
-    // $upd->execute([$today, $borrow_id]);
-    //
-    // 4. Create fine record if overdue
-    // if ($fine_amount > 0) {
-    //     $ins = $pdo->prepare("INSERT INTO fines (student_id, borrow_id, amount, status) VALUES (?,?,?,'unpaid')");
-    //     $ins->execute([$_SESSION['student_id'], $borrow_id, $fine_amount]);
-    //     $_SESSION['has_fines'] = true;
-    // }
-    //
-    // 5. Update active_borrows count in session
-    // $_SESSION['active_borrows'] = max(0, ($_SESSION['active_borrows'] ?? 1) - 1);
+    if ($action === 'cancel_return') {
+        // Student wants to cancel their pending return request
+        $result = $borrow->cancelReturnRequest($borrow_id, $student_id);
+        if ($result === true) {
+            $_SESSION['flash_success'] = 'Return request cancelled. The book is back in your active list.';
+        } else {
+            $_SESSION['flash_error'] = is_string($result) ? $result : 'Failed to cancel return request.';
+        }
+    } else {
+        // Student submitting a new return request
+        $result = $borrow->initiateReturn($borrow_id, $student_id);
+        if ($result === true) {
+            $_SESSION['flash_success'] = 'Return request submitted! The admin will confirm your return.';
+        } else {
+            $_SESSION['flash_error'] = is_string($result) ? $result : 'Failed to submit return request.';
+        }
+    }
 
-    // Redirect back with success (PRG pattern prevents re-submission on refresh)
-    $_SESSION['flash_success'] = 'Book returned successfully!';
-    header('Location: return_book.php?returned=1&id=' . $borrow_id);
+    // Optional redirect target — "View History" sends user to borrow_history.php
+    $redirect = $_POST['redirect'] ?? '';
+    if ($redirect === 'history') {
+        header('Location: borrow_history.php');
+    } else {
+        header('Location: return_book.php?id=' . $borrow_id);
+    }
     exit;
 }
 
-// ── Flash messages ────────────────────────────────────────────
+// ── Flash messages ──
 $flash_success = $_SESSION['flash_success'] ?? '';
 $flash_error   = $_SESSION['flash_error']   ?? '';
 unset($_SESSION['flash_success'], $_SESSION['flash_error']);
 
 $has_fines = (bool)($_SESSION['has_fines'] ?? false);
 
-// ── Load this student's currently borrowed books ──────────────
-// TODO: DB query
-// $stmt = $pdo->prepare("SELECT b.id, b.borrow_date, b.due_date, bk.title, bk.author,
-//   CASE WHEN b.due_date < CURDATE() THEN 1 ELSE 0 END AS is_overdue,
-//   DATEDIFF(CURDATE(), b.due_date) AS days_late
-//   FROM borrows b JOIN books bk ON b.book_id=bk.id
-//   WHERE b.student_id=? AND b.status IN ('active','overdue')
-//   ORDER BY b.due_date ASC");
-// $stmt->execute([$_SESSION['student_id']]);
-// $borrowed_books = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Placeholder data (remove when DB connected):
-$borrowed_books = [
-    [
-        'id'          => 1,
-        'title'       => 'The Great Gatsby',
-        'author'      => 'F. Scott Fitzgerald',
-        'borrow_date' => '2026-05-10',
-        'due_date'    => '2026-05-25',
-        'is_overdue'  => false,
-        'days_late'   => 0,
-        'fine_per_day'=> 5,
-    ],
-    [
-        'id'          => 2,
-        'title'       => 'To Kill a Mockingbird',
-        'author'      => 'Harper Lee',
-        'borrow_date' => '2026-05-03',
-        'due_date'    => '2026-05-18',
-        'is_overdue'  => true,
-        'days_late'   => 2,
-        'fine_per_day'=> 5,
-    ],
-];
+// ── Load active/overdue/pending_return borrows for this student ──
+// pending_return = student already submitted, awaiting admin confirmation
+// If admin rejects, status flips back to active/overdue automatically (handled in BorrowRecord::rejectReturn).
+$all_rows = $borrow->getByStudent($student_id);
+$borrowed_books = [];
+foreach ($all_rows as $r) {
+    if (!in_array($r['status'], ['active','overdue','pending_return'])) continue;
+    $is_overdue = $r['status'] === 'overdue';
+    $is_pending = $r['status'] === 'pending_return';
+    $days_late  = $is_overdue
+        ? max(0, (int)(strtotime(date('Y-m-d')) - strtotime($r['due_date'])) / 86400)
+        : 0;
+    $borrowed_books[] = [
+        'id'           => (int)$r['id'],
+        'title'        => $r['book_title'],
+        'author'       => $r['author'],
+        'borrow_date'  => $r['borrow_date'],
+        'due_date'     => $r['due_date'],
+        'is_overdue'   => $is_overdue,
+        'is_pending'   => $is_pending,
+        'days_late'    => (int)$days_late,
+        'fine_per_day' => 5,
+    ];
+}
 
 $overdue_books = array_filter($borrowed_books, fn($b) => $b['is_overdue']);
 ?>
@@ -173,6 +156,7 @@ $overdue_books = array_filter($borrowed_books, fn($b) => $b['is_overdue']);
               <?php foreach ($borrowed_books as $book): ?>
                 <?php
                   $overdue_cls = $book['is_overdue'] ? ' overdue' : '';
+                  $pending_style = $book['is_pending'] ? 'opacity:0.55;cursor:not-allowed;' : '';
                   $fine_total  = $book['days_late'] * $book['fine_per_day'];
                 ?>
                 <div class="return-book-item<?= $overdue_cls ?>"
@@ -183,8 +167,10 @@ $overdue_books = array_filter($borrowed_books, fn($b) => $b['is_overdue']);
                      data-due="<?= date('M j, Y', strtotime($book['due_date'])) ?>"
                      data-borrowed="<?= date('M j, Y', strtotime($book['borrow_date'])) ?>"
                      data-overdue="<?= $book['is_overdue'] ? 'true' : 'false' ?>"
+                     data-pending="<?= $book['is_pending'] ? 'true' : 'false' ?>"
                      data-fine="<?= $book['fine_per_day'] ?>"
-                     data-days-late="<?= $book['days_late'] ?>">
+                     data-days-late="<?= $book['days_late'] ?>"
+                     style="<?= $pending_style ?>">
                   <div class="return-radio"></div>
                   <div class="return-spine">📖</div>
                   <div class="return-info">
@@ -208,7 +194,20 @@ $overdue_books = array_filter($borrowed_books, fn($b) => $b['is_overdue']);
                     <?php endif; ?>
                   </div>
                   <div class="return-right">
-                    <?php if ($book['is_overdue']): ?>
+                    <?php if ($book['is_pending']): ?>
+                      <span class="badge badge-gold">Awaiting Admin</span>
+                      <span style="font-size:0.72rem;color:var(--gold);margin-top:4px;display:block;">Return requested</span>
+                      <form method="POST" action="return_book.php"
+                            style="margin-top:8px;"
+                            onsubmit="event.stopPropagation(); return confirm('Cancel your return request? The book will go back to your active list.');"
+                            onclick="event.stopPropagation();">
+                        <input type="hidden" name="action"    value="cancel_return">
+                        <input type="hidden" name="borrow_id" value="<?= (int)$book['id'] ?>">
+                        <button type="submit" class="btn-danger" style="font-size:0.74rem;padding:5px 12px;">
+                          Cancel
+                        </button>
+                      </form>
+                    <?php elseif ($book['is_overdue']): ?>
                       <span class="badge badge-rust">Overdue</span>
                       <span style="font-size:0.75rem;color:var(--rust);margin-top:4px;display:block;">+₱<?= $fine_total ?> fine</span>
                     <?php else: ?>
@@ -319,7 +318,7 @@ $overdue_books = array_filter($borrowed_books, fn($b) => $b['is_overdue']);
       </div>
       <div class="receipt-lines" id="receiptLines"></div>
       <div style="display:flex;gap:10px;margin-top:16px;">
-        <a href="borrow_history.php" class="btn-outline" style="flex:1;text-align:center;">View History</a>
+        <button type="button" class="btn-outline" id="modalHistoryBtn" style="flex:1;text-align:center;">View History</button>
         <button class="btn-primary" style="flex:1;" id="modalCloseBtn">Done</button>
       </div>
     </div>
@@ -347,6 +346,13 @@ $overdue_books = array_filter($borrowed_books, fn($b) => $b['is_overdue']);
 
   document.querySelectorAll('.return-book-item').forEach(item => {
     item.addEventListener('click', function() {
+      // Block clicks on pending return rows - student already submitted, waiting for admin
+      if (this.dataset.pending === 'true') {
+        if (typeof showToast === 'function') {
+          showToast('This return request is awaiting admin confirmation.', 'info');
+        }
+        return;
+      }
       document.querySelectorAll('.return-book-item').forEach(i => i.classList.remove('selected'));
       this.classList.add('selected');
       selectedItem = this;
@@ -459,6 +465,22 @@ $overdue_books = array_filter($borrowed_books, fn($b) => $b['is_overdue']);
   document.getElementById('modalClose').addEventListener('click', () => {
     document.getElementById('successModal').classList.remove('open');
     document.getElementById('returnForm').submit();
+  });
+
+  /* ── View History: must submit the return FIRST, then PHP redirects to history ── */
+  document.getElementById('modalHistoryBtn').addEventListener('click', () => {
+    const form = document.getElementById('returnForm');
+    // Add hidden redirect field so PHP redirects to borrow_history.php after recording return
+    let redirInput = form.querySelector('input[name="redirect"]');
+    if (!redirInput) {
+      redirInput = document.createElement('input');
+      redirInput.type = 'hidden';
+      redirInput.name = 'redirect';
+      form.appendChild(redirInput);
+    }
+    redirInput.value = 'history';
+    document.getElementById('successModal').classList.remove('open');
+    form.submit();
   });
 
   document.getElementById('successModal').addEventListener('click', function(e) {

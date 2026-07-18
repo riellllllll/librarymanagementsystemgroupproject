@@ -1,6 +1,9 @@
 <?php
 // ============================================================
-// admin/index.php — redirects to login (path fixed)
+// includes/logout.php
 // ============================================================
-header("Location: ../login/login.php");
+session_start();
+session_unset();
+session_destroy();
+header('Location: ../login/login.php');
 exit;

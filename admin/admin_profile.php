@@ -1,28 +1,62 @@
 <?php
-require 'library_data.php';
+// ============================================================
+// admin/admin_profile.php — DB-powered (UI unchanged)
+// ============================================================
+session_start();
+require_once __DIR__ . '/library_data.php';
+require_once __DIR__ . '/../classes/User.php';
 
-$currentPage = basename($_SERVER['PHP_SELF']);
+// Session guard
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
+    header('Location: ../login/login.php');
+    exit;
+}
+
+$currentPage   = basename($_SERVER['PHP_SELF']);
 $pending_count = pending_request_count();
 
+$db   = new Database();
+$conn = $db->getConnection();
+$usr  = new User($conn);
+
 $success_msg = $_SESSION['flash_success'] ?? '';
-$error_msg = $_SESSION['flash_error'] ?? '';
+$error_msg   = $_SESSION['flash_error']   ?? '';
 unset($_SESSION['flash_success'], $_SESSION['flash_error']);
 
+// ── Handle form submissions ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $action = $_POST['action'] ?? '';
 
   if ($action === 'update_profile') {
-    $contact = trim($_POST['contact'] ?? '');
+    $full_name  = trim($_POST['full_name']  ?? '');
+    $username   = trim($_POST['username']   ?? '');
+    $email      = strtolower(trim($_POST['email'] ?? ''));
+    $contact    = trim($_POST['contact']    ?? '');
     $department = trim($_POST['department'] ?? '');
-    $campus = trim($_POST['campus'] ?? '');
+    $campus     = trim($_POST['campus']     ?? '');
 
     if ($contact && !preg_match('/^\+?[\d\s\-]{7,15}$/', $contact)) {
       $_SESSION['flash_error'] = 'Please enter a valid contact number.';
+    } elseif (empty($full_name) || empty($username) || empty($email)) {
+      $_SESSION['flash_error'] = 'Full name, username and email are required.';
     } else {
-      $_SESSION['admin_contact'] = $contact;
-      $_SESSION['admin_department'] = $department;
-      $_SESSION['admin_campus'] = $campus;
-      $_SESSION['flash_success'] = 'Admin profile updated successfully!';
+      // Update full name, username, email, phone in DB
+      $stmt = $conn->prepare(
+        "UPDATE users SET full_name = ?, username = ?, email = ?, phone = ?
+         WHERE id = ? AND role = 'admin'"
+      );
+      $stmt->bind_param('ssssi', $full_name, $username, $email, $contact, $_SESSION['user_id']);
+      $ok = $stmt->execute();
+      $stmt->close();
+      if ($ok) {
+        $_SESSION['admin_name']       = $full_name;
+        $_SESSION['admin_contact']    = $contact;
+        $_SESSION['admin_department'] = $department;
+        $_SESSION['admin_campus']     = $campus;
+        $_SESSION['flash_success']    = 'Admin profile updated successfully!';
+      } else {
+        $_SESSION['flash_error'] = 'Failed to update profile. Username or email may already be in use.';
+      }
     }
 
     header('Location: admin_profile.php');
@@ -31,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   if ($action === 'change_password') {
     $current = $_POST['current_pw'] ?? '';
-    $new_pw = $_POST['new_pw'] ?? '';
+    $new_pw  = $_POST['new_pw']     ?? '';
     $confirm = $_POST['confirm_pw'] ?? '';
 
     if (!$current || !$new_pw || !$confirm) {
@@ -41,7 +75,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (strlen($new_pw) < 8) {
       $_SESSION['flash_error'] = 'Password must be at least 8 characters.';
     } else {
-      $_SESSION['flash_success'] = 'Password updated successfully!';
+      $result = $usr->changePassword($_SESSION['user_id'], $current, $new_pw);
+      if ($result === true) {
+        $_SESSION['flash_success'] = 'Password updated successfully!';
+      } else {
+        $_SESSION['flash_error'] = is_string($result) ? $result : 'Failed to update password.';
+      }
     }
 
     header('Location: admin_profile.php');
@@ -49,24 +88,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 }
 
-$returns_today = count(array_filter($_SESSION['borrowed_books'], function ($book) {
-  return ($book['status'] ?? '') === 'returned'
-    && ($book['return_date'] ?? '') === date('Y-m-d');
-}));
+// ── "Returns Today" stat from DB ──
+$returns_today_q = $conn->query(
+  "SELECT COUNT(*) AS c FROM borrow_records
+   WHERE status = 'returned' AND return_date = CURDATE()"
+);
+$returns_today = (int)($returns_today_q->fetch_assoc()['c'] ?? 0);
 
+// ── Load admin row from DB ──
+$admin_stmt = $conn->prepare("SELECT * FROM users WHERE id = ? AND role = 'admin' LIMIT 1");
+$admin_stmt->bind_param('i', $_SESSION['user_id']);
+$admin_stmt->execute();
+$admin_row = $admin_stmt->get_result()->fetch_assoc() ?: [];
+$admin_stmt->close();
+
+// Build initials
+$_a_name      = $admin_row['full_name'] ?? ($_SESSION['admin_name'] ?? 'Admin Librarian');
+$_a_parts     = explode(' ', trim($_a_name));
+$_a_initials  = strtoupper(substr($_a_parts[0] ?? 'A', 0, 1));
+if (count($_a_parts) > 1) $_a_initials .= strtoupper(substr(end($_a_parts), 0, 1));
+
+// Save email back to session for use during update_profile
+$_SESSION['admin_email'] = $admin_row['email'] ?? '';
+
+// Build the $admin array — exactly the same shape the UI expects
 $admin = [
-  'name' => $_SESSION['admin_name'] ?? 'Admin Librarian',
-  'initials' => $_SESSION['admin_initials'] ?? 'AD',
-  'admin_id' => $_SESSION['admin_id'] ?? 'ADM-2026-001',
-  'employee_no' => $_SESSION['admin_employee_no'] ?? 'EMP-00045',
-  'email' => $_SESSION['admin_email'] ?? 'admin.library@cvsu.edu.ph',
-  'contact' => $_SESSION['admin_contact'] ?? '+63 912 345 6789',
-  'role' => $_SESSION['admin_role'] ?? 'Administrator',
-  'department' => $_SESSION['admin_department'] ?? 'Library Services',
-  'campus' => $_SESSION['admin_campus'] ?? 'CvSU Imus Campus',
-  'status' => $_SESSION['admin_status'] ?? 'Active',
-  'joined' => $_SESSION['admin_joined'] ?? 'January 10, 2024',
-  'last_login' => $_SESSION['admin_last_login'] ?? 'May 21, 2026',
+  'name'        => $_a_name,
+  'initials'    => $_a_initials,
+  'admin_id'    => 'ADM-' . str_pad((string)(200 + ($admin_row['id'] ?? 1)), 4, '0', STR_PAD_LEFT),
+  'employee_no' => $admin_row['username'] ?? 'admin',
+  'email'       => $admin_row['email'] ?? '',
+  'contact'     => $_SESSION['admin_contact']    ?? ($admin_row['phone'] ?? ''),
+  'role'        => 'Administrator',
+  'department'  => $_SESSION['admin_department'] ?? 'Library Services',
+  'campus'      => $_SESSION['admin_campus']     ?? 'CvSU Imus Campus',
+  'status'      => 'Active',
+  'joined'      => !empty($admin_row['created_at']) ? date('F j, Y', strtotime($admin_row['created_at'])) : '—',
+  'last_login'  => date('F j, Y'),
 ];
 ?>
 
@@ -86,6 +144,34 @@ $admin = [
   <link rel="stylesheet" href="../assets/style.css">
   <link rel="stylesheet" href="../assets/adminStyle.css">
   <link rel="stylesheet" href="../assets/admin_profile.css">
+  <style>
+    /* Eye toggle button — scoped only to password fields so it doesn't touch other inputs */
+    .input-wrap:has(> input[type="password"]),
+    .input-wrap:has(> input[type="text"].pw-input) {
+      position: relative;
+    }
+    .pw-eye-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      padding: 4px;
+      cursor: pointer;
+      color: #8a8a8a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+    }
+    .pw-eye-btn:hover { color: #b88a3e; }
+    /* Padding only on password fields, not all inputs */
+    .input-wrap > input[type="password"],
+    .input-wrap > input[type="text"].pw-input {
+      padding-right: 38px !important;
+    }
+  </style>
 </head>
 
 <body>
@@ -157,14 +243,9 @@ $admin = [
         <div class="admin-profile-info">
           <h2><?= htmlspecialchars($admin['name']) ?></h2>
 
-          <div class="admin-id">
-            Admin ID: <?= htmlspecialchars($admin['admin_id']) ?>
-          </div>
-
           <div class="admin-chips">
             <span class="admin-chip chip-gold"><?= htmlspecialchars($admin['role']) ?></span>
             <span class="admin-chip chip-sage"><?= htmlspecialchars($admin['status']) ?></span>
-            <span class="admin-chip"><?= htmlspecialchars($admin['department']) ?></span>
           </div>
         </div>
 
@@ -188,7 +269,7 @@ $admin = [
         <div class="admin-stat-divider"></div>
 
         <div class="admin-stat-item">
-          <span class="admin-stat-value">24</span>
+          <span class="admin-stat-value"><?= total_students() ?></span>
           <span class="admin-stat-label">Students</span>
         </div>
 
@@ -235,16 +316,6 @@ $admin = [
                 </div>
 
                 <div class="info-cell">
-                  <div class="info-label">Contact Number</div>
-                  <div class="info-value"><?= htmlspecialchars($admin['contact']) ?></div>
-                </div>
-
-                <div class="info-cell">
-                  <div class="info-label">Department</div>
-                  <div class="info-value"><?= htmlspecialchars($admin['department']) ?></div>
-                </div>
-
-                <div class="info-cell">
                   <div class="info-label">Campus</div>
                   <div class="info-value"><?= htmlspecialchars($admin['campus']) ?></div>
                 </div>
@@ -260,24 +331,23 @@ $admin = [
                   <input
                     class="no-icon"
                     type="text"
+                    name="full_name"
                     value="<?= htmlspecialchars($admin['name']) ?>"
-                    readonly
-                    style="opacity:0.6;cursor:not-allowed;"
+                    required
                   >
                 </div>
-                <div class="field-hint">Name adjustments must be handled by the system administrator.</div>
               </div>
 
               <div class="field-grid">
                 <div class="field">
-                  <label>Employee No.</label>
+                  <label>Username</label>
                   <div class="input-wrap">
                     <input
                       class="no-icon"
                       type="text"
+                      name="username"
                       value="<?= htmlspecialchars($admin['employee_no']) ?>"
-                      readonly
-                      style="opacity:0.6;cursor:not-allowed;"
+                      required
                     >
                   </div>
                 </div>
@@ -288,54 +358,15 @@ $admin = [
                     <input
                       class="no-icon"
                       type="email"
+                      name="email"
                       value="<?= htmlspecialchars($admin['email']) ?>"
-                      readonly
-                      style="opacity:0.6;cursor:not-allowed;"
+                      required
                     >
                   </div>
-                  <div class="field-hint">Admin email cannot be changed here.</div>
-                </div>
-              </div>
-
-              <div class="field">
-                <label>Contact Number</label>
-                <div class="input-wrap">
-                  <input
-                    class="no-icon"
-                    type="tel"
-                    name="contact"
-                    value="<?= htmlspecialchars($admin['contact']) ?>"
-                    placeholder="Contact number"
-                  >
                 </div>
               </div>
 
               <div class="field-grid">
-                <div class="field">
-                  <label>Department</label>
-                  <div class="input-wrap">
-                    <select class="no-icon" name="department">
-                      <?php
-                      $departments = [
-                        'Library Services',
-                        'Circulation Desk',
-                        'Reference Services',
-                        'Technical Services'
-                      ];
-
-                      foreach ($departments as $department):
-                      ?>
-                        <option
-                          value="<?= htmlspecialchars($department) ?>"
-                          <?= $department === $admin['department'] ? 'selected' : '' ?>
-                        >
-                          <?= htmlspecialchars($department) ?>
-                        </option>
-                      <?php endforeach; ?>
-                    </select>
-                  </div>
-                </div>
-
                 <div class="field">
                   <label>Campus</label>
                   <div class="input-wrap">
@@ -397,6 +428,9 @@ $admin = [
                     id="currentPw"
                     placeholder="Enter current password"
                   >
+                  <button type="button" class="pw-eye-btn" onclick="togglePwField('currentPw', this)" aria-label="Show password">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
                 </div>
               </div>
 
@@ -411,6 +445,9 @@ $admin = [
                     placeholder="Enter new password"
                     oninput="checkStrength(this.value)"
                   >
+                  <button type="button" class="pw-eye-btn" onclick="togglePwField('newPw', this)" aria-label="Show password">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
                 </div>
 
                 <div class="password-strength">
@@ -430,6 +467,9 @@ $admin = [
                     id="confirmPw"
                     placeholder="Confirm new password"
                   >
+                  <button type="button" class="pw-eye-btn" onclick="togglePwField('confirmPw', this)" aria-label="Show password">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
                 </div>
               </div>
 
@@ -474,23 +514,39 @@ $admin = [
           </div>
         </section>
 
-        <section class="card admin-side-card">
-          <div class="card-body">
-            <div class="card-title">Quick Links</div>
+        <section class="admin-assistance" style="background:#fef2f2;border:1px solid rgba(192,57,43,0.18);border-radius:12px;padding:18px 20px;">
+          <h4 style="font-size:0.92rem;font-weight:700;color:#7a2020;margin:0 0 6px;display:flex;align-items:center;gap:8px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            Account Assistance
+          </h4>
+          <p style="font-size:0.82rem;color:#6b6b6b;margin:0 0 12px;line-height:1.5;">
+            For admin credential or permission concerns, contact the system administrator.
+          </p>
+          <button id="contactSupportBtn" type="button" onclick="toggleAdminContactPanel()"
+                  style="background:#c0392b;color:#fff;font-size:0.78rem;padding:8px 16px;border-radius:8px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;border:none;font-weight:600;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+            </svg>
+            Contact Us
+          </button>
 
-            <div class="admin-quick-links">
-              <a href="student_req.php">Student Requests</a>
-              <a href="view_books.php">View Books</a>
-              <a href="borrowed_books.php">Borrowed Books</a>
-              <a href="view_students.php">Students</a>
+          <!-- Contact Panel (hidden by default) -->
+          <div id="adminContactPanel" style="display:none;margin-top:12px;background:#fff;border:1px solid rgba(192,57,43,0.18);border-radius:10px;padding:14px 16px;">
+            <div style="font-size:0.63rem;letter-spacing:0.14em;text-transform:uppercase;color:#aab4cc;margin-bottom:6px;">System Administrator</div>
+            <a href="mailto:sysadmin@cvsu.edu.ph"
+               style="display:inline-flex !important;align-items:center;gap:8px;font-size:0.88rem;font-weight:600;color:#1a1a1a !important;background:transparent !important;text-decoration:none;word-break:break-all;padding:0 !important;border:none !important;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+              </svg>
+              sysadmin@cvsu.edu.ph
+            </a>
+            <div style="font-size:0.72rem;color:#888;margin-top:6px;line-height:1.5;">
+              Office hours: Mon–Fri, 8:00 AM – 5:00 PM
             </div>
           </div>
-        </section>
-
-        <section class="admin-assistance">
-          <h4>Account Assistance</h4>
-          <p>For admin credential or permission concerns, contact the system administrator.</p>
-          <a href="mailto:library@cvsu.edu.ph">Contact Support</a>
         </section>
       </aside>
 
@@ -592,6 +648,30 @@ $admin = [
   <?php elseif ($error_msg): ?>
     window.addEventListener('DOMContentLoaded', () => showToast(<?= json_encode($error_msg) ?>, 'error'));
   <?php endif; ?>
+
+  // ── Toggle password visibility ──
+  function togglePwField(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    if (input.type === 'password') {
+      input.type = 'text';
+      input.classList.add('pw-input');
+      btn.setAttribute('aria-label', 'Hide password');
+      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+    } else {
+      input.type = 'password';
+      input.classList.remove('pw-input');
+      btn.setAttribute('aria-label', 'Show password');
+      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+    }
+  }
+
+  // ── Toggle admin contact panel (slide open email info) ──
+  function toggleAdminContactPanel() {
+    const panel = document.getElementById('adminContactPanel');
+    if (!panel) return;
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  }
 </script>
 
 </body>

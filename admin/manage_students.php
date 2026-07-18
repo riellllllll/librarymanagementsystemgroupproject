@@ -1,37 +1,93 @@
 <?php
-
+// ============================================================
+// admin/manage_students.php — DB-powered (UI unchanged)
+// ============================================================
 session_start();
+require_once __DIR__ . '/library_data.php';
+require_once __DIR__ . '/../classes/User.php';
 
 // ── Page context ──
-$current_page = basename($_SERVER['PHP_SELF']);
-$request_badge = $pending_count ?? 0;
-$archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_books']) : 0;
+$current_page  = basename($_SERVER['PHP_SELF']);
+$pending_count = pending_request_count();
+$request_badge = $pending_count;
+$archive_badge = archived_book_count();
 
-// ── Demo data (replace with database queries in production) ──
-$students = [
-    ['id' => 1, 'student_id' => '101', 'first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'email' => 'juan.delacruz@cvsu.edu.ph', 'course' => 'BSIT', 'year' => '3rd Year', 'status' => 'active', 'borrowed' => 2, 'fines' => 0],
-    ['id' => 2, 'student_id' => '102', 'first_name' => 'Maria', 'last_name' => 'Santos', 'email' => 'maria.santos@cvsu.edu.ph', 'course' => 'BSED', 'year' => '2nd Year', 'status' => 'active', 'borrowed' => 1, 'fines' => 20],
-    ['id' => 3, 'student_id' => '103', 'first_name' => 'Pedro', 'last_name' => 'Reyes', 'email' => 'pedro.reyes@cvsu.edu.ph', 'course' => 'BSBA', 'year' => '4th Year', 'status' => 'active', 'borrowed' => 0, 'fines' => 0],
-    ['id' => 4, 'student_id' => '104', 'first_name' => 'Ana', 'last_name' => 'Garcia', 'email' => 'ana.garcia@cvsu.edu.ph', 'course' => 'BSN', 'year' => '1st Year', 'status' => 'active', 'borrowed' => 3, 'fines' => 50],
-    ['id' => 5, 'student_id' => '105', 'first_name' => 'Carlos', 'last_name' => 'Mendoza', 'email' => 'carlos.mendoza@cvsu.edu.ph', 'course' => 'BSCS', 'year' => '3rd Year', 'status' => 'inactive', 'borrowed' => 0, 'fines' => 0],
-    ['id' => 6, 'student_id' => '106', 'first_name' => 'Sofia', 'last_name' => 'Lim', 'email' => 'sofia.lim@cvsu.edu.ph', 'course' => 'BSPSY', 'year' => '2nd Year', 'status' => 'active', 'borrowed' => 1, 'fines' => 0],
-];
+$db   = new Database();
+$conn = $db->getConnection();
+$usr  = new User($conn);
 
 $toast = $_SESSION['toast'] ?? null;
 unset($_SESSION['toast']);
 
-// Handle form submissions (demo)
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['action']) && $_POST['action'] === 'add_student') {
-        $_SESSION['toast'] = ['type' => 'success', 'message' => 'Student account added successfully!'];
+// ── Handle form submissions ──
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+
+    if ($_POST['action'] === 'add_student') {
+        $data = [
+            'student_number' => trim($_POST['student_id']  ?? ''),
+            'first_name'     => trim($_POST['first_name']  ?? ''),
+            'last_name'      => trim($_POST['last_name']   ?? ''),
+            'email'          => strtolower(trim($_POST['email'] ?? '')),
+            'course'         => $_POST['course']           ?? '',
+            'year_level'     => $_POST['year']             ?? '',
+            'password'       => $_POST['password']         ?? 'CvSU@2026',
+        ];
+        $_SESSION['toast'] = $usr->addStudent($data)
+            ? ['type' => 'success', 'message' => 'Student account added successfully!']
+            : ['type' => 'error',   'message' => 'Failed to add student. Student number or email may already exist.'];
         header('Location: manage_students.php');
         exit;
     }
-    if (isset($_POST['action']) && $_POST['action'] === 'remove_student') {
-        $_SESSION['toast'] = ['type' => 'success', 'message' => 'Student account removed successfully!'];
+
+    if ($_POST['action'] === 'edit_student') {
+        $id   = (int)($_POST['edit_id'] ?? 0);
+        $data = [
+            'student_number' => trim($_POST['edit_student_id']  ?? ''),
+            'first_name'     => trim($_POST['edit_first_name']  ?? ''),
+            'last_name'      => trim($_POST['edit_last_name']   ?? ''),
+            'middle_name'    => trim($_POST['edit_middle_name'] ?? ''),
+            'email'          => strtolower(trim($_POST['edit_email'] ?? '')),
+            'course'         => $_POST['edit_course']     ?? '',
+            'year_level'     => $_POST['edit_year']       ?? '',
+            'status'         => $_POST['edit_status']     ?? 'active',
+        ];
+        $result = $usr->editStudent($id, $data);
+        $_SESSION['toast'] = $result === true
+            ? ['type' => 'success', 'message' => 'Student account updated successfully!']
+            : ['type' => 'error',   'message' => is_string($result) ? $result : 'Failed to update student.'];
         header('Location: manage_students.php');
         exit;
     }
+
+    if ($_POST['action'] === 'remove_student') {
+        $id     = (int)($_POST['student_id'] ?? 0);
+        $result = $usr->deleteStudent($id);
+        $_SESSION['toast'] = $result === true
+            ? ['type' => 'success', 'message' => 'Student account removed successfully!']
+            : ['type' => 'error',   'message' => is_string($result) ? $result : 'Failed to remove student.'];
+        header('Location: manage_students.php');
+        exit;
+    }
+}
+
+// ── Load students from DB ──
+// Map DB row → the field names this page's UI expects
+$db_students = $usr->getAllStudents();
+$students    = [];
+foreach ($db_students as $s) {
+    $students[] = [
+        'id'         => (int)$s['id'],
+        'student_id' => $s['student_number'],          // UI calls it 'student_id'
+        'first_name' => $s['first_name'],
+        'last_name'  => $s['last_name'],
+        'middle_name'=> $s['middle_name'] ?? '',
+        'email'      => $s['email'],
+        'course'     => $s['course']     ?? '',
+        'year'       => $s['year_level'] ?? '',         // UI calls it 'year'
+        'status'     => $s['status']     ?? 'active',
+        'borrowed'   => (int)$s['active_borrows'],
+        'fines'      => (float)$s['total_fines'],
+    ];
 }
 ?>
 <!DOCTYPE html>
@@ -54,159 +110,7 @@ $request_badge = $pending_count ?? 0;
 $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_books']) : 0;
 ?>
 
-<aside class="sidebar" id="sidebar">
-  <div class="sidebar-logo">
-    <div class="logo-icon">
-      <svg viewBox="0 0 48 48" aria-hidden="true">
-        <rect x="6" y="8" width="8" height="32" rx="1.5" fill="#c9973a"/>
-        <rect x="16" y="10" width="6" height="30" rx="1.5" fill="#e8c26a"/>
-        <rect x="24" y="6" width="10" height="36" rx="1.5" fill="#c9973a"/>
-        <rect x="36" y="9" width="6" height="31" rx="1.5" fill="#a07830"/>
-        <rect x="5" y="38" width="38" height="2.5" rx="1.25" fill="#7a6030"/>
-      </svg>
-    </div>
-
-    <div>
-      <h2>Cv<em>SU</em></h2>
-      <div class="sidebar-subtitle">Admin Panel</div>
-    </div>
-  </div>
-
-  <nav class="sidebar-nav" aria-label="Admin navigation">
-    <div class="nav-section-label">Main</div>
-
-    <a href="dashboard.php" class="nav-link <?= $current_page === 'dashboard.php' ? 'active' : '' ?>">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <rect x="3" y="3" width="7" height="7" rx="1"/>
-        <rect x="14" y="3" width="7" height="7" rx="1"/>
-        <rect x="3" y="14" width="7" height="7" rx="1"/>
-        <rect x="14" y="14" width="7" height="7" rx="1"/>
-      </svg>
-      Dashboard
-    </a>
-
-    <div class="nav-section-label">Books</div>
-
-    <a href="view_books.php" class="nav-link <?= $current_page === 'view_books.php' ? 'active' : '' ?>">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-      </svg>
-      View Books
-    </a>
-
-    <a href="archive_books.php" class="nav-link <?= $current_page === 'archive_books.php' ? 'active' : '' ?>">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <rect x="3" y="4" width="18" height="4" rx="1"/>
-        <path d="M5 8v11h14V8"/>
-        <path d="M10 12h4"/>
-      </svg>
-      Archive Books
-
-      <?php if ($archive_badge > 0): ?>
-        <span class="nav-badge"><?= $archive_badge ?></span>
-      <?php endif; ?>
-    </a>
-
-    <div class="nav-section-label">Borrowing</div>
-
-    <a href="student_req.php" class="nav-link <?= $current_page === 'student_req.php' ? 'active' : '' ?>">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>
-        <path d="M8 9h8M8 13h5"/>
-      </svg>
-      Student Requests
-
-      <?php if ($request_badge > 0): ?>
-        <span class="nav-badge"><?= $request_badge ?></span>
-      <?php endif; ?>
-    </a>
-
-    <a href="borrowed_books.php" class="nav-link <?= $current_page === 'borrowed_books.php' ? 'active' : '' ?>">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-      </svg>
-      Borrowed Books
-    </a>
-
-    <a href="issue_book.php" class="nav-link <?= $current_page === 'issue_book.php' ? 'active' : '' ?>">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M12 5v14M5 12l7-7 7 7"/>
-      </svg>
-      Issue Book
-    </a>
-
-    <a href="return_book.php" class="nav-link <?= $current_page === 'return_book.php' ? 'active' : '' ?>">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M9 14l-4-4 4-4"/>
-        <path d="M5 10h11a4 4 0 0 1 0 8h-1"/>
-      </svg>
-      Return Book
-    </a>
-
-    <div class="nav-section-label">Students</div>
-
-    <a href="view_students.php" class="nav-link <?= $current_page === 'view_students.php' ? 'active' : '' ?>">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-        <circle cx="9" cy="7" r="4"/>
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-      </svg>
-      Students
-    </a>
-
-    <a href="manage_students.php" class="nav-link <?= $current_page === 'manage_students.php' ? 'active' : '' ?>">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06"/>
-        <path d="M4.27 7.11l.06.06A1.65 1.65 0 0 0 6.15 7.5"/>
-      </svg>
-      Manage Students
-    </a>
-
-    <div class="nav-section-label">Fines</div>
-
-    <a href="view_fines.php" class="nav-link <?= $current_page === 'view_fines.php' ? 'active' : '' ?>">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <circle cx="12" cy="12" r="10"/>
-        <line x1="12" y1="8" x2="12" y2="12"/>
-        <line x1="12" y1="16" x2="12.01" y2="16"/>
-      </svg>
-      Fines
-    </a>
-
-    <div class="nav-section-label">Account</div>
-
-    <a href="admin_profile.php" class="nav-link <?= $current_page === 'admin_profile.php' ? 'active' : '' ?>">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-        <circle cx="12" cy="7" r="4"/>
-      </svg>
-      My Profile
-    </a>
-  </nav>
-
-  <div class="sidebar-footer">
-    <div class="sidebar-user">
-      <div class="user-avatar">AD</div>
-
-      <div class="user-info">
-        <div class="user-name">Admin</div>
-        <div class="user-role">Administrator</div>
-      </div>
-    </div>
-
-    <label for="logoutModalToggle" class="btn-logout">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-        <polyline points="16 17 21 12 16 7"/>
-        <line x1="21" y1="12" x2="9" y2="12"/>
-      </svg>
-      Log Out
-    </label>
-  </div>
-</aside>
+<?php include __DIR__ . "/sideBar.php"; ?>
 
 <input type="checkbox" id="logoutModalToggle" class="logout-modal-check">
 
@@ -267,11 +171,13 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
     <h1 class="topbar-title">Manage Students</h1>
 
     <div class="topbar-spacer"></div>
-    <button class="topbar-icon-btn" title="Notifications">
+    <a href="student_req.php" class="topbar-icon-btn" title="Student Requests">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-      <span class="topbar-notif-dot"></span>
-    </button>
-    <a href="my_profile.php" class="topbar-icon-btn" title="My Profile">
+      <?php if ($pending_count > 0): ?>
+        <span class="topbar-notif-dot"></span>
+      <?php endif; ?>
+    </a>
+    <a href="admin_profile.php" class="topbar-icon-btn" title="Admin Profile">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     </a>
   </header>
@@ -373,10 +279,10 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
                   <?php endif; ?>
                 </td>
                 <td class="ms-actions-cell">
-                  <button class="ms-action-btn ms-action-view" title="View Details">
+                  <button class="ms-action-btn ms-action-view" title="View Details" onclick="openViewModal(<?php echo $student['id']; ?>)">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                   </button>
-                  <button class="ms-action-btn ms-action-edit" title="Edit Student">
+                  <button class="ms-action-btn ms-action-edit" title="Edit Student" onclick="openEditModal(<?php echo $student['id']; ?>)">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   </button>
                   <button class="ms-action-btn ms-action-remove" title="Remove Student" onclick="openRemoveModal(<?php echo $student['id']; ?>, '<?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?>', '<?php echo htmlspecialchars($student['student_id']); ?>')">
@@ -389,14 +295,24 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
           </table>
         </div>
 
-        <!-- Pagination -->
+        <?php
+          $per_page    = 10;
+          $total_pages = max(1, (int)ceil(count($students) / $per_page));
+        ?>
+        <?php if ($total_pages > 1): ?>
+        <!-- Pagination (only shown when needed) -->
         <div class="pagination">
-          <button class="page-btn" disabled><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
-          <button class="page-btn active">1</button>
-          <button class="page-btn">2</button>
-          <button class="page-btn">3</button>
-          <button class="page-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+          <button class="page-btn" disabled aria-label="Previous">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <?php for ($p = 1; $p <= $total_pages; $p++): ?>
+            <button class="page-btn <?= $p === 1 ? 'active' : '' ?>"><?= $p ?></button>
+          <?php endfor; ?>
+          <button class="page-btn" aria-label="Next">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
         </div>
+        <?php endif; ?>
       </div>
     </div>
 
@@ -459,14 +375,14 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
               <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>
               <select name="course" required>
                 <option value="" disabled selected>Select course</option>
-                <option value="BSIT">BSIT</option>
-                <option value="BSCS">BSCS</option>
-                <option value="BSBA">BSBA</option>
-                <option value="BSED">BSED</option>
-                <option value="BSN">BSN</option>
-                <option value="BSPSY">BSPSY</option>
-                <option value="BSA">BSA</option>
-                <option value="BSCE">BSCE</option>
+                <option value="BS Computer Science">BS Computer Science</option>
+                <option value="BS Information Technology">BS Information Technology</option>
+                <option value="BS Education">BS Education</option>
+                <option value="BS Nursing">BS Nursing</option>
+                <option value="BS Engineering">BS Engineering</option>
+                <option value="BS Business Administration">BS Business Administration</option>
+                <option value="BS Accountancy">BS Accountancy</option>
+                <option value="AB Communication">AB Communication</option>
               </select>
               <span class="select-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
             </div>
@@ -545,6 +461,174 @@ $archive_badge = isset($_SESSION['archived_books']) ? count($_SESSION['archived_
   </div>
 </div>
 
+
+<!-- ════════════════════════════════════════════
+     VIEW STUDENT MODAL
+     ════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="viewModal">
+  <div class="modal ms-modal">
+    <div class="modal-top"></div>
+    <button class="modal-close" onclick="closeViewModal()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="modal-body">
+      <div class="ms-view-header">
+        <div class="ms-view-avatar" id="viewAvatar"></div>
+        <div class="ms-view-title-wrap">
+          <h2 class="modal-title" id="viewName"></h2>
+          <p class="modal-desc" id="viewStudentId"></p>
+        </div>
+      </div>
+
+      <div class="ms-view-details">
+        <div class="ms-view-row">
+          <span class="ms-view-label">Email</span>
+          <span class="ms-view-value" id="viewEmail"></span>
+        </div>
+        <div class="ms-view-row">
+          <span class="ms-view-label">Course</span>
+          <span class="ms-view-value" id="viewCourse"></span>
+        </div>
+        <div class="ms-view-row">
+          <span class="ms-view-label">Year Level</span>
+          <span class="ms-view-value" id="viewYear"></span>
+        </div>
+        <div class="ms-view-row">
+          <span class="ms-view-label">Status</span>
+          <span class="ms-view-value" id="viewStatus"></span>
+        </div>
+        <div class="ms-view-row">
+          <span class="ms-view-label">Books Borrowed</span>
+          <span class="ms-view-value" id="viewBorrowed"></span>
+        </div>
+        <div class="ms-view-row">
+          <span class="ms-view-label">Total Fines</span>
+          <span class="ms-view-value" id="viewFines"></span>
+        </div>
+      </div>
+
+      <div class="ms-modal-actions">
+        <button type="button" class="btn-outline" onclick="closeViewModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     EDIT STUDENT MODAL
+     ════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="editModal">
+  <div class="modal ms-modal">
+    <div class="modal-top"></div>
+    <button class="modal-close" onclick="closeEditModal()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="modal-body">
+      <h2 class="modal-title">Edit Student</h2>
+      <p class="modal-desc">Update the student information below.</p>
+
+      <form method="POST" action="manage_students.php" id="editStudentForm">
+        <input type="hidden" name="action" value="edit_student">
+        <input type="hidden" name="edit_id" id="editId">
+
+        <div class="field-grid">
+          <div class="field">
+            <label>First Name <span>*</span></label>
+            <div class="input-wrap">
+              <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+              <input type="text" name="edit_first_name" id="editFirstName" required>
+            </div>
+          </div>
+          <div class="field">
+            <label>Last Name <span>*</span></label>
+            <div class="input-wrap">
+              <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+              <input type="text" name="edit_last_name" id="editLastName" required>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Middle Name <small style="color:var(--muted);font-weight:400;">(optional)</small></label>
+          <div class="input-wrap">
+            <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+            <input type="text" name="edit_middle_name" id="editMiddleName" placeholder="Middle name">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Student ID <span>*</span></label>
+          <div class="input-wrap">
+            <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+            <input type="text" name="edit_student_id" id="editStudentIdInput" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Email Address <span>*</span></label>
+          <div class="input-wrap">
+            <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
+            <input type="email" name="edit_email" id="editEmail" required>
+          </div>
+        </div>
+
+        <div class="field-grid">
+          <div class="field">
+            <label>Course <span>*</span></label>
+            <div class="input-wrap">
+              <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>
+              <select name="edit_course" id="editCourse" required>
+                <option value="BS Computer Science">BS Computer Science</option>
+                <option value="BS Information Technology">BS Information Technology</option>
+                <option value="BS Education">BS Education</option>
+                <option value="BS Nursing">BS Nursing</option>
+                <option value="BS Engineering">BS Engineering</option>
+                <option value="BS Business Administration">BS Business Administration</option>
+                <option value="BS Accountancy">BS Accountancy</option>
+                <option value="AB Communication">AB Communication</option>
+              </select>
+              <span class="select-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Year Level <span>*</span></label>
+            <div class="input-wrap">
+              <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+              <select name="edit_year" id="editYear" required>
+                <option value="1st Year">1st Year</option>
+                <option value="2nd Year">2nd Year</option>
+                <option value="3rd Year">3rd Year</option>
+                <option value="4th Year">4th Year</option>
+              </select>
+              <span class="select-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Status <span>*</span></label>
+          <div class="input-wrap">
+            <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>
+            <select name="edit_status" id="editStatus" required>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <span class="select-arrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+          </div>
+        </div>
+
+        <div class="ms-modal-actions">
+          <button type="button" class="btn-outline" onclick="closeEditModal()">Cancel</button>
+          <button type="submit" class="btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -585,6 +669,8 @@ document.getElementById('removeModal').addEventListener('click', function(e) {
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
     closeAddModal();
+    closeViewModal();
+    closeEditModal();
     closeRemoveModal();
   }
 });
@@ -597,6 +683,64 @@ document.getElementById('searchStudents').addEventListener('input', function() {
     const text = row.textContent.toLowerCase();
     row.style.display = text.includes(term) ? '' : 'none';
   });
+});
+
+// ── Modal: View Student ──
+const studentsData = <?php echo json_encode($students); ?>;
+
+function openViewModal(id) {
+  const student = studentsData.find(s => s.id == id);
+  if (!student) return;
+
+  document.getElementById('viewAvatar').textContent = (student.first_name[0] + student.last_name[0]).toUpperCase();
+  document.getElementById('viewName').textContent = student.first_name + ' ' + student.last_name;
+  document.getElementById('viewStudentId').textContent = 'Student ID: ' + student.student_id;
+  document.getElementById('viewEmail').textContent = student.email;
+  document.getElementById('viewCourse').textContent = student.course;
+  document.getElementById('viewYear').textContent = student.year;
+  document.getElementById('viewStatus').innerHTML = student.status === 'active'
+    ? '<span class="badge badge-sage">Active</span>'
+    : '<span class="badge badge-rust">Inactive</span>';
+  document.getElementById('viewBorrowed').textContent = student.borrowed;
+  document.getElementById('viewFines').textContent = student.fines > 0 ? 'PHP ' + student.fines : '—';
+
+  document.getElementById('viewModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeViewModal() {
+  document.getElementById('viewModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ── Modal: Edit Student ──
+function openEditModal(id) {
+  const student = studentsData.find(s => s.id == id);
+  if (!student) return;
+
+  document.getElementById('editId').value = student.id;
+  document.getElementById('editFirstName').value = student.first_name;
+  document.getElementById('editLastName').value = student.last_name;
+  document.getElementById('editMiddleName').value = student.middle_name || '';
+  document.getElementById('editStudentIdInput').value = student.student_id;
+  document.getElementById('editEmail').value = student.email;
+  document.getElementById('editCourse').value = student.course;
+  document.getElementById('editYear').value = student.year;
+  document.getElementById('editStatus').value = student.status;
+
+  document.getElementById('editModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeEditModal() {
+  document.getElementById('editModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ── Close modals on backdrop click ──
+document.getElementById('viewModal').addEventListener('click', function(e) {
+  if (e.target === this) closeViewModal();
+});
+document.getElementById('editModal').addEventListener('click', function(e) {
+  if (e.target === this) closeEditModal();
 });
 
 // ── Toast ──
